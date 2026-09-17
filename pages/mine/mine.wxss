@@ -1,0 +1,150 @@
+.profile-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 20rpx;
+  align-items: center;
+}
+
+.profile-info {
+  min-width: 0;
+}
+
+.profile-name {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-desc {
+  display: block;
+  margin-top: 4rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-edit {
+  color: var(--brand);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.profile-avatar {
+  width: 92rpx;
+  height: 92rpx;
+  border-radius: 24rpx;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-title);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.profile-avatar-img {
+  display: block;
+  background: #eef0ef;
+}
+
+.profile-name {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.profile-desc {
+  display: block;
+  margin-top: 4rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.profile-edit {
+  color: var(--brand);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.metric-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.metric-box {
+  flex: 1;
+  width: 0;
+  margin-right: 12rpx;
+  background: var(--brand-soft);
+  border-radius: 16rpx;
+  padding: 20rpx 8rpx;
+  text-align: center;
+}
+
+.metric-box:last-child {
+  margin-right: 0;
+}
+
+.metric-val {
+  display: block;
+  font-size: var(--fs-title);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.metric-label {
+  display: block;
+  margin-top: 8rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.quick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -6rpx;
+}
+
+.quick-item {
+  width: calc(50% - 12rpx);
+  margin: 6rpx;
+  padding: 24rpx 20rpx;
+  border-radius: 16rpx;
+  background: #f3f6f4;
+  box-sizing: border-box;
+}
+
+.quick-title {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.quick-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.tip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.tip-item {
+  font-size: var(--fs-small);
+  color: #444;
+  line-height: 1.5;
+}

@@ -1,0 +1,26 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">查看已提交的留言与处理进度</text>
+  </view>
+
+  <view wx:if="{{list.length === 0}}" class="card empty-card">
+    <text class="empty-text">暂无反馈记录</text>
+    <text class="empty-hint">可在「用户反馈」页提交留言</text>
+  </view>
+
+  <view wx:for="{{list}}" wx:key="id" class="card fb-card">
+    <view class="fb-head">
+      <text class="fb-type">{{item.type}}</text>
+      <text class="fb-time">{{item.time}}</text>
+    </view>
+    <text class="fb-content">{{item.content}}</text>
+    <view class="fb-status-row">
+      <text class="fb-status-label">状态</text>
+      <text class="fb-status-val">{{item.status}}</text>
+    </view>
+    <view wx:if="{{item.officialReply}}" class="official-reply">
+      <text class="official-title">官方回复</text>
+      <text class="official-text">{{item.officialReply}}</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,175 @@
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    var(--brand) 0%,
+    var(--brand-dark) 42%,
+    var(--bg) 42%
+  );
+}
+
+/* 上半绿色区：整块垂直水平居中 */
+.login-hero {
+  height: 42vh;
+  min-height: 420rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-align: center;
+  padding: 0 40rpx;
+  box-sizing: border-box;
+}
+
+.login-logo {
+  width: 128rpx;
+  height: 128rpx;
+  margin: 0 auto;
+  border-radius: 32rpx;
+  background: rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-hero);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.login-title {
+  display: block;
+  margin-top: 28rpx;
+  font-size: var(--fs-title);
+  font-weight: 800;
+}
+
+.login-desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: var(--fs-body);
+  opacity: 0.95;
+}
+
+.login-panel {
+  flex: 1;
+  background: var(--bg);
+  border-radius: 40rpx 40rpx 0 0;
+  margin-top: -24rpx;
+  padding: 48rpx 32rpx calc(48rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.login-agree {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+  margin-top: 16rpx;
+}
+
+.phone-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 20;
+}
+
+.phone-panel {
+  position: fixed;
+  left: 32rpx;
+  right: 32rpx;
+  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  z-index: 30;
+  background: var(--bg);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.18);
+}
+
+.phone-title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  text-align: center;
+}
+
+.phone-input {
+  height: 80rpx;
+  padding: 0 24rpx;
+  border-radius: 16rpx;
+  background: var(--card, #f5f5f5);
+  font-size: var(--fs-body);
+}
+
+.sms-row {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.sms-input {
+  flex: 1;
+}
+
+.sms-btn {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.phone-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 20;
+}
+
+.phone-panel {
+  position: fixed;
+  left: 32rpx;
+  right: 32rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--card, #fff);
+  border-radius: 24rpx;
+  padding: 36rpx 28rpx;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
+}
+
+.phone-title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  text-align: center;
+}
+
+.phone-input {
+  border: 1rpx solid var(--border, #e5e7eb);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  font-size: var(--fs-body);
+  background: var(--bg, #f8fafc);
+}
+
+.sms-row {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.sms-input {
+  flex: 1;
+}
+
+.sms-btn {
+  flex-shrink: 0;
+  margin: 0;
+}

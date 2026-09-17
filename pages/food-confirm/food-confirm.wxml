@@ -1,0 +1,19 @@
+<view class="confirm-shot-page" style="{{displayStyle}}">
+  <image
+    class="full-photo"
+    src="{{imagePath}}"
+    mode="aspectFill"
+    show-menu-by-longpress="{{false}}"
+    binderror="onImgError"
+    bindload="onImgLoad"
+  />
+
+  <view class="bottom-actions">
+    <view class="circle-btn retake" bindtap="onRetake">
+      <view class="icon-undo"></view>
+    </view>
+    <view class="circle-btn ok" bindtap="onConfirm">
+      <view class="icon-check"></view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,158 @@
+.icon {
+  --icon-color: #7a7a7a;
+  --s: 3rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon.active {
+  --icon-color: var(--brand, #07c160);
+}
+
+.icon-sm { width: 40rpx; height: 40rpx; }
+.icon-md { width: 44rpx; height: 44rpx; }
+.icon-lg { width: 48rpx; height: 48rpx; }
+
+.glyph {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== home：线框房屋 ===== */
+.home-roof {
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  width: 62%;
+  height: 62%;
+  margin-left: -31%;
+  border-left: var(--s) solid var(--icon-color);
+  border-top: var(--s) solid var(--icon-color);
+  transform: rotate(45deg);
+  border-radius: 4rpx 0 0 0;
+  box-sizing: border-box;
+}
+
+.home-body {
+  position: absolute;
+  left: 24%;
+  right: 24%;
+  top: 44%;
+  bottom: 8%;
+  border: var(--s) solid var(--icon-color);
+  border-top-color: transparent;
+  border-radius: 0 0 4rpx 4rpx;
+  box-sizing: border-box;
+}
+
+/* ===== voice：麦克风 ===== */
+.mic-head {
+  position: absolute;
+  left: 50%;
+  top: 2%;
+  width: 32%;
+  height: 46%;
+  margin-left: -16%;
+  border: var(--s) solid var(--icon-color);
+  border-radius: 999rpx;
+  box-sizing: border-box;
+}
+
+.mic-stand {
+  position: absolute;
+  left: 24%;
+  right: 24%;
+  top: 44%;
+  height: 28%;
+  border: var(--s) solid var(--icon-color);
+  border-top: none;
+  border-radius: 0 0 999rpx 999rpx;
+  box-sizing: border-box;
+}
+
+.mic-base {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: var(--s);
+  height: 18%;
+  margin-left: calc(var(--s) / -2);
+  background: var(--icon-color);
+}
+
+.mic-base::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 240%;
+  height: var(--s);
+  margin-left: -120%;
+  background: var(--icon-color);
+  border-radius: 999rpx;
+}
+
+/* ===== ai：菱形框 + 节点 ===== */
+.ai-ring {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 18%;
+  bottom: 18%;
+  border: var(--s) solid var(--icon-color);
+  border-radius: 8rpx;
+  transform: rotate(45deg);
+  box-sizing: border-box;
+}
+
+.ai-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16%;
+  height: 16%;
+  margin: -8% 0 0 -8%;
+  background: var(--icon-color);
+  border-radius: 50%;
+}
+
+/* ===== stats：三柱 ===== */
+.bar {
+  position: absolute;
+  bottom: 12%;
+  width: 14%;
+  border-radius: 3rpx 3rpx 1rpx 1rpx;
+  background: var(--icon-color);
+}
+
+.bar-a { left: 18%; height: 34%; }
+.bar-b { left: 43%; height: 66%; }
+.bar-c { left: 68%; height: 48%; }
+
+/* ===== mine：头像 ===== */
+.user-head {
+  position: absolute;
+  left: 50%;
+  top: 4%;
+  width: 34%;
+  height: 34%;
+  margin-left: -17%;
+  border: var(--s) solid var(--icon-color);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.user-body {
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  top: 50%;
+  bottom: 6%;
+  border: var(--s) solid var(--icon-color);
+  border-bottom: none;
+  border-radius: 999rpx 999rpx 0 0;
+  box-sizing: border-box;
+}

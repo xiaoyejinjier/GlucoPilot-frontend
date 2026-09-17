@@ -1,0 +1,26 @@
+<view class="login-screen" style="{{displayStyle}}">
+  <view class="login-hero">
+    <view class="login-logo">糖</view>
+    <text class="login-title">AI 控糖助手</text>
+    <text class="login-desc">记录 · 分析 · 建议 · 追踪</text>
+  </view>
+  <view class="login-panel">
+    <button class="btn-primary btn-block" bindtap="onWechatLogin">微信一键登录</button>
+    <button class="btn-ghost btn-block" bindtap="onPhoneLogin">手机号登录</button>
+    <text class="login-agree">登录即表示同意《用户协议》《隐私政策》《免责声明》</text>
+  </view>
+
+  <view class="phone-mask" wx:if="{{phonePanel}}" bindtap="onClosePhonePanel"></view>
+  <view class="phone-panel" wx:if="{{phonePanel}}">
+    <text class="phone-title">手机号登录</text>
+    <input class="phone-input" type="number" maxlength="11" placeholder="手机号" value="{{phone}}" bindinput="onPhoneInput" />
+    <view class="sms-row">
+      <input class="phone-input sms-input" type="number" maxlength="6" placeholder="验证码" value="{{smsCode}}" bindinput="onSmsInput" />
+      <button class="btn-ghost sms-btn" size="mini" disabled="{{smsCooldown > 0}}" bindtap="onSendSms">
+        {{smsCooldown > 0 ? smsCooldown + 's' : '获取验证码'}}
+      </button>
+    </view>
+    <button class="btn-primary btn-block" bindtap="onConfirmPhoneLogin">登录</button>
+    <button class="btn-ghost btn-block btn-sm" bindtap="onClosePhonePanel">取消</button>
+  </view>
+</view>

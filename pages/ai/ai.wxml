@@ -1,0 +1,30 @@
+<view class="page" style="{{displayStyle}}">
+  <view class="card">
+    <view class="section-title">
+      <text>今日血糖曲线图</text>
+      <text class="tag tag-ok">已记 {{recordCount}}/9</text>
+    </view>
+    <canvas type="2d" id="glucoseChart" class="chart-canvas"></canvas>
+    <text class="tip">X轴固定 9 时段（灰点=未记录）· Y轴血糖 mmol/L</text>
+  </view>
+
+  <view class="card">
+    <view class="section-title">九时段节点</view>
+    <view class="nodes">
+      <view
+        wx:for="{{nodes}}"
+        wx:key="id"
+        class="node {{item.status}} {{item.isMeal ? 'meal' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onNodeTap"
+      >
+        <view class="node-dot"></view>
+        <text class="node-name">{{item.name}}</text>
+        <text wx:if="{{item.value != null}}" class="node-val">{{item.value}}</text>
+        <text wx:else class="node-empty">未记录</text>
+        <text wx:if="{{item.isMeal}}" class="meal-tag">餐</text>
+      </view>
+    </view>
+    <text class="tip">灰=未记 · 绿正常 · 橙偏高 · 红异常 · 带「餐」为饮食识别</text>
+  </view>
+</view>

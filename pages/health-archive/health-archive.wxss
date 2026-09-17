@@ -1,0 +1,5 @@
+.summary-text {
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: #333;
+}

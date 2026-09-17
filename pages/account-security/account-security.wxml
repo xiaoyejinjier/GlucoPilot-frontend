@@ -1,0 +1,20 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="card menu-list">
+    <view class="menu-item">
+      <text>登录方式</text>
+      <text class="menu-arrow">微信 / 手机号</text>
+    </view>
+    <view class="menu-item" bindtap="onBindPhone">
+      <text>绑定手机号</text>
+      <text class="menu-arrow">{{phone}}</text>
+    </view>
+    <view class="menu-item" bindtap="onChangePwd">
+      <text>修改验证码保护</text>
+      <text class="menu-arrow">已开启 ›</text>
+    </view>
+  </view>
+
+  <view class="card tip-card">
+    <text class="tip-line">原型演示页：展示账号安全入口与状态，不接真实鉴权接口。</text>
+  </view>
+</view>

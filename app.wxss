@@ -1,0 +1,277 @@
+/** 设计规范 Design Tokens */
+page {
+  --bg: #f2f4f3;
+  --surface: #ffffff;
+  --ink: #1c1c1c;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --brand: #07c160;
+  --brand-dark: #06ad56;
+  --brand-soft: #e8f8ef;
+  --wx-green: #95ec69;
+  --warn: #fa9d3b;
+  --danger: #fa5151;
+  --ok: #07c160;
+  --tab-bar-h: 96rpx;
+
+  --fs: 28rpx;
+  --fs-hero: 52rpx;
+  --fs-title: 36rpx;
+  --fs-body: 28rpx;
+  --fs-small: 22rpx;
+  --fs-tiny: 20rpx;
+  --fs-metric: 36rpx;
+
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: var(--fs);
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+view, text, button, input, textarea {
+  box-sizing: border-box;
+}
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding-bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.page-no-tab {
+  min-height: 100vh;
+  background: var(--bg);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+}
+
+/* 带底部 TabBar 组件的二级页（确认/饮食分析） */
+.page-embed-tab {
+  padding-bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
+}
+
+.page-head {
+  padding: 24rpx 28rpx 16rpx;
+  background: var(--surface);
+  border-bottom: 1rpx solid var(--line);
+}
+
+.page-head-title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.page-head-desc {
+  margin-top: 4rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.page-intro {
+  padding: 16rpx 28rpx 8rpx;
+}
+
+.page-intro-text {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin: 16rpx 20rpx;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.section-title {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  margin-bottom: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 84rpx;
+  padding: 0 24rpx;
+  border-radius: 20rpx;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 84rpx;
+  padding: 0 24rpx;
+  border-radius: 20rpx;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  border: none;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.btn-ghost::after {
+  border: none;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-sm {
+  min-height: 76rpx;
+  font-size: var(--fs-small);
+  border-radius: 16rpx;
+  padding: 0 16rpx;
+  line-height: 1.2;
+}
+
+.tag {
+  display: inline-flex;
+  padding: 6rpx 16rpx;
+  border-radius: 12rpx;
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.tag-ok {
+  background: var(--brand-soft);
+  color: var(--ok);
+}
+
+.tag-warn {
+  background: #fff3e0;
+  color: var(--warn);
+}
+
+.tag-danger {
+  background: #fdecea;
+  color: var(--danger);
+}
+
+.menu-list {
+  padding: 4rpx 8rpx;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 16rpx;
+  border-bottom: 1rpx solid var(--line);
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-arrow {
+  color: #bbb;
+  font-weight: 400;
+}
+
+.kv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.tip {
+  margin-top: 12rpx;
+  font-size: var(--fs-tiny);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.warn-text {
+  margin: 16rpx 0;
+  font-size: var(--fs-small);
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.actions-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 16rpx;
+  margin-top: 16rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.actions-row > button,
+.actions-row > .btn-primary,
+.actions-row > .btn-ghost {
+  flex: 1;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 100%;
+  margin: 0 !important;
+  padding-left: 8rpx !important;
+  padding-right: 8rpx !important;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 防止微信 button 默认最小宽度撑破卡片 */
+button {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.kv-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  font-size: var(--fs-small);
+  padding-bottom: 12rpx;
+  border-bottom: 1rpx solid #eef2f1;
+  min-width: 0;
+}
+
+.kv-item-label {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.kv-item-value {
+  font-weight: 600;
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

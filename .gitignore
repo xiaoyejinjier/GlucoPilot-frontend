@@ -1,0 +1,27 @@
+# 文档与设计稿（本地保留，不上传）
+docs/
+*.xlsx
+ui-design.html
+
+# 微信小程序本地配置
+project.private.config.json
+
+# IDE / 编辑器
+.cursor/
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 依赖与构建
+node_modules/
+miniprogram_npm/
+dist/
+
+# 日志与临时文件
+*.log
+*.tmp
+*.temp

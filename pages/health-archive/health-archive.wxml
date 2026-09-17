@@ -1,0 +1,25 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="card">
+    <view class="section-title">基础资料</view>
+    <view class="kv-list">
+      <view class="kv-item"><text class="kv-item-label">糖尿病类型</text><text class="kv-item-value">{{userInfo.diabetesType}}</text></view>
+      <view class="kv-item"><text class="kv-item-label">确诊时间</text><text class="kv-item-value">{{userInfo.confirmDate}}</text></view>
+      <view class="kv-item"><text class="kv-item-label">用药</text><text class="kv-item-value">{{userInfo.medication}}</text></view>
+      <view class="kv-item"><text class="kv-item-label">运动习惯</text><text class="kv-item-value">{{userInfo.exercise}}</text></view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">近期控糖小结</view>
+    <text class="summary-text">近 7 日平均血糖 6.7 mmol/L，餐后偏高 2 次。建议逐步替换为低 GI 主食。</text>
+  </view>
+
+  <view class="card">
+    <view class="section-title">血糖历史（示意）</view>
+    <view class="kv-list">
+      <view class="kv-item"><text class="kv-item-label">今日</text><text class="kv-item-value">{{todayRecords}}</text></view>
+      <view class="kv-item"><text class="kv-item-label">昨日</text><text class="kv-item-value">6.0 / 8.1 / 7.0</text></view>
+      <view class="kv-item"><text class="kv-item-label">本周达标</text><text class="kv-item-value">68%</text></view>
+    </view>
+  </view>
+</view>

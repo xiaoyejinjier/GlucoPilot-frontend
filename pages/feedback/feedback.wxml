@@ -1,0 +1,41 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">欢迎提出产品建议与问题反馈</text>
+  </view>
+
+  <view class="card">
+    <view class="section-title">反馈类型</view>
+    <view class="type-row">
+      <view
+        wx:for="{{types}}"
+        wx:key="*this"
+        class="type-item {{activeType === item ? 'on' : ''}}"
+        data-type="{{item}}"
+        bindtap="onTypeTap"
+      >{{item}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">留言内容</view>
+    <view class="textarea-box">
+      <textarea
+        class="feedback-textarea"
+        placeholder="请写下您的意见和建议"
+        value="{{content}}"
+        bindinput="onInput"
+        maxlength="500"
+      />
+      <text class="char-count">{{content.length}}/500</text>
+    </view>
+    <view class="actions-row">
+      <button class="btn-ghost btn-sm" bindtap="onViewList">查看反馈</button>
+      <button class="btn-primary btn-sm" bindtap="onSubmit">提交留言</button>
+    </view>
+  </view>
+
+  <view class="card tip-card">
+    <text class="tip-line">提交后可在「查看反馈」中查看处理状态。</text>
+    <text class="tip-line">有官方回复时，会在状态下方显示回复内容。</text>
+  </view>
+</view>

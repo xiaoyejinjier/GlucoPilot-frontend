@@ -1,0 +1,73 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/index/index",
+    "pages/voice/voice",
+    "pages/ai/ai",
+    "pages/stats/stats",
+    "pages/mine/mine",
+    "pages/news-detail/news-detail",
+    "pages/camera/camera",
+    "pages/confirm/confirm",
+    "pages/food-confirm/food-confirm",
+    "pages/food-analysis/food-analysis",
+    "pages/health-archive/health-archive",
+    "pages/nutrition/nutrition",
+    "pages/nutrition-list/nutrition-list",
+    "pages/feedback/feedback",
+    "pages/disclaimer/disclaimer",
+    "pages/settings/settings",
+    "pages/profile-edit/profile-edit",
+    "pages/backup/backup",
+    "pages/export-data/export-data",
+    "pages/about/about",
+    "pages/account-security/account-security",
+    "pages/notifications/notifications",
+    "pages/display-settings/display-settings",
+    "pages/feedback-list/feedback-list"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTitleText": "AI 控糖助手",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f2f4f3",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#7a7a7a",
+    "selectedColor": "#07c160",
+    "backgroundColor": "#fafafa",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/voice/voice",
+        "text": "语音"
+      },
+      {
+        "pagePath": "pages/ai/ai",
+        "text": "AI"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.camera": {
+      "desc": "用于拍摄饮食照片与血糖仪读数"
+    }
+  }
+}

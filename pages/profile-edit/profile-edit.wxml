@@ -1,0 +1,50 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">修改后点保存即可生效</text>
+  </view>
+
+  <view class="card">
+    <view class="avatar-block" bindtap="onChooseAvatar">
+      <image
+        wx:if="{{form.avatarUrl}}"
+        class="avatar-img"
+        src="{{form.avatarUrl}}"
+        mode="aspectFill"
+      />
+      <view wx:else class="avatar">{{form.avatarText}}</view>
+      <text class="avatar-tip">点击更换头像</text>
+    </view>
+    <view wx:if="{{form.avatarUrl}}" class="avatar-actions">
+      <text class="avatar-clear" catchtap="onClearAvatar">恢复默认头像</text>
+    </view>
+
+    <view class="form-item">
+      <text class="label">昵称</text>
+      <input class="input" value="{{form.nickname}}" bindinput="onField" data-key="nickname" maxlength="12" />
+    </view>
+    <view class="form-item">
+      <text class="label">年龄</text>
+      <input class="input" type="number" value="{{form.age}}" bindinput="onField" data-key="age" />
+    </view>
+    <view class="form-item">
+      <text class="label">糖尿病类型</text>
+      <input class="input" value="{{form.diabetesType}}" bindinput="onField" data-key="diabetesType" />
+    </view>
+    <view class="form-item">
+      <text class="label">确诊时间</text>
+      <input class="input" value="{{form.confirmDate}}" bindinput="onField" data-key="confirmDate" placeholder="如 2021-06" />
+    </view>
+    <view class="form-item">
+      <text class="label">用药</text>
+      <input class="input" value="{{form.medication}}" bindinput="onField" data-key="medication" />
+    </view>
+    <view class="form-item last">
+      <text class="label">运动习惯</text>
+      <input class="input" value="{{form.exercise}}" bindinput="onField" data-key="exercise" />
+    </view>
+  </view>
+
+  <view class="card">
+    <button class="btn-primary btn-block btn-sm" bindtap="onSave">保存资料</button>
+  </view>
+</view>

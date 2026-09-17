@@ -1,0 +1,23 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="card about-hero">
+    <view class="logo">糖</view>
+    <text class="app-name">AI 控糖助手</text>
+    <text class="app-ver">版本 {{version}}</text>
+  </view>
+
+  <view class="card menu-list">
+    <view class="menu-item">
+      <text>版本号</text>
+      <text class="menu-arrow">{{version}}</text>
+    </view>
+    <view class="menu-item" bindtap="onCheckUpdate">
+      <text>检查更新</text>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="company">贵州慧科未来科技有限公司</text>
+    <text class="desc">移动互联网 + 健康管理。本应用为健康管理工具，不提供医疗诊断。</text>
+  </view>
+</view>

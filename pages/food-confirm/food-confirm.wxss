@@ -1,0 +1,83 @@
+.confirm-shot-page {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+.full-photo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: #111;
+}
+
+.bottom-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 80rpx;
+  z-index: 3;
+}
+
+.circle-btn {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle-btn.retake {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.circle-btn.ok {
+  background: #fff;
+}
+
+.icon-undo {
+  width: 36rpx;
+  height: 36rpx;
+  border: 4rpx solid #333;
+  border-radius: 50%;
+  border-right-color: transparent;
+  position: relative;
+  transform: rotate(-45deg);
+}
+
+.icon-undo::after {
+  content: '';
+  position: absolute;
+  right: -2rpx;
+  top: -8rpx;
+  width: 0;
+  height: 0;
+  border-left: 12rpx solid transparent;
+  border-right: 12rpx solid transparent;
+  border-bottom: 16rpx solid #333;
+  transform: rotate(90deg);
+}
+
+.icon-check {
+  width: 36rpx;
+  height: 20rpx;
+  border-left: 6rpx solid var(--brand);
+  border-bottom: 6rpx solid var(--brand);
+  transform: rotate(-45deg);
+  margin-top: -8rpx;
+}

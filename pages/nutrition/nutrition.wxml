@@ -1,0 +1,46 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">按大类浏览 · 点进查看营养成分</text>
+  </view>
+
+  <view class="card">
+    <input
+      class="search-input"
+      placeholder="搜索食物，如：米饭、苹果"
+      value="{{keyword}}"
+      bindinput="onSearch"
+      confirm-type="search"
+    />
+  </view>
+
+  <view class="card">
+    <view class="section-title">食物大类</view>
+    <view class="cat-grid">
+      <view
+        wx:for="{{categories}}"
+        wx:key="*this"
+        class="cat-item"
+        data-cat="{{item}}"
+        bindtap="onCategoryTap"
+      >{{item}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{keyword}}" class="card">
+    <view class="section-title">{{keyword}}</view>
+    <view wx:if="{{searchResults.length === 0}}" class="empty-tip">未找到相关食物</view>
+    <view
+      wx:for="{{searchResults}}"
+      wx:key="name"
+      class="food-item"
+      data-name="{{item.name}}"
+      bindtap="onFoodTap"
+    >
+      <image class="food-thumb" src="{{item.image}}" mode="aspectFill" />
+      <view class="food-meta">
+        <text class="food-name">{{item.name}}</text>
+        <text class="food-info">{{item.carbs}}克碳水/100g · {{item.cal}}kcal</text>
+      </view>
+    </view>
+  </view>
+</view>

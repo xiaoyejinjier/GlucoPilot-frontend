@@ -1,0 +1,87 @@
+<view class="page-no-tab page-embed-tab food-page" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">确认后再分析 · 两段式预测</text>
+  </view>
+
+  <view class="card">
+    <image
+      wx:if="{{imagePath}}"
+      class="photo-meal-img"
+      src="{{imagePath}}"
+      mode="aspectFill"
+    />
+    <view wx:else class="photo-meal">已确认的餐食照片</view>
+    <view class="metrics">
+      <view class="metric"><text class="metric-val">{{metrics.glucose}}</text><text class="metric-label">血糖</text></view>
+      <view class="metric"><text class="metric-val">{{metrics.carbs}}</text><text class="metric-label">碳水</text></view>
+      <view class="metric"><text class="metric-val">{{metrics.extra}}</text><text class="metric-label">待定</text></view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">当前饱腹感</view>
+    <view class="fullness-row">
+      <view
+        wx:for="{{hungerOptions}}"
+        wx:key="*this"
+        class="fullness-item {{hunger === item ? 'on' : ''}}"
+        data-val="{{item}}"
+        bindtap="onHunger"
+      >{{item}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="result-card">
+      <view class="result-icon">①</view>
+      <view class="result-body">
+        <text class="result-title">识别的食物与营养</text>
+        <text class="result-desc">{{foodsText}}</text>
+      </view>
+    </view>
+    <view class="result-card warn">
+      <view class="result-icon">②</view>
+      <view class="result-body">
+        <text class="result-title">预测约 1 小时后血糖</text>
+        <text class="result-big">{{predictNow}} <text class="result-unit">mmol/L</text></text>
+      </view>
+    </view>
+    <view class="result-card">
+      <view class="result-icon">③</view>
+      <view class="result-body">
+        <text class="result-title">建议吃的量</text>
+        <text class="result-desc">{{suggestText}}</text>
+      </view>
+    </view>
+    <view class="result-card ok">
+      <view class="result-icon">④</view>
+      <view class="result-body">
+        <text class="result-title">按建议量再预测 1 小时血糖</text>
+        <text class="result-big">{{predictSuggest}} <text class="result-unit">mmol/L</text></text>
+        <text class="result-compare">现状 {{predictNow}} → 建议后 {{predictSuggest}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card voice-card">
+    <view class="section-title">语音补充信息</view>
+    <view class="voice-row">
+      <button class="btn-ghost btn-sm voice-btn" bindtap="onVoiceFill" disabled="{{busy}}">语音转文字</button>
+      <text class="voice-hint">原型演示：点一下填入示例补充</text>
+    </view>
+    <textarea
+      class="voice-input"
+      placeholder="例如：米饭只吃了一半，红烧肉吃了两块"
+      value="{{supplement}}"
+      maxlength="200"
+      bindinput="onSupplementInput"
+    />
+    <button class="btn-primary btn-block btn-sm" bindtap="onRePredict" disabled="{{busy}}">确认后再预测</button>
+  </view>
+
+  <view class="card">
+    <button class="btn-primary btn-block btn-sm" bindtap="onSave" disabled="{{busy}}">确认保存饮食记录</button>
+  </view>
+
+  <tab-bar selected="{{2}}"></tab-bar>
+</view>

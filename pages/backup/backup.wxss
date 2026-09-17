@@ -1,0 +1,14 @@
+.restore-btn {
+  margin-top: 16rpx;
+}
+
+.tip-card .tip-line {
+  display: block;
+  font-size: var(--fs-small);
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.tip-card .tip-line + .tip-line {
+  margin-top: 8rpx;
+}
