@@ -1,0 +1,27 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">要求必须看完再点同意</text>
+  </view>
+
+  <view class="card">
+    <scroll-view
+      class="disclaimer-scroll"
+      scroll-y
+      bindscrolltolower="onScrollToBottom"
+      lower-threshold="20"
+    >
+      <view class="disclaimer-text">
+        <text wx:for="{{paragraphs}}" wx:key="*this" class="disclaimer-para">{{item}}</text>
+        <text class="disclaimer-hint">（请滑动至底部）</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="card">
+    <button
+      class="btn-primary btn-block btn-sm {{canAgree ? '' : 'disabled'}}"
+      disabled="{{!canAgree}}"
+      bindtap="onAgree"
+    >{{canAgree ? '我已阅读并同意' : '请先滑到底部'}}</button>
+  </view>
+</view>

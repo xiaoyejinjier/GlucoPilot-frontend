@@ -1,0 +1,1 @@
+<view class="ui-icon ui-icon-{{name}} {{active ? 'is-active' : ''}}" style="width:{{size}}rpx;height:{{size}}rpx;"></view>

@@ -1,0 +1,27 @@
+<view
+  class="icon icon-{{name}} icon-{{size}} {{active ? 'active' : ''}}"
+  style="{{color ? '--icon-color:' + color : ''}}"
+>
+  <view wx:if="{{name === 'home'}}" class="glyph">
+    <view class="home-roof"></view>
+    <view class="home-body"></view>
+  </view>
+  <view wx:elif="{{name === 'voice'}}" class="glyph">
+    <view class="mic-head"></view>
+    <view class="mic-stand"></view>
+    <view class="mic-base"></view>
+  </view>
+  <view wx:elif="{{name === 'ai'}}" class="glyph">
+    <view class="ai-ring"></view>
+    <view class="ai-core"></view>
+  </view>
+  <view wx:elif="{{name === 'stats'}}" class="glyph">
+    <view class="bar bar-a"></view>
+    <view class="bar bar-b"></view>
+    <view class="bar bar-c"></view>
+  </view>
+  <view wx:elif="{{name === 'mine'}}" class="glyph">
+    <view class="user-head"></view>
+    <view class="user-body"></view>
+  </view>
+</view>

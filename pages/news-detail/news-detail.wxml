@@ -1,0 +1,37 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="card">
+    <video
+      wx:if="{{news.type === 'video' && news.videoUrl}}"
+      class="news-video"
+      src="{{news.videoUrl}}"
+      poster="{{news.cover}}"
+      controls
+      show-center-play-btn
+      object-fit="cover"
+    />
+    <image
+      wx:else
+      class="news-hero-img"
+      src="{{news.cover}}"
+      mode="aspectFill"
+    />
+  </view>
+
+  <view class="card">
+    <text class="news-meta">{{news.channel}} · {{news.typeLabel}} · {{news.time}}</text>
+    <text class="news-lead">{{news.summary}}</text>
+    <view class="news-body">
+      <text wx:if="{{news.contentBody}}" class="news-para" style="white-space: pre-wrap;">{{news.contentBody}}</text>
+      <block wx:else>
+        <text class="news-para">餐后血糖升高，往往不是"突然坏了"，而是进餐结构、进食速度和活动量共同作用的结果。</text>
+        <text class="news-para">第一步：看主食。米饭、面条等精制主食升糖更快，建议逐步替换为低 GI 主食如燕麦、糙米。</text>
+        <text class="news-para">第二步：控速度。细嚼慢咽，每口咀嚼 15-20 次，给大脑足够时间接收饱腹信号。</text>
+        <text class="news-para">第三步：餐后动。餐后 30 分钟轻度活动，如散步 10-15 分钟，有助于平稳血糖。</text>
+      </block>
+    </view>
+    <view class="news-ops">
+      <view class="news-op {{liked ? 'on' : ''}}" bindtap="onLike">{{liked ? '已赞' : '点赞'}}</view>
+      <view class="news-op {{collected ? 'on' : ''}}" bindtap="onCollect">{{collected ? '已收藏' : '收藏'}}</view>
+    </view>
+  </view>
+</view>

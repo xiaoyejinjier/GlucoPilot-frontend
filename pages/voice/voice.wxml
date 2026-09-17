@@ -1,0 +1,42 @@
+<view class="page voice-page" style="{{displayStyle}}">
+  <scroll-view class="wx-body" scroll-y scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
+    <text class="wx-time">今天 {{currentTime}}</text>
+    <view wx:for="{{messages}}" wx:key="id" class="wx-row {{item.role === 'user' ? 'user' : ''}}">
+      <view class="wx-avatar">{{item.role === 'user' ? '我' : 'AI'}}</view>
+      <view class="wx-bubble">
+        <image
+          wx:if="{{item.type === 'image'}}"
+          class="wx-msg-img"
+          src="{{item.imagePath}}"
+          mode="widthFix"
+          data-src="{{item.imagePath}}"
+          bindtap="onPreviewImage"
+        />
+        <text wx:else>{{item.content}}</text>
+      </view>
+    </view>
+    <view id="msg-bottom"></view>
+  </scroll-view>
+
+  <view class="wx-foot">
+    <view class="wx-btn" bindtap="onToggleVoiceMode">{{voiceMode ? '键盘' : '语音'}}</view>
+    <block wx:if="{{!voiceMode}}">
+      <view class="wx-btn icon-btn" bindtap="onChooseImage">
+        <view class="icon-pic"></view>
+      </view>
+      <input class="wx-input" placeholder="请输入问题" value="{{inputValue}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
+      <view class="wx-btn send" bindtap="onSend">发送</view>
+    </block>
+    <block wx:else>
+      <view class="wx-btn icon-btn" bindtap="onChooseImage">
+        <view class="icon-pic"></view>
+      </view>
+      <view
+        class="wx-hold {{recording ? 'on' : ''}}"
+        bindtouchstart="onHoldStart"
+        bindtouchend="onHoldEnd"
+        bindtouchcancel="onHoldEnd"
+      >{{recording ? '松开结束' : '按住 说话'}}</view>
+    </block>
+  </view>
+</view>

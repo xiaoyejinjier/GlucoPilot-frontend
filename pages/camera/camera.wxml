@@ -1,0 +1,49 @@
+<view class="camera-page" style="{{displayStyle}}">
+  <view class="camera-view">
+    <!-- 真机：实时摄像头 -->
+    <camera
+      wx:if="{{useLiveCamera}}"
+      id="shotCam"
+      class="live-camera"
+      device-position="{{devicePosition}}"
+      flash="auto"
+      resolution="medium"
+      binderror="onCameraError"
+      bindinitdone="onCameraInit"
+    />
+
+    <!-- 开发者工具 / 无权限：不挂载 camera，避免出现 OBS 虚拟摄像头怪画面 -->
+    <view wx:else class="camera-fallback">
+      <view class="fallback-icon"></view>
+      <text class="fallback-title">{{isDevtools ? '模拟器无法稳定调用真机摄像头' : '摄像头未就绪'}}</text>
+      <text class="fallback-text">{{cameraTip}}</text>
+      <button wx:if="{{needAuth && !isDevtools}}" class="btn-auth" bindtap="onRequestAuth">去开启权限</button>
+      <button wx:if="{{isDevtools}}" class="btn-auth ghost" bindtap="onAlbum">用相册选图演示</button>
+    </view>
+
+    <view class="camera-overlay">
+      <text class="camera-guide">拍照识别饮食/条形码/指血记录等</text>
+      <text class="camera-hint">{{isMeal ? '对准餐食拍照' : '对准血糖仪读数'}}</text>
+      <text class="camera-node">当前节点：{{nodeName}}</text>
+    </view>
+  </view>
+
+  <view class="camera-bottom">
+    <text class="camera-tip">{{isDevtools ? '提示：请点「真机调试」看实时摄像头；模拟器可点相册继续演示' : '为保证识别率，请保证图片内容完整、清晰，建议俯拍'}}</text>
+    <view class="camera-controls">
+      <view class="camera-side" bindtap="onAlbum">
+        <view class="side-icon album">
+          <view class="album-frame"></view>
+        </view>
+        <text class="side-text">相册</text>
+      </view>
+      <view class="camera-shutter {{busy ? 'disabled' : ''}}" bindtap="onCapture"></view>
+      <view class="camera-side" bindtap="onClose">
+        <view class="side-icon back">
+          <view class="back-arrow"></view>
+        </view>
+        <text class="side-text">返回</text>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,30 @@
+.switch-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid #eef2f1;
+}
+
+.switch-row:last-child {
+  border-bottom: none;
+}
+
+.switch-main {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+}
+
+.switch-title {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.switch-desc {
+  display: block;
+  margin-top: 6rpx;
+  font-size: var(--fs-small);
+  color: #6b7280;
+}

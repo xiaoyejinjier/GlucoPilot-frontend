@@ -1,0 +1,98 @@
+.chart-canvas {
+  width: 100%;
+  height: 240rpx;
+}
+
+.nodes {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin: 0 -6rpx;
+}
+
+.node {
+  position: relative;
+  width: calc(33.33% - 12rpx);
+  margin: 6rpx;
+  border-radius: 16rpx;
+  padding: 18rpx 8rpx 16rpx;
+  min-height: 148rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ececec;
+  border: 2rpx solid transparent;
+  box-sizing: border-box;
+}
+
+.node-dot {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #c8c8c8;
+  margin-bottom: 8rpx;
+}
+
+.node-name {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.node-val {
+  margin-top: 6rpx;
+  font-size: var(--fs-body);
+  font-weight: 800;
+  color: #111;
+}
+
+.node-empty {
+  margin-top: 6rpx;
+  font-size: var(--fs-small);
+  color: #999;
+  font-weight: 600;
+}
+
+.meal-tag {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  font-size: 18rpx;
+  font-weight: 700;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+}
+
+.node.ok {
+  background: var(--brand-soft);
+  border-color: #b7ebc9;
+}
+
+.node.ok .node-dot {
+  background: var(--brand);
+}
+
+.node.warn {
+  background: #fff4e5;
+  border-color: #ffd59a;
+}
+
+.node.warn .node-dot {
+  background: #fa9d3b;
+}
+
+.node.danger {
+  background: #fdecea;
+  border-color: #f5b5b5;
+}
+
+.node.danger .node-dot {
+  background: #fa5151;
+}
+
+.node.meal .node-name {
+  color: #1f6b4a;
+}

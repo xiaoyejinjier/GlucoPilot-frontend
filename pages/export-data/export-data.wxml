@@ -1,0 +1,124 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">选择时间范围后生成导出摘要</text>
+  </view>
+
+  <view class="card">
+    <view class="section-title">导出范围</view>
+    <view class="range-row">
+      <view
+        wx:for="{{ranges}}"
+        wx:key="id"
+        class="range-item {{activeRange === item.id ? 'on' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onRange"
+      >{{item.label}}</view>
+    </view>
+
+    <view wx:if="{{activeRange === 'custom' && customStart && customEnd}}" class="custom-range">
+      <view class="custom-chip" bindtap="onReopenStart">
+        <text class="custom-chip-label">开始</text>
+        <text class="custom-chip-val">{{customStart}}</text>
+      </view>
+      <text class="custom-sep">至</text>
+      <view class="custom-chip" bindtap="onReopenEnd">
+        <text class="custom-chip-label">结束</text>
+        <text class="custom-chip-val">{{customEnd}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">导出内容预览</view>
+    <view class="preview-box">
+      <view class="kv-item">
+        <text class="kv-item-label">范围</text>
+        <text class="kv-item-value">{{rangeLabel}}</text>
+      </view>
+      <view class="kv-item">
+        <text class="kv-item-label">记录条数</text>
+        <text class="kv-item-value">{{previewCount}} 条</text>
+      </view>
+      <view class="kv-item">
+        <text class="kv-item-label">格式</text>
+        <text class="kv-item-value">文本摘要</text>
+      </view>
+    </view>
+    <view class="actions-row">
+      <button class="btn-ghost btn-sm" bindtap="onBack" disabled="{{exporting}}">取消</button>
+      <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{exporting}}">确定导出</button>
+    </view>
+  </view>
+
+  <view wx:if="{{exportText}}" class="card">
+    <view class="section-title">导出结果</view>
+    <text wx:if="{{filePath}}" class="file-path">已保存：{{filePath}}</text>
+    <view class="export-box">
+      <text class="export-text">{{exportText}}</text>
+    </view>
+    <button class="btn-ghost btn-block btn-sm copy-btn" bindtap="onCopy">复制摘要</button>
+  </view>
+
+  <view class="card tip-card">
+    <text class="tip-line">导出内容包含所选范围内的血糖与饮食记录摘要。</text>
+    <text class="tip-line">原型阶段写入本机文件并复制到剪贴板，不上传服务器。</text>
+  </view>
+
+  <!-- 自定义日期弹窗：‹ 年 › + 左月右日滚动 -->
+  <view wx:if="{{showDateSheet}}" class="sheet-mask" bindtap="onCloseSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-head">
+        <text class="sheet-cancel" bindtap="onCloseSheet">取消</text>
+        <text class="sheet-title">{{dateStep === 'start' ? '选择开始日期' : '选择结束日期'}}</text>
+        <text class="sheet-ok" bindtap="onConfirmDate">确定</text>
+      </view>
+
+      <view class="year-nav">
+        <text class="year-btn" bindtap="onPrevYear">‹</text>
+        <text class="year-text">{{pickYear}}年</text>
+        <text class="year-btn" bindtap="onNextYear">›</text>
+      </view>
+
+      <view class="picker-labels">
+        <text class="picker-label">月</text>
+        <text class="picker-label">日</text>
+      </view>
+
+      <view class="roller-box">
+        <view class="roller-indicator"></view>
+        <scroll-view
+          class="roller-col"
+          scroll-y
+          scroll-top="{{monthScrollTop}}"
+          scroll-with-animation="{{false}}"
+          show-scrollbar="{{false}}"
+          bindscroll="onMonthScroll"
+        >
+          <view class="roller-pad"></view>
+          <view
+            wx:for="{{months}}"
+            wx:key="*this"
+            class="roller-item {{monthIndex === index ? 'on' : ''}}"
+          >{{item}}月</view>
+          <view class="roller-pad"></view>
+        </scroll-view>
+        <scroll-view
+          class="roller-col"
+          scroll-y
+          scroll-top="{{dayScrollTop}}"
+          scroll-with-animation="{{false}}"
+          show-scrollbar="{{false}}"
+          bindscroll="onDayScroll"
+        >
+          <view class="roller-pad"></view>
+          <view
+            wx:for="{{days}}"
+            wx:key="*this"
+            class="roller-item {{dayIndex === index ? 'on' : ''}}"
+          >{{item}}日</view>
+          <view class="roller-pad"></view>
+        </scroll-view>
+      </view>
+    </view>
+  </view>
+</view>

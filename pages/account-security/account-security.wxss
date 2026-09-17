@@ -1,0 +1,5 @@
+.tip-card .tip-line {
+  font-size: var(--fs-small);
+  color: #6b7280;
+  line-height: 1.5;
+}

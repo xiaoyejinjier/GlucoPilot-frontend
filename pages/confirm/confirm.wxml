@@ -1,0 +1,38 @@
+<view class="page-no-tab page-embed-tab confirm-page" style="{{displayStyle}}">
+  <view class="card">
+    <image
+      wx:if="{{imagePath}}"
+      class="photo-preview"
+      src="{{imagePath}}"
+      mode="aspectFill"
+    />
+    <view wx:else class="photo-placeholder">拍照图片（示意）</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">自动识别出的血糖值</view>
+    <view class="manual-check" bindtap="onToggleManual">
+      <text class="check-icon">{{manualEdit ? '☑' : '☐'}}</text>
+      <text>识别有误，手动修改</text>
+    </view>
+    <view class="value-box">
+      <input
+        wx:if="{{manualEdit}}"
+        class="value-input"
+        type="digit"
+        value="{{value}}"
+        bindinput="onValueInput"
+        focus
+      />
+      <text wx:else class="value-num">{{value}}</text>
+      <text class="value-unit">mmol/L</text>
+    </view>
+    <text class="warn-text">设计红线：识别结果绝不自动保存，必须用户确认。</text>
+    <view class="actions-row">
+      <button class="btn-ghost btn-sm" bindtap="onBack" disabled="{{busy}}">返回</button>
+      <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{busy}}">确认</button>
+    </view>
+  </view>
+
+  <tab-bar selected="{{2}}"></tab-bar>
+</view>

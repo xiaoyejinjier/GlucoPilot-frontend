@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "饮食识别",
+  "usingComponents": {
+    "tab-bar": "/components/tab-bar/tab-bar"
+  }
+}

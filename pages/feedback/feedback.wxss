@@ -1,0 +1,61 @@
+.type-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.type-item {
+  width: calc(50% - 6rpx);
+  min-height: 72rpx;
+  border-radius: 12rpx;
+  background: #eef0ef;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  box-sizing: border-box;
+  padding: 0 8rpx;
+}
+
+.type-item.on {
+  background: var(--brand);
+  color: #fff;
+}
+
+.textarea-box {
+  background: var(--brand-soft);
+  border-radius: 16rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.feedback-textarea {
+  width: 100%;
+  min-height: 200rpx;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--ink);
+  background: transparent;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: var(--fs-tiny);
+  color: var(--muted);
+  margin-top: 8rpx;
+}
+
+.tip-card .tip-line {
+  display: block;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tip-card .tip-line + .tip-line {
+  margin-top: 8rpx;
+}

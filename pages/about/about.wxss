@@ -1,0 +1,44 @@
+.about-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 24rpx;
+}
+
+.logo {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 28rpx;
+  background: var(--brand);
+  color: #fff;
+  font-size: var(--fs-hero);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-name {
+  margin-top: 20rpx;
+  font-size: var(--fs-title);
+  font-weight: 800;
+}
+
+.app-ver {
+  margin-top: 8rpx;
+  font-size: var(--fs-small);
+  color: #6b7280;
+}
+
+.company {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  margin-bottom: 12rpx;
+}
+
+.desc {
+  font-size: var(--fs-small);
+  color: #6b7280;
+  line-height: 1.6;
+}

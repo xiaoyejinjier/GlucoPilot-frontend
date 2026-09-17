@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "确认入库",
+  "usingComponents": {
+    "tab-bar": "/components/tab-bar/tab-bar"
+  }
+}

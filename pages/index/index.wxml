@@ -1,0 +1,57 @@
+<view class="page home-page" style="{{displayStyle}}">
+  <swiper
+    class="banner"
+    autoplay
+    circular
+    indicator-dots
+    indicator-color="rgba(255,255,255,0.4)"
+    indicator-active-color="#fff"
+  >
+    <swiper-item wx:for="{{banners}}" wx:key="index">
+      <view class="banner-inner">
+        <text class="banner-badge">公司宣传 {{index + 1}}/{{banners.length}}</text>
+        <text class="banner-title">{{item.title}}</text>
+        <text class="banner-desc">{{item.desc}}</text>
+      </view>
+    </swiper-item>
+  </swiper>
+
+  <view class="card news-card">
+    <view class="section-title">
+      <text>关注动态，获取最新消息</text>
+    </view>
+
+    <view class="channel-row">
+      <view
+        wx:for="{{channels}}"
+        wx:key="*this"
+        class="channel-btn {{activeChannel === item ? 'on' : ''}}"
+        data-channel="{{item}}"
+        bindtap="onChannelTap"
+      >
+        <text class="channel-btn-text">{{item}}</text>
+      </view>
+    </view>
+
+    <view
+      wx:for="{{filteredNews}}"
+      wx:key="id"
+      class="news-item"
+      data-id="{{item.id}}"
+      bindtap="onNewsTap"
+    >
+      <view class="news-cover-wrap">
+        <image class="news-cover-img" src="{{item.cover}}" mode="aspectFill" />
+        <view wx:if="{{item.type === 'video'}}" class="play-mark">▶</view>
+      </view>
+      <view class="news-meta">
+        <text class="news-title">{{item.title}}</text>
+        <text class="news-sum">{{item.summary}}</text>
+        <view class="news-footer">
+          <text class="news-type">{{item.typeLabel}}</text>
+          <text class="news-info">{{item.channel}} · {{item.time}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

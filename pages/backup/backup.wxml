@@ -1,0 +1,28 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">原型演示：备份到本地缓存</text>
+  </view>
+
+  <view class="card">
+    <view class="kv-list">
+      <view class="kv-item">
+        <text class="kv-item-label">血糖/饮食记录</text>
+        <text class="kv-item-value">{{recordDays}} 天</text>
+      </view>
+      <view class="kv-item">
+        <text class="kv-item-label">上次备份</text>
+        <text class="kv-item-value">{{lastBackup || '暂无'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <button class="btn-primary btn-block btn-sm" bindtap="onBackup">立即备份</button>
+    <button class="btn-ghost btn-block btn-sm restore-btn" bindtap="onRestore">从备份恢复</button>
+  </view>
+
+  <view class="card tip-card">
+    <text class="tip-line">备份内容包含：个人资料、今日及历史血糖/饮食记录。</text>
+    <text class="tip-line">原型阶段仅写入本机 Storage，不上传服务器。</text>
+  </view>
+</view>
