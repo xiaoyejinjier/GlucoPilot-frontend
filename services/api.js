@@ -1,4 +1,5 @@
 const { get, post, put, del, setToken } = require('../utils/request')
+const { openSse } = require('../utils/sse')
 
 const CHANNEL_NAMES = ['', '企业动态', '行业快讯', '设备新知', '控糖科普']
 
@@ -129,6 +130,36 @@ function fetchFoods(params) {
   })
 }
 
+/** ---------- chat（接口文档 2.23 / 2.24 / 2.25） ---------- */
+
+/** 2.23 获取或创建进行中的会话 */
+function getOrCreateChatSession(sessionType) {
+  return post('/chat-sessions/current', { sessionType: sessionType || 3 }, { auth: true })
+}
+
+/** 2.24 发送消息（clientMsgId 幂等，重复提交返回同一条） */
+function sendChatMessage(sessionId, payload) {
+  return post(`/chat-sessions/${sessionId}/messages`, payload, { auth: true })
+}
+
+/**
+ * 2.25 AI 流式补全（SSE）。
+ * @param {string} sessionId
+ * @param {object} payload { clientMsgId, replyToMsgId, stream }
+ * @param {object} handlers { onEvent, onError, onComplete }
+ * @returns {{abort: function}}
+ */
+function streamChatCompletion(sessionId, payload, handlers) {
+  const h = handlers || {}
+  return openSse({
+    url: `/chat-sessions/${sessionId}/completions`,
+    data: payload,
+    onEvent: h.onEvent,
+    onError: h.onError,
+    onComplete: h.onComplete
+  })
+}
+
 /** ---------- device ---------- */
 function syncMockGlucose(readings) {
   return post('/device/glucose-sync', {
@@ -160,6 +191,9 @@ module.exports = {
   updateNewsAction,
   fetchFoodCategories,
   fetchFoods,
+  getOrCreateChatSession,
+  sendChatMessage,
+  streamChatCompletion,
   syncMockGlucose,
   defaultMockReadings,
   mapNewsItem,

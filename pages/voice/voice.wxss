@@ -156,3 +156,21 @@
   color: #fff;
   border-color: var(--brand);
 }
+
+/* 流式进行中：还没有内容时显示占位 */
+.wx-typing {
+  color: var(--muted);
+}
+
+/* 失败后的重试入口 */
+.wx-retry {
+  margin-top: 12rpx;
+  font-size: var(--fs-small);
+  color: var(--brand);
+  text-decoration: underline;
+}
+
+/* 回复中禁用发送，避免重复提交 */
+.wx-btn.send.disabled {
+  opacity: 0.55;
+}

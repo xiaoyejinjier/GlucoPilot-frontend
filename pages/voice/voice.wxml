@@ -12,7 +12,11 @@
           data-src="{{item.imagePath}}"
           bindtap="onPreviewImage"
         />
-        <text wx:else>{{item.content}}</text>
+        <block wx:else>
+          <text wx:if="{{item.pending && !item.content}}" class="wx-typing">正在思考…</text>
+          <text wx:else>{{item.content}}</text>
+          <view wx:if="{{item.error}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
+        </block>
       </view>
     </view>
     <view id="msg-bottom"></view>
@@ -25,7 +29,7 @@
         <view class="icon-pic"></view>
       </view>
       <input class="wx-input" placeholder="请输入问题" value="{{inputValue}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
-      <view class="wx-btn send" bindtap="onSend">发送</view>
+      <view class="wx-btn send {{sending ? 'disabled' : ''}}" bindtap="onSend">{{sending ? '回复中' : '发送'}}</view>
     </block>
     <block wx:else>
       <view class="wx-btn icon-btn" bindtap="onChooseImage">

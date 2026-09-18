@@ -64,10 +64,5 @@
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
-  "lazyCodeLoading": "requiredComponents",
-  "permission": {
-    "scope.camera": {
-      "desc": "用于拍摄饮食照片与血糖仪读数"
-    }
-  }
+  "lazyCodeLoading": "requiredComponents"
 }
