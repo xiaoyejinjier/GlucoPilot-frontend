@@ -1,4 +1,4 @@
-# 更新说明 · frontend/wcy
+# 更新说明 · frontend
 
 ## 2026-09-10
 
