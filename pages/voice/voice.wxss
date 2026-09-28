@@ -1,6 +1,15 @@
 .voice-page {
   display: flex;
   flex-direction: column;
+  /*
+   * 关键：必须给"确定高度"，不能让 .page 的 min-height:100vh 兜底。
+   * 原因：.wx-body 用的是 flex:1 + height:0（标准聊天布局），它要求父容器高度确定；
+   * 若父容器只有 min-height，高度会由内容决定 → scroll-view 被撑到等于自身内容高度
+   * → 内部无可滚动空间，同时它又会吃掉落在它身上的滑动手势 → 表现为「内容超出屏幕却滑不动」。
+   * box-sizing 由 .page 提供（border-box），因此这里 100vh 已包含底部 TabBar 的留白。
+   */
+  height: 100vh;
+  overflow: hidden;
   background: var(--bg);
 }
 
