@@ -72,8 +72,8 @@
     "disableSWC": true
   },
   "compileType": "miniprogram",
-  "libVersion": "3.5.5",
-  "appid": "wxf72eca21e7f2314a",
+  "libVersion": "3.17.3",
+  "appid": "wx38053b27b95e9e78",
   "projectname": "控糖健康管理系统",
   "condition": {},
   "editorSetting": {
