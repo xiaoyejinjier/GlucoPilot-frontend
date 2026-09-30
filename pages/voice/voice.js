@@ -1,5 +1,6 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const api = require('../../services/api')
+const media = require('../../utils/media')
 const app = getApp()
 
 /** 增量文本合并刷新间隔：模型会推数百个 delta，逐个 setData 在真机上会卡 */
@@ -106,23 +107,82 @@ Page({
     this.sendText(text)
   },
 
-  /** 发一轮新消息：乐观插入用户气泡 → 写库 → 开流 */
+  /** 发一轮文本消息：乐观插入用户气泡 → 写库 → 开流 */
   sendText(text) {
-    const userMsg = { id: this.nextLocalId(), role: 'user', type: 'text', content: text }
+    this.appendRound(
+      { id: this.nextLocalId(), role: 'user', type: 'text', content: text },
+      { msgType: 1, contentText: text }
+    )
+  },
+
+  /**
+   * 发一轮图片消息：本地气泡先显示 → 上传（凭证/直传/登记）→ 写库 → 开流。
+   * 与文本轮次共用 {@link startRound} 之后的全部链路，因此 SSE、幂等、重试语义完全一致。
+   *
+   * 用户在选图前已经输入的文字会作为 contentText 一起带上（后端支持「图 + 文字」），
+   * 这正是两阶段里阶段 1 的识别线索来源。
+   */
+  sendImage(filePath) {
+    const caption = (this.data.inputValue || '').trim()
+    const userMsg = {
+      id: this.nextLocalId(),
+      role: 'user',
+      type: 'image',
+      imagePath: filePath,
+      content: caption,
+      /** 登记完成前为 true：用于在气泡上显示「图片上传中…」，此时还没有 mediaId */
+      uploading: true
+    }
+    const aiMsg = { id: this.nextLocalId(), role: 'ai', type: 'text', content: '', pending: true }
+    // 乐观插入：先让用户看到自己选的图，上传失败也不至于以为没选中
+    this.setData({
+      messages: this.data.messages.concat([userMsg, aiMsg]),
+      sending: true,
+      inputValue: '',
+      scrollIntoView: 'msg-bottom'
+    })
+    this.uploadImageThenSend(userMsg.id, aiMsg.id)
+  },
+
+  /**
+   * 上传一张图并在成功后开一轮。抽出来是为了让「首次发送」和「上传失败后重试」
+   * 走同一段代码——两者只差一个调用入口，逻辑分叉迟早会出现只修一边的情况。
+   */
+  uploadImageThenSend(userLocalId, aiLocalId) {
+    const userMsg = this.findMessage(userLocalId)
+    if (!userMsg || !userMsg.imagePath) return
+
+    media
+      .uploadChatImage(userMsg.imagePath)
+      .then((record) => {
+        this.patchMessage(userLocalId, () => ({ uploading: false, mediaId: record.id }))
+        this.startRound(
+          { msgType: 2, mediaId: record.id, contentText: userMsg.content || undefined },
+          aiLocalId
+        )
+      })
+      .catch((err) => {
+        this.patchMessage(userLocalId, () => ({ uploading: false }))
+        this.failRound(aiLocalId, err)
+      })
+  },
+
+  /** 乐观插入「用户气泡 + AI 占位」并进入 startRound。图片轮次在上传完成后才走到这里。 */
+  appendRound(userMsg, payload) {
     const aiMsg = { id: this.nextLocalId(), role: 'ai', type: 'text', content: '', pending: true }
     this.setData({
       messages: this.data.messages.concat([userMsg, aiMsg]),
       sending: true,
       scrollIntoView: 'msg-bottom'
     })
-    this.startRound(text, aiMsg.id)
+    this.startRound(payload, aiMsg.id)
   },
 
-  startRound(text, aiLocalId) {
+  startRound(payload, aiLocalId) {
     const clientMsgId = genClientMsgId()
     this.ensureSession()
       .then((sessionId) =>
-        api.sendChatMessage(sessionId, { clientMsgId, msgType: 1, contentText: text }).then((saved) => {
+        api.sendChatMessage(sessionId, Object.assign({ clientMsgId }, payload)).then((saved) => {
           this._currentRound = {
             sessionId,
             clientMsgId,
@@ -262,30 +322,80 @@ Page({
     }
 
     // 用户消息没写成功：整轮重发
-    const text = this.findUserTextBefore(id)
-    if (!text) return
+    const userMsg = this.findUserMessageBefore(id)
+    if (!userMsg) return
     this.patchMessage(id, () => ({ content: '', error: false, pending: true }))
     this.setData({ sending: true })
-    this.startRound(text, id)
+
+    const payload = this.payloadOf(userMsg)
+    if (!payload) {
+      // 图片停在「上传失败 / 未登记成功」：从本地临时路径重走一遍上传，
+      // 而不是让用户重新选一次图——重试的意义就在于不用重做已经做过的部分
+      this.patchMessage(userMsg.id, () => ({ uploading: true }))
+      this.uploadImageThenSend(userMsg.id, id)
+      return
+    }
+    this.startRound(payload, id)
   },
 
-  findUserTextBefore(aiLocalId) {
+  /** 从本地气泡重建 2.24 的入参；图片尚未登记（没有 mediaId）时返回 null。 */
+  payloadOf(userMsg) {
+    if (userMsg.type === 'image') {
+      if (!userMsg.mediaId) return null
+      return { msgType: 2, mediaId: userMsg.mediaId, contentText: userMsg.content || undefined }
+    }
+    return { msgType: 1, contentText: userMsg.content }
+  },
+
+  findMessage(localId) {
+    return this.data.messages.find((m) => m.id === localId) || null
+  },
+
+  /** 找某个 AI 气泡前面最近的一条用户气泡（整轮重发要连它一起重建）。 */
+  findUserMessageBefore(aiLocalId) {
     const messages = this.data.messages
     for (let i = 0; i < messages.length; i += 1) {
       if (messages[i].id === aiLocalId) {
         for (let k = i - 1; k >= 0; k -= 1) {
-          if (messages[k].role === 'user') return messages[k].content
+          if (messages[k].role === 'user') return messages[k]
         }
-        return ''
+        return null
       }
     }
-    return ''
+    return null
   },
 
-  /** ---------- 图片 / 语音（后端 media、ASR 未实现，先明确告知而不是造假数据） ---------- */
+  /** ---------- 图片 / 语音 ---------- */
 
+  /**
+   * 选图并发起一轮图片消息。
+   * 只做「选」，上传与发送交给 sendImage，避免这个回调过长难以阅读。
+   */
   onChooseImage() {
-    wx.showToast({ title: '图片对话暂未开放', icon: 'none' })
+    if (this.data.sending) {
+      wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
+      return
+    }
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      // 压缩后再上传：原图常常超过视觉识别的 5MB 上限
+      sizeType: ['compressed'],
+      success: (res) => {
+        const file = (res.tempFiles || [])[0]
+        if (file && file.tempFilePath) {
+          this.sendImage(file.tempFilePath)
+        }
+      },
+      fail: (err) => {
+        // 用户主动取消不算错误，只有真正失败才提示
+        const msg = (err && err.errMsg) || ''
+        if (msg.indexOf('cancel') === -1) {
+          wx.showToast({ title: '选择图片失败', icon: 'none' })
+        }
+      }
+    })
   },
 
   onToggleVoiceMode() {

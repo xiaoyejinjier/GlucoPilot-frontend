@@ -160,6 +160,21 @@ function streamChatCompletion(sessionId, payload, handlers) {
   })
 }
 
+/** ---------- media（接口 2.14 上传凭证 / 2.15 登记媒体） ---------- */
+
+/** 2.14 取预签名直传凭证。返回 { uploadUrl, storageKey, expireIn }。 */
+function createMediaUploadCredential(bizType, mimeType, sizeBytes) {
+  return post('/media-files/upload-credentials', { bizType, mimeType, sizeBytes }, { auth: true })
+}
+
+/**
+ * 2.15 登记已直传的对象，返回 media_file 记录（含 id，供 2.24 的 mediaId 使用）。
+ * sha256Hex 可选：留空即跳过去重，由服务端按需处理。
+ */
+function registerMediaFile(payload) {
+  return post('/media-files', payload, { auth: true })
+}
+
 /** ---------- device ---------- */
 function syncMockGlucose(readings) {
   return post('/device/glucose-sync', {
@@ -194,6 +209,8 @@ module.exports = {
   getOrCreateChatSession,
   sendChatMessage,
   streamChatCompletion,
+  createMediaUploadCredential,
+  registerMediaFile,
   syncMockGlucose,
   defaultMockReadings,
   mapNewsItem,

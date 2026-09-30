@@ -115,34 +115,10 @@
   flex-shrink: 0;
 }
 
-.wx-btn.icon-btn {
-  width: 72rpx;
-  padding: 0;
-}
-
 .wx-btn.send {
   background: var(--brand);
   color: #fff;
   border: none;
-}
-
-.icon-pic {
-  width: 36rpx;
-  height: 28rpx;
-  border: 3rpx solid var(--muted);
-  border-radius: 6rpx;
-  position: relative;
-}
-
-.icon-pic::after {
-  content: '';
-  position: absolute;
-  left: 6rpx;
-  top: 6rpx;
-  width: 10rpx;
-  height: 10rpx;
-  border-radius: 50%;
-  background: var(--muted);
 }
 
 .wx-hold {

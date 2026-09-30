@@ -167,13 +167,22 @@ function openSse(options) {
     success: (res) => {
       // 已正常收到 done/error，按正常结束处理
       if (!terminal) {
-        // 开流前的校验失败会返回统一 JSON 错误体（HTTP 4xx/5xx），这里兜底解析
-        const raw = String(rawText || textBuffer || '').trim()
+        // 开流前的校验失败会返回统一 JSON 错误体（HTTP 4xx/5xx），这里兜底解析。
+        // ⚠️ body 的来源有三种可能，必须都试过再放弃，否则会把后端写好的中文原因吞成
+        //    「请求失败(400)」这种无用文案（本项目真实发生过）：
+        //   1) res.data 已经是对象——Content-Type: application/json 时小程序会自动解析；
+        //   2) res.data 是字符串；
+        //   3) 走 onChunkReceived 累积的 rawText——个别基础库会把非流式响应也按 chunk 派发。
         let parsed = null
-        try {
-          parsed = JSON.parse(raw)
-        } catch (e) {
-          parsed = null
+        if (res.data && typeof res.data === 'object') {
+          parsed = res.data
+        } else {
+          const raw = String(res.data || rawText || textBuffer || '').trim()
+          try {
+            parsed = JSON.parse(raw)
+          } catch (e) {
+            parsed = null
+          }
         }
         if (parsed && typeof parsed.code !== 'undefined' && parsed.code !== 0) {
           finish(Object.assign(new Error(parsed.message || `请求失败(${res.statusCode})`), {

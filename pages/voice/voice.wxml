@@ -4,14 +4,17 @@
     <view wx:for="{{messages}}" wx:key="id" class="wx-row {{item.role === 'user' ? 'user' : ''}}">
       <view class="wx-avatar">{{item.role === 'user' ? '我' : 'AI'}}</view>
       <view class="wx-bubble">
-        <image
-          wx:if="{{item.type === 'image'}}"
-          class="wx-msg-img"
-          src="{{item.imagePath}}"
-          mode="widthFix"
-          data-src="{{item.imagePath}}"
-          bindtap="onPreviewImage"
-        />
+        <block wx:if="{{item.type === 'image'}}">
+          <image
+            class="wx-msg-img"
+            src="{{item.imagePath}}"
+            mode="widthFix"
+            data-src="{{item.imagePath}}"
+            bindtap="onPreviewImage"
+          />
+          <!-- 直传+登记完成前还没有 mediaId，给一个明确的过程提示 -->
+          <text wx:if="{{item.uploading}}" class="wx-typing">图片上传中…</text>
+        </block>
         <block wx:else>
           <text wx:if="{{item.pending && !item.content}}" class="wx-typing">正在思考…</text>
           <text wx:else>{{item.content}}</text>
@@ -25,16 +28,12 @@
   <view class="wx-foot">
     <view class="wx-btn" bindtap="onToggleVoiceMode">{{voiceMode ? '键盘' : '语音'}}</view>
     <block wx:if="{{!voiceMode}}">
-      <view class="wx-btn icon-btn" bindtap="onChooseImage">
-        <view class="icon-pic"></view>
-      </view>
+      <view class="wx-btn" bindtap="onChooseImage">图片</view>
       <input class="wx-input" placeholder="请输入问题" value="{{inputValue}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
       <view class="wx-btn send {{sending ? 'disabled' : ''}}" bindtap="onSend">{{sending ? '回复中' : '发送'}}</view>
     </block>
     <block wx:else>
-      <view class="wx-btn icon-btn" bindtap="onChooseImage">
-        <view class="icon-pic"></view>
-      </view>
+      <view class="wx-btn" bindtap="onChooseImage">图片</view>
       <view
         class="wx-hold {{recording ? 'on' : ''}}"
         bindtouchstart="onHoldStart"
