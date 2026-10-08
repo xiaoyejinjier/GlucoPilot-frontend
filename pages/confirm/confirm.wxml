@@ -10,24 +10,25 @@
   </view>
 
   <view class="card">
-    <view class="section-title">自动识别出的血糖值</view>
+    <view class="section-title">本次血糖值</view>
     <view class="manual-check" bindtap="onToggleManual">
       <text class="check-icon">{{manualEdit ? '☑' : '☐'}}</text>
-      <text>识别有误，手动修改</text>
+      <text>手动修改</text>
     </view>
     <view class="value-box">
       <input
         wx:if="{{manualEdit}}"
         class="value-input"
         type="digit"
+        placeholder="请输入血糖值"
         value="{{value}}"
         bindinput="onValueInput"
         focus
       />
-      <text wx:else class="value-num">{{value}}</text>
+      <text wx:else class="value-num">{{value || '待填写'}}</text>
       <text class="value-unit">mmol/L</text>
     </view>
-    <text class="warn-text">设计红线：识别结果绝不自动保存，必须用户确认。</text>
+    <text class="warn-text">血糖值必须经你确认后才会保存。</text>
     <view class="actions-row">
       <button class="btn-ghost btn-sm" bindtap="onBack" disabled="{{busy}}">返回</button>
       <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{busy}}">确认</button>

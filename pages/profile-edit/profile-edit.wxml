@@ -28,7 +28,15 @@
     </view>
     <view class="form-item">
       <text class="label">糖尿病类型</text>
-      <input class="input" value="{{form.diabetesType}}" bindinput="onField" data-key="diabetesType" />
+      <picker
+        class="input"
+        mode="selector"
+        range="{{diabetesOptions}}"
+        value="{{diabetesIndex}}"
+        bindchange="onDiabetesChange"
+      >
+        <view class="picker-value">{{diabetesOptions[diabetesIndex]}}</view>
+      </picker>
     </view>
     <view class="form-item">
       <text class="label">确诊时间</text>

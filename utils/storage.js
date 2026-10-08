@@ -1,30 +1,21 @@
+/**
+ * 本地离线缓存。
+ *
+ * 唯一数据源是后端接口（见 services/api.js）：这里只在接口成功返回后落一份缓存，
+ * 供小程序冷启动或断网时先渲染上一份数据，不再提供任何演示/兜底假数据。
+ */
 const { GLUCOSE_NODES } = require('./constants')
 
-const DEFAULT_USER = {
-  nickname: '吴先生',
-  avatarText: '吴',
-  diabetesType: '2 型糖尿病',
-  age: 42,
-  confirmDate: '2021-06',
-  medication: '二甲双胍 0.5g bid',
-  exercise: '每周快走 3 次'
-}
-
-const DEFAULT_RECORDS = {
-  before_breakfast: { value: 5.8, type: 'glucose' },
-  after_breakfast: { value: 7.6, type: 'glucose' },
-  before_lunch: { value: 6.1, type: 'glucose' }
-}
-
-function getTodayKey() {
-  const d = new Date()
+function getTodayKey(date) {
+  const d = date || new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** 今日血糖缓存：{ nodeId: { value, type } }，无数据返回空对象。 */
 function getRecords(date) {
   const key = date || getTodayKey()
   const all = wx.getStorageSync('glucoseRecords') || {}
-  return all[key] || { ...DEFAULT_RECORDS }
+  return all[key] || {}
 }
 
 function getAllRecords() {
@@ -40,16 +31,34 @@ function saveRecord(nodeId, data, date) {
   return all[key]
 }
 
+/**
+ * 使用日看板接口返回的数据覆盖某一天的缓存。
+ * 只替换指定日期，保留其他日期，避免一次刷新把历史缓存清空。
+ */
+function replaceDayRecords(date, records) {
+  const key = date || getTodayKey()
+  const all = wx.getStorageSync('glucoseRecords') || {}
+  all[key] = records || {}
+  wx.setStorageSync('glucoseRecords', all)
+  return all[key]
+}
+
+/** 用接口返回的区间记录整体覆盖缓存，避免本地与后端长期不一致。 */
+function replaceRecords(recordsByDate) {
+  wx.setStorageSync('glucoseRecords', recordsByDate || {})
+}
+
 function getRecordCount(records) {
   return Object.keys(records || {}).length
 }
 
+/** 当前用户资料缓存；未登录或未拉取过时返回 null。 */
 function getUserInfo() {
-  return wx.getStorageSync('userInfo') || { ...DEFAULT_USER }
+  return wx.getStorageSync('userInfo') || null
 }
 
 function saveUserInfo(info) {
-  wx.setStorageSync('userInfo', { ...DEFAULT_USER, ...info })
+  wx.setStorageSync('userInfo', info || null)
 }
 
 function login(userInfo) {
@@ -60,34 +69,8 @@ function login(userInfo) {
 function logout() {
   wx.removeStorageSync('isLoggedIn')
   wx.removeStorageSync('accessToken')
-}
-
-/** 日历打卡：1–3 红 / 4–6 橙 / ≥7 绿；部分天为 0 不着色 */
-function getCalendarData(year, month) {
-  const data = {}
-  const all = getAllRecords()
-  const pad = (n) => (n < 10 ? '0' + n : '' + n)
-  const daysInMonth = new Date(year, month, 0).getDate()
-  // 示意次数：含若干 0，颜色按次数映射（非乱标）
-  const demoCounts = [2, 0, 5, 1, 0, 7, 3, 0, 6, 4, 8, 0, 2, 9, 1, 0, 5, 3, 0, 7, 4, 0, 6, 2, 0, 8, 3, 0, 5, 1, 0]
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const key = `${year}-${pad(month)}-${pad(d)}`
-    const dayRec = all[key]
-    let count = dayRec ? Object.keys(dayRec).length : 0
-    if (!dayRec) {
-      count = demoCounts[(d - 1) % demoCounts.length]
-    }
-    if (count <= 0) continue
-
-    // a=绿 b=橙 c=红（图例色不变）：1–3→红c，4–6→橙b，≥7→绿a
-    let level = 'c'
-    if (count >= 7) level = 'a'
-    else if (count >= 4) level = 'b'
-
-    data[d] = { level, count }
-  }
-  return data
+  wx.removeStorageSync('userInfo')
+  wx.removeStorageSync('glucoseRecords')
 }
 
 module.exports = {
@@ -96,11 +79,11 @@ module.exports = {
   getRecords,
   getAllRecords,
   saveRecord,
+  replaceDayRecords,
+  replaceRecords,
   getRecordCount,
   getUserInfo,
   saveUserInfo,
   login,
-  logout,
-  getCalendarData,
-  DEFAULT_USER
+  logout
 }

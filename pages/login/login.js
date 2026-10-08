@@ -1,4 +1,4 @@
-const { login, getUserInfo } = require('../../utils/storage')
+const { login } = require('../../utils/storage')
 const { applyDisplayToCurrentPage, getDisplayStyle } = require('../../utils/display')
 const { wechatLogin, sendSmsCode, phoneLogin } = require('../../services/api')
 const app = getApp()
@@ -28,12 +28,12 @@ Page({
   },
 
   finishLogin(session) {
-    login({
-      nickname: session && session.isNewUser ? '新用户' : getUserInfo().nickname,
-      needDisclaimer: !!(session && session.needDisclaimer)
-    })
+    login()
     app.globalData.isLoggedIn = true
-    app.globalData.userInfo = getUserInfo()
+    // 资料与偏好由 app.syncProfile 从 /users/me 拉取后回填
+    if (typeof app.syncProfile === 'function') {
+      app.syncProfile()
+    }
     wx.switchTab({ url: '/pages/index/index' })
   },
 

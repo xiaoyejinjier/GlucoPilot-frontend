@@ -11,7 +11,7 @@ Page({
   },
 
   onLoad(options) {
-    const imagePath = readShotImage() || '/assets/foods/rice.jpg'
+    const imagePath = readShotImage() || '/assets/foods/rice.svg'
 
     this.setData({
       nodeId: options.nodeId || 'breakfast',
@@ -30,7 +30,7 @@ Page({
   },
 
   onImgError() {
-    const fallback = '/assets/foods/rice.jpg'
+    const fallback = '/assets/foods/rice.svg'
     if (this.data.imagePath !== fallback) {
       this.setData({ imagePath: fallback })
     }

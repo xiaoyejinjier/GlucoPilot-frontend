@@ -24,7 +24,7 @@ Page({
   },
 
   onLoad(options) {
-    const imagePath = readShotImage() || '/assets/foods/rice.jpg'
+    const imagePath = readShotImage() || '/assets/foods/rice.svg'
     this.setData({
       nodeId: options.nodeId || 'breakfast',
       nodeName: decodeURIComponent(options.nodeName || '早餐'),

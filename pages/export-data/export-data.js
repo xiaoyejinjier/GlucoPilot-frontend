@@ -1,7 +1,12 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
+const { fetchGlucoseRecords } = require('../../services/api')
 
 const ITEM_RPX = 72
 const VISIBLE = 5 // 上下各 2 + 中间 1
+
+/** 后端 PageQuery 的 pageSize 上限是 100，导出要翻页取全 */
+const PAGE_SIZE = 100
+const MAX_PAGES = 20
 
 function pad(n) {
   return n < 10 ? '0' + n : '' + n
@@ -9,6 +14,41 @@ function pad(n) {
 
 function daysInMonth(year, month) {
   return new Date(year, month, 0).getDate()
+}
+
+/** 接口记录 -> { 'YYYY-MM-DD': { nodeCode: { value, sourceType } } }，与导出模板一致 */
+function groupByDate(records) {
+  const out = {}
+  ;(records || []).forEach((r) => {
+    const day = r.recordDate
+    if (!day || r.value == null) return
+    if (!out[day]) out[day] = {}
+    out[day][r.nodeCode] = { value: r.value, sourceType: r.sourceType }
+  })
+  return out
+}
+
+/** 翻页拉取当前用户的全部血糖记录，缓存到 this._recordsByDate */
+function loadAllRecords(page) {
+  const all = []
+  const next = (pageNum) =>
+    fetchGlucoseRecords({ pageNum, pageSize: PAGE_SIZE }).then((res) => {
+      const records = res.records || []
+      all.push(...records)
+      const hasMore = records.length === PAGE_SIZE && pageNum < MAX_PAGES
+      return hasMore ? next(pageNum + 1) : all
+    })
+
+  return next(1)
+    .then((records) => {
+      page._recordsByDate = groupByDate(records)
+      return page._recordsByDate
+    })
+    .catch((err) => {
+      page._recordsByDate = {}
+      wx.showToast({ title: err.message || '记录加载失败', icon: 'none' })
+      return {}
+    })
 }
 
 function buildMonths() {
@@ -258,31 +298,25 @@ Page({
   },
 
   refreshPreview() {
-    const all = wx.getStorageSync('glucoseRecords') || {}
-    let count = 0
     const { activeRange, customStart, customEnd } = this.data
 
-    Object.keys(all).forEach(day => {
-      const dayCount = Object.keys(all[day] || {}).length
-      if (activeRange === 'custom' && customStart && customEnd) {
-        if (day >= customStart && day <= customEnd) count += dayCount
-      } else {
-        count += dayCount
-      }
+    return loadAllRecords(this).then((all) => {
+      let count = 0
+      Object.keys(all).forEach(day => {
+        const dayCount = Object.keys(all[day] || {}).length
+        if (activeRange === 'custom' && customStart && customEnd) {
+          if (day >= customStart && day <= customEnd) count += dayCount
+        } else {
+          count += dayCount
+        }
+      })
+
+      this.setData({ previewCount: count })
     })
-
-    if (activeRange !== 'custom') {
-      const factor = activeRange === '30' ? 1 : 0.3
-      count = Math.max(count, Math.ceil(count * factor) || 3)
-    } else if (!count) {
-      count = 3
-    }
-
-    this.setData({ previewCount: count })
   },
 
   buildExportText() {
-    const all = wx.getStorageSync('glucoseRecords') || {}
+    const all = this._recordsByDate || {}
     const lines = [`【控糖助手导出】`, `范围：${this.data.rangeLabel}`, `导出时间：${this.formatNow()}`, '']
     let days = Object.keys(all).sort()
 
@@ -324,6 +358,11 @@ Page({
     }
 
     this.setData({ exporting: true })
+    // 导出前重新拉一次，保证导的是库里的最新记录
+    loadAllRecords(this).then(() => this.doExport())
+  },
+
+  doExport() {
     const text = this.buildExportText()
     const stamp = this.formatNow().replace(/[:\s-]/g, '')
     const filePath = `${wx.env.USER_DATA_PATH}/控糖导出_${stamp}.txt`

@@ -197,7 +197,8 @@ Page({
         })
       } else {
         wx.navigateTo({
-          url: `/pages/confirm/confirm?nodeId=${nodeId}&nodeName=${name}&value=6.8`,
+          // 不预填血糖值：本项目还没有 OCR，预填等于凭空造一个"识别结果"
+          url: `/pages/confirm/confirm?nodeId=${nodeId}&nodeName=${name}`,
           complete: done,
           fail: done
         })

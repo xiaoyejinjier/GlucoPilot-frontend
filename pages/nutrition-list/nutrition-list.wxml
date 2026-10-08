@@ -7,13 +7,22 @@
     <view wx:if="{{list.length === 0}}" class="empty">该类暂无示例数据</view>
     <view
       wx:for="{{list}}"
-      wx:key="name"
+      wx:key="index"
       class="food-row"
-      data-name="{{item.name}}"
+      data-index="{{index}}"
       bindtap="onFoodTap"
     >
-      <text class="food-name">{{item.name}}</text>
-      <text class="food-val">{{item.carbs}}克碳水/100g</text>
+      <image
+        class="food-thumb"
+        src="{{item.image}}"
+        mode="aspectFill"
+        data-index="{{index}}"
+        binderror="onImageError"
+      />
+      <view class="food-main">
+        <text class="food-name">{{item.name}}</text>
+        <text class="food-val">{{item.carbs}}克碳水/100g</text>
+      </view>
     </view>
   </view>
 </view>

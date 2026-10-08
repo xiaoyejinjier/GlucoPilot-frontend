@@ -91,12 +91,11 @@
     <view class="card">
       <view class="section-title">
         <text>血糖一周曲线</text>
-        <text class="chart-label">双色对比</text>
+        <text class="chart-label">按日均值</text>
       </view>
       <canvas type="2d" id="weekChart" class="chart-canvas"></canvas>
       <view class="legend">
-        <text class="legend-item"><text class="legend-dot a"></text>实际数值</text>
-        <text class="legend-item"><text class="legend-dot pred"></text>预估数值</text>
+        <text class="legend-item"><text class="legend-dot a"></text>日均血糖（无记录日断开）</text>
       </view>
     </view>
 
@@ -119,7 +118,7 @@
     </view>
 
     <view class="card">
-      <view class="section-title">时段分布（示意）</view>
+      <view class="section-title">时段分布</view>
       <view class="dist-row" wx:for="{{slotStats}}" wx:key="name">
         <text class="dist-name">{{item.name}}</text>
         <view class="dist-bar-bg">
