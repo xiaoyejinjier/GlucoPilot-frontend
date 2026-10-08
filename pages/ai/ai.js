@@ -1,5 +1,7 @@
 const { GLUCOSE_NODES, getGlucoseStatus } = require('../../utils/constants')
-const { getRecords, getRecordCount } = require('../../utils/storage')
+const { fetchDayBoard } = require('../../services/api')
+const { getToken } = require('../../utils/request')
+const { getTodayKey, getRecords, getRecordCount, replaceDayRecords } = require('../../utils/storage')
 const { applyDisplayToCurrentPage, getTheme, getDisplaySettings } = require('../../utils/display')
 
 Page({
@@ -14,7 +16,35 @@ Page({
       this.getTabBar().setData({ selected: 2 })
     }
     applyDisplayToCurrentPage()
+    // 先用本地缓存立即渲染，再用数据库中的当天记录校准页面。
     this.loadData()
+    this.syncTodayFromServer()
+  },
+
+  syncTodayFromServer() {
+    if (!getToken()) return
+
+    const recordDate = getTodayKey()
+    fetchDayBoard(recordDate)
+      .then((board) => {
+        const records = {}
+        ;(board.nodes || []).forEach((node) => {
+          if (!node.hasRecord) return
+          records[node.nodeCode || node.id] = {
+            value: node.value,
+            type: node.recordKind || 'glucose',
+            remark: node.remark || ''
+          }
+        })
+        replaceDayRecords(recordDate, records)
+        this.loadData()
+      })
+      .catch((err) => {
+        // 网络异常时继续展示本地缓存；登录失效由统一请求层处理。
+        if (err && err.code !== 40100) {
+          console.warn('同步今日血糖记录失败', err)
+        }
+      })
   },
 
   loadData() {

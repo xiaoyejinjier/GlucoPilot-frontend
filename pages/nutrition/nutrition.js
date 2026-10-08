@@ -1,8 +1,9 @@
 const { FOOD_CATEGORIES } = require('../../utils/constants')
 const { searchFoods, getFoodsByCategory } = require('../../utils/food-db')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
-const { fetchFoodCategories, fetchFoods } = require('../../services/api')
+const { fetchFoodCategories, fetchFoods, fetchFoodDetail } = require('../../services/api')
 const config = require('../../utils/config')
+const { DEFAULT_FOOD_IMAGE } = require('../../utils/food-images')
 
 Page({
   data: {
@@ -43,53 +44,65 @@ Page({
       this.setData({ searchResults: [] })
       return
     }
-
-    fetchFoods({ keyword, pageNum: 1, pageSize: 50 })
-      .then((page) => {
-        const records = (page && page.records) || []
-        if (records.length || this.data.usingRemote) {
-          this.setData({ searchResults: records })
-        } else {
-          this.setData({ searchResults: searchFoods(keyword) })
-        }
-      })
-      .catch(() => {
-        this.setData({ searchResults: searchFoods(keyword) })
-      })
+    this.query({ keyword })
   },
 
   onCategoryTap(e) {
     const cat = e.currentTarget.dataset.cat
     const meta = (this.data.categoryMeta || []).find((c) => c.categoryName === cat)
     this.setData({ keyword: cat })
+    // 优先按分类主键过滤，未拉到分类时退回本地演示数据
+    this.query(meta && meta.id ? { categoryId: meta.id } : null, cat)
+  },
 
-    if (meta && meta.id) {
-      // 按大类枚举码筛：与种子 category_code / 分类顺序对齐
-      const code = this.data.categoryMeta.findIndex((c) => c.categoryName === cat) + 1
-      fetchFoods({ categoryCode: code > 0 ? code : undefined, pageNum: 1, pageSize: 50 })
-        .then((page) => {
-          const records = ((page && page.records) || []).map((f) => ({ ...f, category: cat }))
-          this.setData({
-            searchResults: records.length ? records : getFoodsByCategory(cat)
-          })
-        })
-        .catch(() => {
-          this.setData({ searchResults: getFoodsByCategory(cat) })
-        })
+  query(params, fallbackCategory) {
+    if (!params) {
+      this.setData({ searchResults: getFoodsByCategory(fallbackCategory) })
       return
     }
-
-    this.setData({ searchResults: getFoodsByCategory(cat) })
+    fetchFoods({ ...params, pageNum: 1, pageSize: 100 })
+      .then((page) => {
+        const records = (page && page.records) || []
+        this.setData({
+          searchResults: records.length ? records : getFoodsByCategory(fallbackCategory)
+        })
+      })
+      .catch(() => {
+        this.setData({
+          searchResults: fallbackCategory
+            ? getFoodsByCategory(fallbackCategory)
+            : searchFoods(this.data.keyword)
+        })
+      })
   },
 
   onFoodTap(e) {
-    const name = e.currentTarget.dataset.name
-    const food = this.data.searchResults.find((f) => f.name === name)
+    const food = this.data.searchResults[Number(e.currentTarget.dataset.index)]
     if (!food) return
-    wx.showModal({
-      title: food.name,
-      content: `${food.carbs}克碳水/100g · 热量 ${food.cal}kcal`,
+
+    const show = (item) => wx.showModal({
+      title: item.name,
+      content: [
+        `${item.carbs}克碳水/100g`,
+        `热量 ${item.cal}kcal`,
+        item.gi != null ? `GI ${item.gi}` : 'GI 暂无数据'
+      ].join(' · '),
       showCancel: false
     })
+
+    // 本地降级数据没有后端 id，直接展示已有字段
+    if (!food.id) {
+      show(food)
+      return
+    }
+    fetchFoodDetail(food.id)
+      .then(show)
+      .catch((err) => wx.showToast({ title: err.message || '详情加载失败', icon: 'none' }))
+  },
+
+  onImageError(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || !this.data.searchResults[index]) return
+    this.setData({ [`searchResults[${index}].image`]: DEFAULT_FOOD_IMAGE })
   }
 })

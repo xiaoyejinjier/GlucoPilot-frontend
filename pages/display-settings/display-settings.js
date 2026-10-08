@@ -6,6 +6,8 @@ const {
   getTheme,
   THEME_MAP
 } = require('../../utils/display')
+const { fetchMe, updateSettings } = require('../../services/api')
+const { fontNameOf, fontCodeOf, themeIdOf, themeCodeOf } = require('../../utils/mappers')
 
 Page({
   data: {
@@ -23,6 +25,13 @@ Page({
 
   onLoad() {
     this.loadAndApply()
+    // 服务端是偏好设置的唯一数据源，拉取后覆盖本地并重新应用
+    fetchMe()
+      .then((me) => {
+        saveDisplaySettings({ fontSize: fontNameOf(me.fontSize), theme: themeIdOf(me.themeCode) })
+        this.loadAndApply()
+      })
+      .catch(() => null)
   },
 
   onShow() {
@@ -41,6 +50,7 @@ Page({
     applyNavigationBar(saved)
   },
 
+  /** 主题/字号本地立即生效，同时落库；落库失败不打断本地体验。 */
   applyNow() {
     const settings = saveDisplaySettings({
       fontSize: this.data.fontSize,
@@ -52,7 +62,13 @@ Page({
       displayStyle: getDisplayStyle(settings)
     })
     applyNavigationBar(settings)
-    wx.showToast({ title: '已应用', icon: 'success' })
+
+    updateSettings({
+      fontSize: fontCodeOf(settings.fontSize),
+      themeCode: themeCodeOf(settings.theme)
+    })
+      .then(() => wx.showToast({ title: '已应用', icon: 'success' }))
+      .catch((err) => wx.showToast({ title: err.message || '已本地生效，同步失败', icon: 'none' }))
   },
 
   onFont(e) {

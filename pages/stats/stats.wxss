@@ -236,8 +236,12 @@
 }
 
 .chart-canvas {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 280rpx;
+  box-sizing: border-box;
 }
 
 .chart-label {

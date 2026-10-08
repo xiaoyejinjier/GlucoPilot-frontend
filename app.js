@@ -1,6 +1,8 @@
-const { applyDisplayToCurrentPage } = require('./utils/display')
-const { getUserInfo } = require('./utils/storage')
+const { applyDisplayToCurrentPage, saveDisplaySettings } = require('./utils/display')
+const { getUserInfo, saveUserInfo } = require('./utils/storage')
 const { getToken } = require('./utils/request')
+const { fetchMe } = require('./services/api')
+const { fontNameOf, themeIdOf } = require('./utils/mappers')
 
 App({
   globalData: {
@@ -16,6 +18,7 @@ App({
     if (loggedIn && token) {
       this.globalData.isLoggedIn = true
       this.globalData.userInfo = getUserInfo()
+      this.syncProfile()
     } else {
       wx.setStorageSync('isLoggedIn', false)
       this.globalData.isLoggedIn = false
@@ -24,6 +27,21 @@ App({
 
   onShow() {
     applyDisplayToCurrentPage()
+  },
+
+  /** 登录态下用服务端资料与偏好校准本地缓存（含字号/主题）。 */
+  syncProfile() {
+    fetchMe()
+      .then((userInfo) => {
+        saveUserInfo(userInfo)
+        this.globalData.userInfo = userInfo
+        saveDisplaySettings({
+          fontSize: fontNameOf(userInfo.fontSize),
+          theme: themeIdOf(userInfo.themeCode)
+        })
+        applyDisplayToCurrentPage()
+      })
+      .catch(() => null)
   },
 
   checkLogin() {

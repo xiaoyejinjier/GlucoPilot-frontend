@@ -9,7 +9,7 @@
     <view wx:else class="profile-avatar">{{userInfo.avatarText}}</view>
     <view class="profile-info">
       <text class="profile-name">{{userInfo.nickname}}</text>
-      <text class="profile-desc">{{userInfo.diabetesType}} · {{userInfo.age}} 岁</text>
+      <text class="profile-desc">{{userInfo.profileDesc}}</text>
     </view>
     <text class="profile-edit" bindtap="onEditProfile">编辑资料</text>
   </view>

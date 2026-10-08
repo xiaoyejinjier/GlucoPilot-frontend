@@ -70,6 +70,10 @@ function put(url, data, options = {}) {
   return request({ url, method: 'PUT', data, ...options })
 }
 
+function patch(url, data, options = {}) {
+  return request({ url, method: 'PATCH', data, ...options })
+}
+
 function del(url, data, options = {}) {
   return request({ url, method: 'DELETE', data, ...options })
 }
@@ -79,6 +83,7 @@ module.exports = {
   get,
   post,
   put,
+  patch,
   del,
   getToken,
   setToken,

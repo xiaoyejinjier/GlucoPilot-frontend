@@ -1,12 +1,14 @@
 const { FEEDBACK_TYPES } = require('../../utils/constants')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
+const { submitFeedback } = require('../../services/api')
 
 Page({
   data: {
     displayStyle: '',
     types: FEEDBACK_TYPES,
-    activeType: '产品建议',
-    content: ''
+    activeTypeIndex: 0,
+    content: '',
+    submitting: false
   },
 
   onShow() {
@@ -14,7 +16,7 @@ Page({
   },
 
   onTypeTap(e) {
-    this.setData({ activeType: e.currentTarget.dataset.type })
+    this.setData({ activeTypeIndex: Number(e.currentTarget.dataset.index) })
   },
 
   onInput(e) {
@@ -22,23 +24,24 @@ Page({
   },
 
   onSubmit() {
-    if (!this.data.content.trim()) {
+    const content = this.data.content.trim()
+    if (!content) {
       wx.showToast({ title: '请填写反馈内容', icon: 'none' })
       return
     }
-    const list = wx.getStorageSync('feedbackList') || []
-    const now = new Date()
-    const p = (n) => String(n).padStart(2, '0')
-    list.unshift({
-      id: Date.now(),
-      type: this.data.activeType,
-      content: this.data.content.trim(),
-      status: '已收到',
-      time: `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`
-    })
-    wx.setStorageSync('feedbackList', list)
-    this.setData({ content: '' })
-    wx.showToast({ title: '提交成功', icon: 'none' })
+    if (this.data.submitting) return
+
+    this.setData({ submitting: true })
+    // 端上顺序与后端 feedback_type 1~4 一一对应
+    submitFeedback(this.data.activeTypeIndex + 1, content)
+      .then(() => {
+        this.setData({ submitting: false, content: '' })
+        wx.showToast({ title: '提交成功', icon: 'none' })
+      })
+      .catch((err) => {
+        this.setData({ submitting: false })
+        wx.showToast({ title: err.message || '提交失败', icon: 'none' })
+      })
   },
 
   onViewList() {

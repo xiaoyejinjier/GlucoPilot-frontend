@@ -9,8 +9,8 @@
       <view
         wx:for="{{types}}"
         wx:key="*this"
-        class="type-item {{activeType === item ? 'on' : ''}}"
-        data-type="{{item}}"
+        class="type-item {{activeTypeIndex === index ? 'on' : ''}}"
+        data-index="{{index}}"
         bindtap="onTypeTap"
       >{{item}}</view>
     </view>
@@ -30,7 +30,7 @@
     </view>
     <view class="actions-row">
       <button class="btn-ghost btn-sm" bindtap="onViewList">查看反馈</button>
-      <button class="btn-primary btn-sm" bindtap="onSubmit">提交留言</button>
+      <button class="btn-primary btn-sm" disabled="{{submitting}}" bindtap="onSubmit">提交留言</button>
     </view>
   </view>
 

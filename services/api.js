@@ -1,4 +1,6 @@
-const { get, post, put, del, setToken } = require('../utils/request')
+const { get, post, put, patch, del, setToken } = require('../utils/request')
+const mappers = require('../utils/mappers')
+const { getFoodImage } = require('../utils/food-images')
 const { openSse } = require('../utils/sse')
 
 const CHANNEL_NAMES = ['', '企业动态', '行业快讯', '设备新知', '控糖科普']
@@ -51,14 +53,17 @@ function mapBanner(b) {
 }
 
 function mapFood(f, categoryName) {
+  const resolvedCategoryName = categoryName || f.categoryName || ''
   return {
     id: f.id,
     name: f.foodName,
-    category: categoryName || '',
+    category: resolvedCategoryName,
     categoryCode: f.categoryCode,
     carbs: f.carbsPer100g,
     cal: f.caloriesPer100g,
-    image: f.imageUrl || '/assets/foods/rice.jpg'
+    gi: f.giValue,
+    imageUrl: f.imageUrl || '',
+    image: getFoodImage(f.foodName, resolvedCategoryName, f.imageUrl)
   }
 }
 
@@ -122,12 +127,17 @@ function fetchFoods(params) {
     pageNum: (params && params.pageNum) || 1,
     pageSize: (params && params.pageSize) || 50
   }
+  if (params && params.categoryId) data.categoryId = params.categoryId
   if (params && params.categoryCode) data.categoryCode = params.categoryCode
   if (params && params.keyword) data.keyword = params.keyword
   return get('/foods', data, { auth: false }).then((page) => {
     const records = (page && page.records ? page.records : []).map((f) => mapFood(f))
     return { ...page, records }
   })
+}
+
+function fetchFoodDetail(id) {
+  return get(`/foods/${id}`, null, { auth: false }).then(mapFood)
 }
 
 /** ---------- chat（接口文档 2.23 / 2.24 / 2.25） ---------- */
@@ -193,6 +203,95 @@ function defaultMockReadings() {
   ]
 }
 
+/** ---------- user / 设置 / 反馈 ---------- */
+function fetchMe() {
+  return get('/users/me', null, { auth: true }).then(mappers.mapUserMe)
+}
+
+function updateProfile(payload) {
+  return patch('/users/me/profile', payload, { auth: true })
+}
+
+function saveHealthProfile(payload) {
+  return put('/users/me/health-profile', payload, { auth: true })
+}
+
+function updateSettings(payload) {
+  return patch('/users/me/settings', payload, { auth: true })
+}
+
+function agreeDisclaimer(disclaimerVersion) {
+  return post('/users/me/settings/disclaimer-agreement', { disclaimerVersion }, { auth: true })
+}
+
+function bindPhone(phone, verifyCode) {
+  return patch('/users/me/phone', { phone, verifyCode }, { auth: true })
+}
+
+function fetchAppConfig(groups) {
+  const data = {}
+  if (groups && groups.length) data.groups = groups.join(',')
+  return get('/app-config', data, { auth: false })
+}
+
+function submitFeedback(feedbackType, contentText) {
+  return post('/feedbacks', { feedbackType, contentText }, { auth: true })
+}
+
+function fetchFeedbacks(pageNum, pageSize) {
+  return get('/feedbacks', { pageNum: pageNum || 1, pageSize: pageSize || 20 }, { auth: true })
+    .then((page) => ({
+      ...page,
+      records: (page && page.records ? page.records : []).map(mappers.mapFeedback)
+    }))
+}
+
+/** ---------- glucose ---------- */
+function upsertGlucoseRecord(payload) {
+  return put('/glucose-records/by-node', payload, { auth: true })
+}
+
+function fetchGlucoseRecords(params) {
+  const data = {
+    pageNum: (params && params.pageNum) || 1,
+    pageSize: (params && params.pageSize) || 50
+  }
+  if (params && params.startDate) data.startDate = params.startDate
+  if (params && params.endDate) data.endDate = params.endDate
+  if (params && params.nodeCode) data.nodeCode = params.nodeCode
+  return get('/glucose-records', data, { auth: true }).then((page) => ({
+    ...page,
+    records: (page && page.records ? page.records : []).map(mappers.mapGlucoseRecord)
+  }))
+}
+
+function updateGlucoseRecord(id, payload) {
+  return patch(`/glucose-records/${id}`, payload, { auth: true }).then(mappers.mapGlucoseRecord)
+}
+
+function deleteGlucoseRecord(id) {
+  return del(`/glucose-records/${id}`, null, { auth: true })
+}
+
+function fetchDayBoard(recordDate) {
+  return get(`/day-boards/${recordDate}`, null, { auth: true }).then(mappers.mapDayBoard)
+}
+
+function fetchGlucoseNodes() {
+  return get('/dict/glucose-nodes', null, { auth: false })
+}
+
+/** ---------- statistics ---------- */
+function fetchGlucoseSummary(params) {
+  const data = {}
+  if (params && params.year) data.year = params.year
+  if (params && params.month) data.month = params.month
+  if (params && params.startDate) data.startDate = params.startDate
+  if (params && params.endDate) data.endDate = params.endDate
+  if (params && params.trendDays) data.trendDays = params.trendDays
+  return get('/glucose-records/summary', data, { auth: true }).then(mappers.mapSummary)
+}
+
 module.exports = {
   channelName,
   channelCode,
@@ -206,6 +305,7 @@ module.exports = {
   updateNewsAction,
   fetchFoodCategories,
   fetchFoods,
+  fetchFoodDetail,
   getOrCreateChatSession,
   sendChatMessage,
   streamChatCompletion,
@@ -213,6 +313,22 @@ module.exports = {
   registerMediaFile,
   syncMockGlucose,
   defaultMockReadings,
+  fetchMe,
+  updateProfile,
+  saveHealthProfile,
+  updateSettings,
+  agreeDisclaimer,
+  bindPhone,
+  fetchAppConfig,
+  submitFeedback,
+  fetchFeedbacks,
+  upsertGlucoseRecord,
+  fetchGlucoseRecords,
+  updateGlucoseRecord,
+  deleteGlucoseRecord,
+  fetchDayBoard,
+  fetchGlucoseNodes,
+  fetchGlucoseSummary,
   mapNewsItem,
   mapBanner,
   mapFood

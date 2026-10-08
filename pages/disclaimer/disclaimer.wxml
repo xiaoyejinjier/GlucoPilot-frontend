@@ -1,9 +1,13 @@
-<view class="page-no-tab" style="{{displayStyle}}">
-  <view class="page-intro">
-    <text class="page-intro-text">要求必须看完再点同意</text>
+<view class="page-no-tab disclaimer-page" style="{{displayStyle}}">
+  <view class="disclaimer-head">
+    <view class="disclaimer-mark">!</view>
+    <view class="disclaimer-head-copy">
+      <text class="disclaimer-title">请认真阅读免责声明</text>
+      <text class="disclaimer-subtitle">了解服务边界与健康信息使用说明</text>
+    </view>
   </view>
 
-  <view class="card">
+  <view class="card disclaimer-card">
     <scroll-view
       class="disclaimer-scroll"
       scroll-y
@@ -11,15 +15,23 @@
       lower-threshold="20"
     >
       <view class="disclaimer-text">
-        <text wx:for="{{paragraphs}}" wx:key="*this" class="disclaimer-para">{{item}}</text>
-        <text class="disclaimer-hint">（请滑动至底部）</text>
+        <view wx:for="{{paragraphs}}" wx:key="*this" class="disclaimer-para">
+          <view class="para-index">{{index + 1}}</view>
+          <text class="para-content">{{item}}</text>
+        </view>
+        <view class="disclaimer-end">
+          <view class="end-line"></view>
+          <text>您已阅读至内容底部</text>
+          <view class="end-line"></view>
+        </view>
       </view>
     </scroll-view>
   </view>
 
-  <view class="card">
+  <view class="disclaimer-footer">
+    <text class="scroll-hint">{{canAgree ? '内容已阅读完成' : '请向上滑动并阅读至底部'}}</text>
     <button
-      class="btn-primary btn-block btn-sm {{canAgree ? '' : 'disabled'}}"
+      class="btn-primary btn-block agree-button {{canAgree ? '' : 'disabled'}}"
       disabled="{{!canAgree}}"
       bindtap="onAgree"
     >{{canAgree ? '我已阅读并同意' : '请先滑到底部'}}</button>

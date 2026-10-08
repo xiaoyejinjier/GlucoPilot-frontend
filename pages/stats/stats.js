@@ -1,6 +1,30 @@
-const { getCalendarData, getRecords, getAllRecords } = require('../../utils/storage')
-const { GLUCOSE_NODES } = require('../../utils/constants')
+const { fetchGlucoseSummary, fetchGlucoseRecords } = require('../../services/api')
 const { applyDisplayToCurrentPage, getTheme, getDisplaySettings } = require('../../utils/display')
+
+/** 一天一条，取区间内所有节点，供日历明细展示 */
+function recordsOfDay(year, month, day) {
+  const p = (n) => (n < 10 ? '0' + n : '' + n)
+  const date = `${year}-${p(month)}-${p(day)}`
+  return fetchGlucoseRecords({ startDate: date, endDate: date, pageSize: 100 })
+}
+
+/** 根据实际周数据扩展 Y 轴，避免低于 4 或高于 10 的点画到坐标区外。 */
+function getWeekYAxis(points) {
+  const values = (points || [])
+    .filter((point) => point.value != null && point.value !== '')
+    .map((point) => Number(point.value))
+    .filter((value) => Number.isFinite(value))
+  const dataMin = values.length ? Math.min(...values) : 4
+  const dataMax = values.length ? Math.max(...values) : 10
+  const min = Math.max(0, Math.min(4, Math.floor(dataMin)))
+  const max = Math.max(10, Math.ceil(dataMax))
+  const range = Math.max(1, max - min)
+  const ticks = Array.from({ length: 4 }, (_, index) => {
+    const value = min + (range * index) / 3
+    return Number(value.toFixed(1))
+  })
+  return { min, max, ticks, values }
+}
 
 Page({
   data: {
@@ -17,10 +41,12 @@ Page({
     monthRecordDays: 0,
     monthTotal: 0,
     compliance: 0,
-    weekAvg: '6.7',
-    weekMax: '7.8',
-    weekMin: '6.2',
-    slotStats: []
+    weekAvg: '--',
+    weekMax: '--',
+    weekMin: '--',
+    slotStats: [],
+    weekPoints: [],
+    loading: false
   },
 
   onShow() {
@@ -33,20 +59,99 @@ Page({
       this.setData({ year: now.getFullYear(), month: now.getMonth() + 1, selectedDay: now.getDate() })
       this._inited = true
     }
-    this.buildCalendar()
-    this.buildMonthStats()
-    this.buildWeekStats()
-    if (this.data.activeView === 'glucose') {
-      setTimeout(() => this.drawWeekChart(), 50)
+    this.loadSummary()
+    if (this.data.activeView === 'glucose') this.scheduleWeekChart()
+  },
+
+  onHide() {
+    this.cancelWeekChartDraw()
+  },
+
+  onUnload() {
+    this.cancelWeekChartDraw()
+  },
+
+  onResize() {
+    if (this.data.activeView === 'glucose') this.scheduleWeekChart()
+  },
+
+  loadSummary() {
+    const { year, month } = this.data
+    const requestVersion = (this._summaryRequestVersion || 0) + 1
+    this._summaryRequestVersion = requestVersion
+    this.setData({ loading: true })
+    fetchGlucoseSummary({ year, month })
+      .then((summary) => {
+        if (requestVersion !== this._summaryRequestVersion) return
+        this._summary = summary
+        this.setData({
+          loading: false,
+          monthRecordDays: summary.monthRecordDays,
+          monthTotal: summary.monthTotal,
+          compliance: summary.compliance,
+          weekAvg: summary.week.avg == null ? '--' : String(summary.week.avg),
+          weekMax: summary.week.max == null ? '--' : String(summary.week.max),
+          weekMin: summary.week.min == null ? '--' : String(summary.week.min),
+          slotStats: summary.slotStats,
+          weekPoints: summary.week.points
+        }, () => {
+          this.buildCalendar(summary.calendarMap)
+          this.buildDayRecords(this.data.selectedDay)
+          if (this.data.activeView === 'glucose') this.scheduleWeekChart()
+        })
+      })
+      .catch((err) => {
+        if (requestVersion !== this._summaryRequestVersion) return
+        this.setData({ loading: false })
+        wx.showToast({ title: err.message || '统计加载失败', icon: 'none' })
+      })
+  },
+
+  buildCalendar(calendarMap) {
+    const { year, month, selectedDay } = this.data
+    const firstDay = new Date(year, month - 1, 1).getDay()
+    const offset = firstDay === 0 ? 6 : firstDay - 1
+    const daysInMonth = new Date(year, month, 0).getDate()
+    const days = []
+
+    for (let i = 0; i < offset; i++) days.push({ day: null })
+    for (let d = 1; d <= daysInMonth; d++) {
+      const info = calendarMap[d] || {}
+      days.push({ day: d, level: info.level || '', count: info.count || 0 })
     }
+
+    const selected = days.find((d) => d.day === selectedDay)
+    this.setData({
+      calendarDays: days,
+      selectedCount: selected ? selected.count : 0
+    })
+  },
+
+  buildDayRecords(day) {
+    if (!day) {
+      this.setData({ dayRecords: [] })
+      return
+    }
+    const { year, month } = this.data
+    recordsOfDay(year, month, day)
+      .then((page) => {
+        this.setData({
+          dayRecords: (page.records || []).map((r) => ({
+            id: r.id,
+            name: r.nodeName,
+            text: `${r.value} mmol/L`
+          }))
+        })
+      })
+      .catch(() => this.setData({ dayRecords: [] }))
   },
 
   onSwitchView(e) {
     const view = e.currentTarget.dataset.view
-    this.setData({ activeView: view })
-    if (view === 'glucose') {
-      setTimeout(() => this.drawWeekChart(), 80)
-    }
+    this.setData({ activeView: view }, () => {
+      if (view === 'glucose') this.scheduleWeekChart()
+      else this.cancelWeekChartDraw()
+    })
   },
 
   onSwitchToCalendar() {
@@ -54,8 +159,7 @@ Page({
   },
 
   onSwitchToGlucose() {
-    this.setData({ activeView: 'glucose' })
-    setTimeout(() => this.drawWeekChart(), 80)
+    this.setData({ activeView: 'glucose' }, () => this.scheduleWeekChart())
   },
 
   onPrevMonth() {
@@ -66,8 +170,7 @@ Page({
       year -= 1
     }
     this.setData({ year, month, selectedDay: 1 })
-    this.buildCalendar()
-    this.buildMonthStats()
+    this.loadSummary()
   },
 
   onNextMonth() {
@@ -78,109 +181,50 @@ Page({
       year += 1
     }
     this.setData({ year, month, selectedDay: 1 })
-    this.buildCalendar()
-    this.buildMonthStats()
+    this.loadSummary()
   },
 
-  buildCalendar() {
-    const { year, month, selectedDay } = this.data
-    const calData = getCalendarData(year, month)
-    const firstDay = new Date(year, month - 1, 1).getDay()
-    const offset = firstDay === 0 ? 6 : firstDay - 1
-    const daysInMonth = new Date(year, month, 0).getDate()
-    const days = []
-
-    for (let i = 0; i < offset; i++) days.push({ day: null })
-    for (let d = 1; d <= daysInMonth; d++) {
-      const info = calData[d] || {}
-      days.push({ day: d, level: info.level || '', count: info.count || 0 })
+  cancelWeekChartDraw() {
+    this._chartDrawVersion = (this._chartDrawVersion || 0) + 1
+    if (this._chartDrawTimer) {
+      clearTimeout(this._chartDrawTimer)
+      this._chartDrawTimer = null
     }
-
-    const selected = days.find(d => d.day === selectedDay)
-    this.setData({
-      calendarDays: days,
-      selectedCount: selected ? selected.count : 0
-    })
-    this.buildDayRecords(selectedDay)
   },
 
-  buildDayRecords(day) {
-    const { year, month } = this.data
-    const p = n => (n < 10 ? '0' + n : '' + n)
-    const key = `${year}-${p(month)}-${p(day)}`
-    const all = getAllRecords()
-    const dayData = all[key] || {}
-    const list = []
-
-    GLUCOSE_NODES.forEach(node => {
-      const rec = dayData[node.id]
-      if (!rec) return
-      let text = ''
-      if (rec.value != null) text = `${rec.value} mmol/L`
-      else if (rec.type === 'meal') text = `饮食 ${rec.foods || '已记录'}`
-      else text = '已记录'
-      list.push({ id: node.id, name: node.name, text })
-    })
-
-    // 无真实数据时给示意（仅选中当日）
-    if (list.length === 0) {
-      list.push(
-        { id: 'demo1', name: '早餐前', text: '5.8 mmol/L' },
-        { id: 'demo2', name: '早餐后', text: '7.6 mmol/L' },
-        { id: 'demo3', name: '午餐', text: '饮食 米饭+青菜' }
-      )
-    }
-
-    this.setData({ dayRecords: list })
+  /** 等 setData 和 wx:if 完成布局后再测量 Canvas，并使旧绘制任务失效。 */
+  scheduleWeekChart() {
+    if (this.data.activeView !== 'glucose') return
+    this.cancelWeekChartDraw()
+    const drawVersion = this._chartDrawVersion
+    const draw = () => this.drawWeekChart(drawVersion, 0)
+    if (typeof wx.nextTick === 'function') wx.nextTick(draw)
+    else this._chartDrawTimer = setTimeout(draw, 16)
   },
 
-  buildMonthStats() {
-    const { year, month, calendarDays } = this.data
-    let days = 0
-    let total = 0
-    calendarDays.forEach(d => {
-      if (d.day && d.count) {
-        days += 1
-        total += d.count
-      }
-    })
-    const daysInMonth = new Date(year, month, 0).getDate()
-    const compliance = daysInMonth ? Math.round((days / daysInMonth) * 100) : 0
-    this.setData({
-      monthRecordDays: days || 8,
-      monthTotal: total || 42,
-      compliance: compliance || 68
-    })
-  },
+  /** 周曲线：只画实际值，无记录的天断开（不连线、不画点）。 */
+  drawWeekChart(drawVersion, attempt) {
+    if (drawVersion !== this._chartDrawVersion || this.data.activeView !== 'glucose') return
 
-  buildWeekStats() {
-    const actual = [6.2, 6.8, 7.4, 6.5, 6.9, 7.8, 6.6]
-    const avg = (actual.reduce((a, b) => a + b, 0) / actual.length).toFixed(1)
-    this.setData({
-      weekAvg: avg,
-      weekMax: Math.max(...actual).toFixed(1),
-      weekMin: Math.min(...actual).toFixed(1),
-      slotStats: [
-        { name: '早餐段', count: 12, pct: 80 },
-        { name: '午餐段', count: 10, pct: 66 },
-        { name: '晚餐段', count: 9, pct: 60 },
-        { name: '其他', count: 5, pct: 33 }
-      ]
+    const points = (this.data.weekPoints || []).map((point) => {
+      const value = point.value == null || point.value === '' ? null : Number(point.value)
+      return { ...point, value: Number.isFinite(value) ? value : null }
     })
-  },
-
-  drawWeekChart() {
-    const actual = [6.2, 6.8, 7.4, 6.5, 6.9, 7.8, 6.6]
-    const predicted = [6.0, 6.5, 7.0, 6.3, 6.7, 7.5, 6.4]
-    const labels = ['一', '二', '三', '四', '五', '六', '日']
+    const labels = points.map((p) => p.label)
     const brand = getTheme(getDisplaySettings().theme).brand
 
-    const query = wx.createSelectorQuery()
-    query.select('#weekChart').fields({ node: true, size: true }).exec(res => {
-      if (!res[0] || !res[0].node) return
+    const query = wx.createSelectorQuery().in(this)
+    query.select('#weekChart').fields({ node: true, size: true }).exec((res) => {
+      if (drawVersion !== this._chartDrawVersion || this.data.activeView !== 'glucose') return
+      if (!res[0] || !res[0].node || res[0].width <= 0 || res[0].height <= 0) {
+        if (attempt < 4) {
+          this._chartDrawTimer = setTimeout(() => this.drawWeekChart(drawVersion, attempt + 1), 50)
+        }
+        return
+      }
       const canvas = res[0].node
       const ctx = canvas.getContext('2d')
-      const dpr = wx.getSystemInfoSync().pixelRatio
+      const dpr = wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : wx.getSystemInfoSync().pixelRatio
       const width = res[0].width
       const height = res[0].height
       canvas.width = width * dpr
@@ -200,12 +244,11 @@ Page({
       ctx.lineTo(pad.l + cw, pad.t + ch)
       ctx.stroke()
 
-      const minY = 4
-      const maxY = 10
-      const yTicks = [4, 6, 8, 10]
+      const yAxis = getWeekYAxis(points)
+      const minY = yAxis.min
+      const maxY = yAxis.max
+      const yTicks = yAxis.ticks
 
-      // Y 轴刻度与数值
-      ctx.fillStyle = '#888'
       ctx.font = '10px sans-serif'
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
@@ -220,37 +263,53 @@ Page({
         ctx.fillText(String(val), pad.l - 6, y)
       })
 
-      const stepX = cw / (actual.length - 1)
-      const toPoint = (val, i) => ({
+      const stepX = points.length > 1 ? cw / (points.length - 1) : 0
+      const toPoint = (value, i) => ({
         x: pad.l + i * stepX,
-        y: pad.t + ch - ((val - minY) / (maxY - minY)) * ch
+        y: pad.t + ch - ((value - minY) / (maxY - minY)) * ch
       })
 
-      const drawLine = (data, color, dashed) => {
-        ctx.strokeStyle = color
-        ctx.lineWidth = 2.5
-        ctx.setLineDash(dashed ? [5, 4] : [])
+      if (yAxis.values.length === 0) {
+        ctx.fillStyle = '#aaa'
+        ctx.textAlign = 'center'
+        ctx.fillText('本周暂无记录', pad.l + cw / 2, pad.t + ch / 2)
+      } else {
+        // 裁剪到坐标区域，异常值也不会覆盖横轴标签或相邻布局。
+        ctx.save()
         ctx.beginPath()
-        data.forEach((v, i) => {
-          const p = toPoint(v, i)
-          if (i === 0) ctx.moveTo(p.x, p.y)
-          else ctx.lineTo(p.x, p.y)
+        ctx.rect(pad.l, pad.t, cw, ch)
+        ctx.clip()
+
+        // 折线按连续段绘制，缺数据处自然断开。
+        ctx.strokeStyle = brand
+        ctx.lineWidth = 2.5
+        ctx.beginPath()
+        let started = false
+        points.forEach((p, i) => {
+          if (p.value == null) {
+            started = false
+            return
+          }
+          const point = toPoint(p.value, i)
+          if (!started) {
+            ctx.moveTo(point.x, point.y)
+            started = true
+          } else {
+            ctx.lineTo(point.x, point.y)
+          }
         })
         ctx.stroke()
-        ctx.setLineDash([])
-        if (!dashed) {
-          data.forEach((v, i) => {
-            const p = toPoint(v, i)
-            ctx.fillStyle = color
-            ctx.beginPath()
-            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2)
-            ctx.fill()
-          })
-        }
-      }
 
-      drawLine(actual, brand, false)
-      drawLine(predicted, '#576b95', true)
+        points.forEach((p, i) => {
+          if (p.value == null) return
+          const point = toPoint(p.value, i)
+          ctx.fillStyle = brand
+          ctx.beginPath()
+          ctx.arc(point.x, point.y, 4, 0, Math.PI * 2)
+          ctx.fill()
+        })
+        ctx.restore()
+      }
 
       ctx.fillStyle = '#888'
       ctx.font = '11px sans-serif'
@@ -268,7 +327,7 @@ Page({
 
   onDayTap(e) {
     const day = e.currentTarget.dataset.day
-    const selected = this.data.calendarDays.find(d => d.day === day)
+    const selected = this.data.calendarDays.find((d) => d.day === day)
     this.setData({
       selectedDay: day,
       selectedCount: selected ? selected.count : 0

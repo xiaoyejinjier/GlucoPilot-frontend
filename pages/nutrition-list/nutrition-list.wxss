@@ -14,17 +14,36 @@
   border-bottom: 1rpx solid #eef2f1;
 }
 
+.food-thumb {
+  width: 96rpx;
+  height: 96rpx;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  border-radius: 14rpx;
+  background: #e8eee9;
+}
+
+.food-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .food-row:last-child {
   border-bottom: none;
 }
 
 .food-name {
+  display: block;
   font-size: var(--fs-body);
   font-weight: 700;
   color: #1c1c1c;
 }
 
 .food-val {
+  display: block;
   font-size: var(--fs-body);
   color: var(--brand);
   font-weight: 700;
