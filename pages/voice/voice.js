@@ -163,6 +163,9 @@ Page({
       })
       .catch((err) => {
         this.patchMessage(userLocalId, () => ({ uploading: false }))
+        if (err && typeof err === 'object') {
+          err.isUploadError = true
+        }
         this.failRound(aiLocalId, err)
       })
   },
@@ -284,9 +287,13 @@ Page({
     this._currentRound = null
     this._streamTask = null
     const isAuth = err && err.code === 40100
+    // 图片上传类错误单独成文：这些消息是「图片过大/格式不对/上传失败」，归到
+    // 「AI 服务不可用」会误导用户去排查对话链路，实际问题在文件上传
     const message = isAuth
       ? '登录已过期，请重新登录'
-      : (err && err.message) || 'AI 服务暂时不可用，请稍后重试'
+      : err && err.isUploadError
+        ? (err.message || '图片上传失败，请重试')
+        : (err && err.message) || 'AI 服务暂时不可用，请稍后重试'
     // 已经流出的内容保留，只在后面追加重试入口
     this.patchMessage(aiLocalId, (m) => ({
       content: m.content ? `${m.content}\n\n[${message}]` : message,
