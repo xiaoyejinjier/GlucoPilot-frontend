@@ -17,6 +17,20 @@ function normalizeYearMonth(raw) {
   return text
 }
 
+// 身高取整（cm）；空值返回 null
+function toIntOrNull(raw) {
+  if (raw === '' || raw == null) return null
+  const n = parseInt(raw, 10)
+  return isNaN(n) ? null : n
+}
+
+// 体重保留一位小数（kg）；空值返回 null
+function toOneDecimalOrNull(raw) {
+  if (raw === '' || raw == null) return null
+  const n = Number(raw)
+  return isNaN(n) ? null : Math.round(n * 10) / 10
+}
+
 Page({
   data: {
     displayStyle: '',
@@ -110,6 +124,18 @@ Page({
       return
     }
 
+    const height = toIntOrNull(form.height)
+    if (height != null && (height < 50 || height > 250)) {
+      wx.showToast({ title: '身高需在 50~250 cm 之间', icon: 'none' })
+      return
+    }
+
+    const weight = toOneDecimalOrNull(form.weight)
+    if (weight != null && (weight < 20 || weight > 300)) {
+      wx.showToast({ title: '体重需在 20~300 kg 之间', icon: 'none' })
+      return
+    }
+
     this.setData({ saving: true })
     const avatarText = (form.nickname || '用').trim().charAt(0)
     const confirmDate = normalizeYearMonth(form.confirmDate)
@@ -130,6 +156,8 @@ Page({
         age: isNaN(age) ? null : age,
         medication: form.medication || null,
         exerciseHabit: form.exercise || null,
+        height,
+        weight,
         // 全量保存：未在表单暴露的目标值原样带回，避免被清空
         targetFasting: form.targetFasting == null ? null : form.targetFasting,
         targetPostprandial: form.targetPostprandial == null ? null : form.targetPostprandial

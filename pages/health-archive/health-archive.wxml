@@ -2,6 +2,8 @@
   <view class="card" bindtap="onEditProfile">
     <view class="section-title">基础资料<text class="section-edit">编辑 ›</text></view>
     <view class="kv-list">
+      <view class="kv-item"><text class="kv-item-label">身高</text><text class="kv-item-value">{{userInfo.height ? userInfo.height + ' cm' : '--'}}</text></view>
+      <view class="kv-item"><text class="kv-item-label">体重</text><text class="kv-item-value">{{userInfo.weight ? userInfo.weight + ' kg' : '--'}}</text></view>
       <view class="kv-item"><text class="kv-item-label">糖尿病类型</text><text class="kv-item-value">{{userInfo.diabetesType || '未填写'}}</text></view>
       <view class="kv-item"><text class="kv-item-label">确诊时间</text><text class="kv-item-value">{{userInfo.confirmDate || '未填写'}}</text></view>
       <view class="kv-item"><text class="kv-item-label">用药</text><text class="kv-item-value">{{userInfo.medication || '未填写'}}</text></view>

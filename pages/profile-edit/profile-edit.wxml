@@ -27,6 +27,14 @@
       <input class="input" type="number" value="{{form.age}}" bindinput="onField" data-key="age" />
     </view>
     <view class="form-item">
+      <text class="label">身高(cm)</text>
+      <input class="input" type="number" value="{{form.height}}" bindinput="onField" data-key="height" placeholder="如 170" />
+    </view>
+    <view class="form-item">
+      <text class="label">体重(kg)</text>
+      <input class="input" type="digit" value="{{form.weight}}" bindinput="onField" data-key="weight" placeholder="如 65.5" />
+    </view>
+    <view class="form-item">
       <text class="label">糖尿病类型</text>
       <picker
         class="input"

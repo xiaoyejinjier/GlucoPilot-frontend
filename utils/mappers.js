@@ -137,6 +137,8 @@ function mapUserMe(me) {
   const settings = me.settings || {}
   const typeText = diabetesText(health.diabetesType)
   const age = health.age == null ? '' : health.age
+  const height = health.height == null ? '' : health.height
+  const weight = health.weight == null ? '' : health.weight
   return {
     accountStatus: me.accountStatus,
     phoneMasked: me.phoneMasked || '',
@@ -152,6 +154,8 @@ function mapUserMe(me) {
     diabetesTypeText: health.diabetesTypeText || '',
     confirmDate: health.diagnosedYm || '',
     age,
+    height,
+    weight,
     medication: health.medication || '',
     exercise: health.exerciseHabit || '',
     targetFasting: health.targetFasting,
