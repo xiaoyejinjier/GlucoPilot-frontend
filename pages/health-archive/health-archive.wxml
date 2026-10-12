@@ -1,6 +1,6 @@
 <view class="page-no-tab" style="{{displayStyle}}">
-  <view class="card">
-    <view class="section-title">基础资料</view>
+  <view class="card" bindtap="onEditProfile">
+    <view class="section-title">基础资料<text class="section-edit">编辑 ›</text></view>
     <view class="kv-list">
       <view class="kv-item"><text class="kv-item-label">糖尿病类型</text><text class="kv-item-value">{{userInfo.diabetesType || '未填写'}}</text></view>
       <view class="kv-item"><text class="kv-item-label">确诊时间</text><text class="kv-item-value">{{userInfo.confirmDate || '未填写'}}</text></view>

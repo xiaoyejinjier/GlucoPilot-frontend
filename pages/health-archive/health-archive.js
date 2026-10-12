@@ -11,6 +11,19 @@ Page({
   },
 
   onLoad() {
+    this.loadRecords()
+  },
+
+  onShow() {
+    // 首次进入与从编辑页返回都会触发，确保资料即时刷新
+    this.loadUserInfo()
+  },
+
+  onEditProfile() {
+    wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+  },
+
+  loadUserInfo() {
     const cached = getUserInfo()
     if (cached) {
       this.setData({ userInfo: cached })
@@ -23,8 +36,6 @@ Page({
       .catch((err) => {
         wx.showToast({ title: err.message || '资料加载失败', icon: 'none' })
       })
-
-    this.loadRecords()
   },
 
   loadRecords() {

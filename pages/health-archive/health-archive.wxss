@@ -1,3 +1,9 @@
+.section-edit {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .summary-text {
   font-size: var(--fs-small);
   line-height: 1.6;

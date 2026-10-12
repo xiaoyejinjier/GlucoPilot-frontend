@@ -4,6 +4,19 @@ const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { persistShotImage } = require('../../utils/shot')
 const { DIABETES_TYPE_TEXT, diabetesCode } = require('../../utils/mappers')
 
+// 将 2022.06 / 2022/06 / 2022年6月 / 202206 / 2022-6 统一归一化为 YYYY-MM
+function normalizeYearMonth(raw) {
+  if (raw == null) return null
+  const text = String(raw).trim()
+  if (!text) return null
+  const digits = text.replace(/\D/g, '')
+  if (digits.length === 6) return `${digits.slice(0, 4)}-${digits.slice(4, 6)}`
+  if (digits.length === 5) return `${digits.slice(0, 4)}-0${digits.slice(4, 5)}`
+  const matched = text.match(/^(\d{4})\D+(\d{1,2})/)
+  if (matched) return `${matched[1]}-${matched[2].padStart(2, '0')}`
+  return text
+}
+
 Page({
   data: {
     displayStyle: '',
@@ -99,6 +112,11 @@ Page({
 
     this.setData({ saving: true })
     const avatarText = (form.nickname || '用').trim().charAt(0)
+    const confirmDate = normalizeYearMonth(form.confirmDate)
+    // 回填归一化后的确诊时间，避免用户看到原始写法产生困惑
+    if (confirmDate !== (form.confirmDate || null)) {
+      this.setData({ form: { ...form, confirmDate: confirmDate || '' } })
+    }
 
     Promise.all([
       updateProfile({
@@ -108,7 +126,7 @@ Page({
       }),
       saveHealthProfile({
         diabetesType: this.data.diabetesIndex,
-        diagnosedYm: form.confirmDate || null,
+        diagnosedYm: confirmDate,
         age: isNaN(age) ? null : age,
         medication: form.medication || null,
         exerciseHabit: form.exercise || null,
