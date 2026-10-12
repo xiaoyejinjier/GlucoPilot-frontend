@@ -7,9 +7,9 @@
         <block wx:if="{{item.type === 'image'}}">
           <image
             class="wx-msg-img"
-            src="{{item.imagePath}}"
+            src="{{item.fileUrl || item.imagePath}}"
             mode="widthFix"
-            data-src="{{item.imagePath}}"
+            data-src="{{item.fileUrl || item.imagePath}}"
             bindtap="onPreviewImage"
           />
           <!-- 直传+登记完成前还没有 mediaId，给一个明确的过程提示 -->

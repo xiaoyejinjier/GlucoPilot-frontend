@@ -23,14 +23,16 @@ const BIZ_TYPE = {
   CHAT_VOICE: 6
 }
 
-/**
- * 会话图片的客户端上限：5MB，与后端 `ai.vision.max-image-bytes` 对齐。
+/** 会话图片的客户端上限：5MB，与后端 `ai.vision.max-image-bytes` 对齐。
  *
  * 为什么要在客户端先拦：媒体接口本身允许 20MB，但视觉识别只吃 5MB。
  * 若等到 2.25 才由服务端拒绝，图片已经传完了、用户白等一场，体验很差。
  * ⚠️ 权威限制在服务端，这里只是提前反馈，不作为安全边界。
  */
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+/** 通用上传的客户端默认上限：20MB，与后端媒体接口上限对齐。 */
+const DEFAULT_MAX_BYTES = 20 * 1024 * 1024
 
 /** 读取本地文件为 ArrayBuffer（不传 encoding 即以二进制读取）。 */
 function readFileAsArrayBuffer(filePath) {
@@ -96,12 +98,21 @@ function sniffImageMime(arrayBuffer) {
 }
 
 /**
- * 上传一张会话图片，返回登记的 media_file（含 id，即 2.24 需要的 mediaId）。
+ * 通用三步上传：**凭证 → 直传 → 登记**，适用于任意 {@link BIZ_TYPE}（头像 1 / 餐食 3 / 会话图 4 ……）。
  *
+ * 四个参数只取「bizType + 本地路径」，规则与后端媒体接口完全一致：大小默认 20MB 上限、
+ * MIME 靠魔数嗅探（不信扩展名）、直传用 PUT+ArrayBuffer（两个坑见文件头注释）。
+ *
+ * @param {number} bizType MediaBizType 编码（见 {@link BIZ_TYPE}）
  * @param {string} filePath 本地临时文件路径（wx.chooseMedia 的 tempFilePath）
- * @returns {Promise<{id: (number|string), fileUrl: string}>}
+ * @param {object} [opts]
+ * @param {number} [opts.maxBytes=DEFAULT_MAX_BYTES] 客户端预检字节上限
+ * @param {string} [opts.label='文件'] 超限提示里的资源名（如会话图传「图片」）
+ * @returns {Promise<{id: (number|string), fileUrl: string}>} 登记的 media_file（含 id 供业务引用）
  */
-function uploadChatImage(filePath) {
+function uploadMediaFile(bizType, filePath, opts) {
+  const maxBytes = (opts && opts.maxBytes) || DEFAULT_MAX_BYTES
+  const label = (opts && opts.label) || '文件'
   let arrayBuffer
   let mimeType
 
@@ -109,14 +120,14 @@ function uploadChatImage(filePath) {
     .then((buf) => {
       arrayBuffer = buf
       const sizeBytes = buf.byteLength
-      if (sizeBytes > MAX_IMAGE_BYTES) {
-        throw new Error(`图片不能超过 ${Math.floor(MAX_IMAGE_BYTES / 1024 / 1024)}MB，请压缩后重试`)
+      if (sizeBytes > maxBytes) {
+        throw new Error(`${label}不能超过 ${Math.floor(maxBytes / 1024 / 1024)}MB，请压缩后重试`)
       }
       mimeType = sniffImageMime(buf)
       if (!mimeType) {
         throw new Error('仅支持 JPG / PNG / GIF / WebP 格式的图片')
       }
-      return api.createMediaUploadCredential(BIZ_TYPE.CHAT_IMAGE, mimeType, sizeBytes)
+      return api.createMediaUploadCredential(bizType, mimeType, sizeBytes)
     })
     .then((cred) =>
       putToStorage(cred.uploadUrl, arrayBuffer).then(() => ({
@@ -126,7 +137,7 @@ function uploadChatImage(filePath) {
     )
     .then((uploaded) =>
       api.registerMediaFile({
-        bizType: BIZ_TYPE.CHAT_IMAGE,
+        bizType,
         storageKey: uploaded.storageKey,
         mimeType,
         sizeBytes: uploaded.sizeBytes
@@ -134,9 +145,22 @@ function uploadChatImage(filePath) {
     )
 }
 
+/**
+ * 上传一张会话图片，返回登记的 media_file（含 id，即 2.24 需要的 mediaId）。
+ * 直接委托通用 {@link uploadMediaFile}：本函数只是把 bizType 固定为聊天图并套用 5MB 上限。
+ *
+ * @param {string} filePath 本地临时文件路径（wx.chooseMedia 的 tempFilePath）
+ * @returns {Promise<{id: (number|string), fileUrl: string}>}
+ */
+function uploadChatImage(filePath) {
+  return uploadMediaFile(BIZ_TYPE.CHAT_IMAGE, filePath, { maxBytes: MAX_IMAGE_BYTES, label: '图片' })
+}
+
 module.exports = {
   BIZ_TYPE,
   MAX_IMAGE_BYTES,
+  DEFAULT_MAX_BYTES,
   uploadChatImage,
+  uploadMediaFile,
   sniffImageMime
 }

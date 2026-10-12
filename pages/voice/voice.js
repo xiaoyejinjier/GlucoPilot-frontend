@@ -155,7 +155,14 @@ Page({
     media
       .uploadChatImage(userMsg.imagePath)
       .then((record) => {
-        this.patchMessage(userLocalId, () => ({ uploading: false, mediaId: record.id }))
+        // imagePath 登记成功后替换为服务端 fileUrl：本地临时路径页内有效，换屏/重进会失效，
+        // 而 fileUrl 由服务端解析、可长期引用（预览、重试均走它）。
+        this.patchMessage(userLocalId, (m) => ({
+          uploading: false,
+          mediaId: record.id,
+          fileUrl: record.fileUrl,
+          imagePath: m.imagePath || record.fileUrl
+        }))
         this.startRound(
           { msgType: 2, mediaId: record.id, contentText: userMsg.content || undefined },
           aiLocalId
