@@ -30,6 +30,7 @@ function createPage(fetch, wxOverrides = {}) {
     },
     '../../utils/constants': { GLUCOSE_NODES },
     '../../utils/stats-week': dates,
+    '../../utils/meal-details': require('../../utils/meal-details'),
     '../../utils/display': { applyDisplayToCurrentPage() {}, getTheme: () => ({ brand: '#07c160' }), getDisplaySettings: () => ({}) }
   }
   vm.runInNewContext(source, {
