@@ -3,7 +3,7 @@
   <view class="card glucose-chart-card">
     <view class="section-title">
       <text>今日血糖曲线图</text>
-      <text class="tag tag-ok">已记 {{recordCount}}/9</text>
+      <text class="tag tag-ok">已记 {{recordCount}}/{{glucoseTotalNodes}}</text>
     </view>
     <view wx:if="{{noticeVisible}}" class="chart-canvas"></view>
     <canvas wx:else type="2d" id="glucoseChart" class="chart-canvas"

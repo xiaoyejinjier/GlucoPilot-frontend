@@ -24,6 +24,8 @@ Page({
     displayStyle: '',
     nodes: [],
     recordCount: 0,
+  /** 血糖节点总数（进度分母）。后端 DayBoard.glucoseTotalNodes 优先，取不到时退回常量 6。 */
+  glucoseTotalNodes: 6,
     timeRuleHint: '',
     selectedChartNodeId: '',
     chartSelection: null,
@@ -95,6 +97,13 @@ Page({
     ])
       .then(([boardResult, mealResult, glucoseResult]) => {
         if (syncVersion !== this._syncVersion || this._visible === false || recordDate !== getTodayKey() || getToken() !== token) return
+        // 进度分母用"血糖节点数"：后端 DayBoard.totalNodes 是全部启用节点（含 3 个餐点），
+        // 而下面 recordCount 只数血糖记录，用 9 当分母会让人以为还差 3 个时段。
+        // 存实例字段而不是局部变量：渲染用的 setData 在 promise 回调之外的路径上，闭包变量在那里不可见
+        // （写成局部变量会让 loadData 直接 ReferenceError，本题的测试就是这样抓出来的）。
+        this._glucoseTotalNodes = boardResult.value && boardResult.value.glucoseTotalNodes
+          ? boardResult.value.glucoseTotalNodes
+          : 6
         const cached = getRecords(recordDate)
         const records = { ...cached }
 
@@ -188,6 +197,7 @@ Page({
       chartSelection,
       selectedChartNodeId: chartSelection ? chartSelection.nodeId : '',
       recordCount: getRecordCount(records),
+      glucoseTotalNodes: this._glucoseTotalNodes || 6,
       timeRuleHint: getRecordWindowHint(now)
     })
     // 等 setData 与页面布局都稳定后再绘制，避免首次进入时 Canvas 尺寸错位。
