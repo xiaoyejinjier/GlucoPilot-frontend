@@ -3,7 +3,7 @@
     <view class="disclaimer-mark">!</view>
     <view class="disclaimer-head-copy">
       <text class="disclaimer-title">请认真阅读免责声明</text>
-      <text class="disclaimer-subtitle">了解服务边界与健康信息使用说明</text>
+      <text class="disclaimer-subtitle">{{forced ? '同意后才能继续使用，请阅读至底部' : '了解服务边界与健康信息使用说明'}}</text>
     </view>
   </view>
 

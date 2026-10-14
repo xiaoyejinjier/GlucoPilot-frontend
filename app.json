@@ -34,7 +34,7 @@
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "custom": true,
+    "custom": false,
     "color": "#7a7a7a",
     "selectedColor": "#07c160",
     "backgroundColor": "#fafafa",
@@ -42,27 +42,42 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页"
+        "text": "首页",
+        "iconPath": "assets/tabbar/home.png",
+        "selectedIconPath": "assets/tabbar/home-active.png"
       },
       {
         "pagePath": "pages/voice/voice",
-        "text": "语音"
+        "text": "语音",
+        "iconPath": "assets/tabbar/voice.png",
+        "selectedIconPath": "assets/tabbar/voice-active.png"
       },
       {
         "pagePath": "pages/ai/ai",
-        "text": "AI"
+        "text": "记录",
+        "iconPath": "assets/tabbar/record.png",
+        "selectedIconPath": "assets/tabbar/record-active.png"
       },
       {
         "pagePath": "pages/stats/stats",
-        "text": "统计"
+        "text": "统计",
+        "iconPath": "assets/tabbar/stats.png",
+        "selectedIconPath": "assets/tabbar/stats-active.png"
       },
       {
         "pagePath": "pages/mine/mine",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "assets/tabbar/mine.png",
+        "selectedIconPath": "assets/tabbar/mine-active.png"
       }
     ]
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.camera": {
+      "desc": "用于拍摄餐食照片与血糖仪读数"
+    }
+  }
 }

@@ -1,6 +1,8 @@
 const { GLUCOSE_NODES } = require('../../utils/constants')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { persistShotImage } = require('../../utils/shot')
+const { recognizeGlucoseImage } = require('../../utils/ocr/index')
+const { getNodeRecordWindow } = require('../../utils/record-window')
 
 Page({
   data: {
@@ -11,6 +13,7 @@ Page({
     busy: false,
     isDevtools: false,
     useLiveCamera: false,
+    blocked: false,
     needAuth: false,
     cameraTip: '',
     devicePosition: 'back'
@@ -22,19 +25,26 @@ Page({
     const nodeId = options.nodeId || 'after_breakfast'
     const isMeal = options.isMeal === '1' || options.isMeal === true
     const node = GLUCOSE_NODES.find(n => n.id === nodeId) || GLUCOSE_NODES[2]
+    const recordWindow = getNodeRecordWindow(node.id, new Date())
     const sys = wx.getSystemInfoSync() || {}
     const isDevtools = sys.platform === 'devtools'
 
     this.setData({
-      nodeId,
+      nodeId: node.id,
       nodeName: decodeURIComponent(options.nodeName || node.name),
       isMeal: !!isMeal,
       isDevtools,
       useLiveCamera: false,
+      blocked: recordWindow.locked,
       cameraTip: isDevtools
         ? '电脑端常会误开 OBS 等虚拟摄像头，画面会像刚才那样。请用手机「真机调试」预览。'
         : '正在申请摄像头权限…'
     })
+
+    if (recordWindow.locked) {
+      this.showWindowClosed(recordWindow.lockReason)
+      return
+    }
 
     if (!isDevtools) {
       this.ensureCameraAuth()
@@ -112,8 +122,31 @@ Page({
     wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/ai/ai' }) })
   },
 
+  showWindowClosed(reason) {
+    if (this._windowModalVisible) return
+    this._windowModalVisible = true
+    wx.showModal({
+      title: '该时段已截止',
+      content: reason || '请返回记录页选择当前可记录的时段。',
+      showCancel: false,
+      confirmText: '返回记录页',
+      complete: () => {
+        this._windowModalVisible = false
+        wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/ai/ai' }) })
+      }
+    })
+  },
+
+  ensureNodeOpen() {
+    const recordWindow = getNodeRecordWindow(this.data.nodeId, new Date())
+    if (!recordWindow.locked) return true
+    this.setData({ blocked: true, useLiveCamera: false, busy: false })
+    this.showWindowClosed(recordWindow.lockReason)
+    return false
+  },
+
   onAlbum() {
-    if (this.data.busy) return
+    if (this.data.busy || !this.ensureNodeOpen()) return
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
@@ -131,7 +164,7 @@ Page({
   },
 
   onCapture() {
-    if (this.data.busy) return
+    if (this.data.busy || !this.ensureNodeOpen()) return
 
     if (this.data.isDevtools || !this.data.useLiveCamera) {
       wx.showModal({
@@ -169,25 +202,30 @@ Page({
   },
 
   afterShot(imagePath) {
+    if (!this.ensureNodeOpen()) return
     if (this.data.isMeal) {
       this.goNext(imagePath)
       return
     }
 
-    wx.showLoading({ title: '识别中...', mask: true })
-    setTimeout(() => {
-      wx.hideLoading()
-      this.goNext(imagePath)
-    }, 350)
+    this.setData({ busy: true })
+    wx.showLoading({ title: '上传并识别中...', mask: true })
+    persistShotImage(imagePath)
+      .then((savedPath) => recognizeGlucoseImage(savedPath || imagePath))
+      .then(() => {
+        wx.hideLoading()
+        this.goNext(imagePath, true)
+      })
   },
 
-  goNext(imagePath) {
+  goNext(imagePath, alreadyPersisted) {
     const { nodeId, nodeName, isMeal } = this.data
     const name = encodeURIComponent(nodeName || '')
     const done = () => this.setData({ busy: false })
 
     wx.showLoading({ title: '处理中...', mask: true })
-    persistShotImage(imagePath).then(() => {
+    const persist = alreadyPersisted ? Promise.resolve(imagePath) : persistShotImage(imagePath)
+    persist.then(() => {
       wx.hideLoading()
       if (isMeal) {
         wx.navigateTo({
@@ -197,7 +235,6 @@ Page({
         })
       } else {
         wx.navigateTo({
-          // 不预填血糖值：本项目还没有 OCR，预填等于凭空造一个"识别结果"
           url: `/pages/confirm/confirm?nodeId=${nodeId}&nodeName=${name}`,
           complete: done,
           fail: done

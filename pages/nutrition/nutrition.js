@@ -5,10 +5,26 @@ const { fetchFoodCategories, fetchFoods, fetchFoodDetail } = require('../../serv
 const config = require('../../utils/config')
 const { DEFAULT_FOOD_IMAGE } = require('../../utils/food-images')
 
+const CATEGORY_ICONS = {
+  '主食类': '/assets/foods/rice.svg',
+  '肉蛋类': '/assets/foods/chicken.svg',
+  '蔬菜类': '/assets/foods/broccoli.svg',
+  '水果类': '/assets/foods/apple.svg',
+  '奶类': '/assets/foods/milk.svg',
+  '豆制品': '/assets/foods/tofu.svg',
+  '坚果类': '/assets/foods/walnut.svg',
+  '饮料类': '/assets/foods/water.svg',
+  '零食及其他': '/assets/foods/cracker.svg'
+}
+
+function categoryItem(name) {
+  return { name, icon: CATEGORY_ICONS[name] || DEFAULT_FOOD_IMAGE }
+}
+
 Page({
   data: {
     displayStyle: '',
-    categories: FOOD_CATEGORIES,
+    categories: FOOD_CATEGORIES.map(categoryItem),
     categoryMeta: [],
     keyword: '',
     searchResults: [],
@@ -27,7 +43,7 @@ Page({
         this.setData({
           usingRemote: true,
           categoryMeta: list,
-          categories: list.map((c) => c.categoryName)
+          categories: list.map((c) => categoryItem(c.categoryName))
         })
       })
       .catch(() => {

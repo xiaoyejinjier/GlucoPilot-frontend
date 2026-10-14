@@ -18,7 +18,7 @@ function setToken(token) {
  * 统一请求。成功约定：HTTP 2xx 且 body.code === 0，返回 data。
  */
 function request(options) {
-  const { url, method = 'GET', data, auth = true, header = {} } = options
+  const { url, method = 'GET', data, auth = true, header = {}, timeout } = options
   const headers = {
     'Content-Type': 'application/json',
     ...header
@@ -36,12 +36,22 @@ function request(options) {
       method,
       data,
       header: headers,
+      ...(timeout ? { timeout } : {}),
       success(res) {
         const body = res.data || {}
         if (res.statusCode === 401 || body.code === 40100) {
-          setToken('')
-          wx.setStorageSync('isLoggedIn', false)
-          reject(Object.assign(new Error(body.message || '未登录或 Token 失效'), { code: 40100, body }))
+          if (auth) {
+            setToken('')
+            wx.setStorageSync('isLoggedIn', false)
+          }
+          const message = auth
+            ? (body.message || '未登录或 Token 失效')
+            : '登录服务暂不可用，请稍后重试'
+          reject(Object.assign(new Error(message), {
+            code: 40100,
+            body,
+            requestId: body.requestId || ''
+          }))
           return
         }
         if (res.statusCode >= 200 && res.statusCode < 300 && body.code === 0) {

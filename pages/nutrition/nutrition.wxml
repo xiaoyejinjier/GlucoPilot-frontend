@@ -18,11 +18,14 @@
     <view class="cat-grid">
       <view
         wx:for="{{categories}}"
-        wx:key="*this"
+        wx:key="name"
         class="cat-item"
-        data-cat="{{item}}"
+        data-cat="{{item.name}}"
         bindtap="onCategoryTap"
-      >{{item}}</view>
+      >
+        <image class="cat-icon" src="{{item.icon}}" mode="aspectFit" />
+        <text class="cat-name">{{item.name}}</text>
+      </view>
     </view>
   </view>
 

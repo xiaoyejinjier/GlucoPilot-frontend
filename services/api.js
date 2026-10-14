@@ -131,7 +131,12 @@ function fetchFoods(params) {
   if (params && params.categoryCode) data.categoryCode = params.categoryCode
   if (params && params.keyword) data.keyword = params.keyword
   return get('/foods', data, { auth: false }).then((page) => {
-    const records = (page && page.records ? page.records : []).map((f) => mapFood(f))
+    // 兼容尚未重启的旧后端（直接返回数组）与新版 PageResult。
+    const source = Array.isArray(page) ? page : (page && page.records ? page.records : [])
+    const records = source.map((f) => mapFood(f))
+    if (Array.isArray(page)) {
+      return { pageNum: 1, pageSize: records.length, total: records.length, pages: records.length ? 1 : 0, records }
+    }
     return { ...page, records }
   })
 }
@@ -183,6 +188,41 @@ function createMediaUploadCredential(bizType, mimeType, sizeBytes) {
  */
 function registerMediaFile(payload) {
   return post('/media-files', payload, { auth: true })
+}
+
+/** ---------- OCR（接口 2.21 创建任务 / 2.22 查询任务） ---------- */
+
+function createOcrTask(mediaId, bizType, idempotencyKey) {
+  return post('/ocr-tasks', { mediaId, bizType }, {
+    auth: true,
+    header: { 'X-Idempotency-Key': idempotencyKey }
+  })
+}
+
+function fetchOcrTask(id) {
+  return get(`/ocr-tasks/${id}`, null, { auth: true })
+}
+
+/** ---------- meal（正餐记录） ---------- */
+
+function analyzeMealPhoto(payload, idempotencyKey) {
+  return post('/meal-analysis', payload, {
+    auth: true,
+    timeout: 90000,
+    header: { 'X-Idempotency-Key': idempotencyKey }
+  })
+}
+
+function predictMealGlucose(payload) {
+  return post('/predictions/meal-glucose', payload, { auth: true })
+}
+
+function saveMealRecord(payload) {
+  return post('/meal-records', payload, { auth: true })
+}
+
+function fetchDayMeals(recordDate) {
+  return get('/meal-records', { recordDate }, { auth: true })
 }
 
 /** ---------- device ---------- */
@@ -311,6 +351,12 @@ module.exports = {
   streamChatCompletion,
   createMediaUploadCredential,
   registerMediaFile,
+  createOcrTask,
+  fetchOcrTask,
+  saveMealRecord,
+  analyzeMealPhoto,
+  predictMealGlucose,
+  fetchDayMeals,
   syncMockGlucose,
   defaultMockReadings,
   fetchMe,

@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "用户反馈"
+  "navigationBarTitleText": "用户反馈",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#f2f4f3"
 }

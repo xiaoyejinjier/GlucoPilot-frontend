@@ -15,7 +15,9 @@ Page({
   onLoad() {
     this.setData({ displayStyle: getDisplayStyle() })
     if (app.globalData.isLoggedIn) {
-      wx.switchTab({ url: '/pages/index/index' })
+      if (typeof app.goAfterLogin === 'function') {
+        app.goAfterLogin()
+      }
     }
   },
 
@@ -27,14 +29,15 @@ Page({
     if (this._smsTimer) clearInterval(this._smsTimer)
   },
 
-  finishLogin(session) {
+  finishLogin() {
     login()
     app.globalData.isLoggedIn = true
-    // 资料与偏好由 app.syncProfile 从 /users/me 拉取后回填
-    if (typeof app.syncProfile === 'function') {
-      app.syncProfile()
+    // 资料、当前声明版本与用户已同意版本校验完成后再决定去向。
+    if (typeof app.goAfterLogin === 'function') {
+      app.goAfterLogin()
+      return
     }
-    wx.switchTab({ url: '/pages/index/index' })
+    wx.reLaunch({ url: '/pages/disclaimer/disclaimer?forced=1' })
   },
 
   onWechatLogin() {

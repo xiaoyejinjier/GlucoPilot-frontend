@@ -2,7 +2,7 @@
   <view class="camera-view">
     <!-- 真机：实时摄像头 -->
     <camera
-      wx:if="{{useLiveCamera}}"
+      wx:if="{{useLiveCamera && !blocked}}"
       id="shotCam"
       class="live-camera"
       device-position="{{devicePosition}}"
@@ -15,7 +15,7 @@
     <!-- 开发者工具 / 无权限：不挂载 camera，避免出现 OBS 虚拟摄像头怪画面 -->
     <view wx:else class="camera-fallback">
       <view class="fallback-icon"></view>
-      <text class="fallback-title">{{isDevtools ? '模拟器无法稳定调用真机摄像头' : '摄像头未就绪'}}</text>
+      <text class="fallback-title">{{blocked ? '该记录时段已截止' : (isDevtools ? '模拟器无法稳定调用真机摄像头' : '摄像头未就绪')}}</text>
       <text class="fallback-text">{{cameraTip}}</text>
       <button wx:if="{{needAuth && !isDevtools}}" class="btn-auth" bindtap="onRequestAuth">去开启权限</button>
       <button wx:if="{{isDevtools}}" class="btn-auth ghost" bindtap="onAlbum">用相册选图演示</button>

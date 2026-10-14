@@ -1,5 +1,6 @@
 <view class="confirm-shot-page" style="{{displayStyle}}">
   <image
+    wx:if="{{imagePath}}"
     class="full-photo"
     src="{{imagePath}}"
     mode="aspectFill"
@@ -7,6 +8,7 @@
     binderror="onImgError"
     bindload="onImgLoad"
   />
+  <view wx:else class="photo-missing">照片无法读取，请点击左下角重新拍摄</view>
 
   <view class="bottom-actions">
     <view class="circle-btn retake" bindtap="onRetake">

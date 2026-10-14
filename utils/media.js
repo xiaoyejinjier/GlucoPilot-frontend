@@ -48,17 +48,21 @@ function readFileAsArrayBuffer(filePath) {
 /**
  * 直传对象存储。**只看 HTTP 状态码**，不解析 body —— 预签名 URL 的响应没有业务信封。
  *
- * 刻意不设置 Content-Type：预签名 URL 的签名范围只含 host（实测 X-Amz-SignedHeaders=host），
- * 但阿里云 OSS 的 V1 签名会把 Content-Type 计入待签串，签名时为空、上传时非空就会
- * SignatureDoesNotMatch。真正对业务有用的 MIME 是 2.15 登记进 media_file.mime_type 的那个，
- * 与对象自身的 Content-Type 无关（视觉模型用的是库里那个值）。
+ * 本地存储地址必须显式使用 application/octet-stream。微信小程序默认会把未指定类型的
+ * wx.request 当作 application/json；后端 JSON 请求过滤器随后按 UTF-8 读取请求体，会把
+ * JPEG/PNG 的非法 UTF-8 字节替换掉，最终得到大小相近但已经打不开的损坏图片。
+ *
+ * 外部预签名 URL 则刻意不设置 Content-Type：阿里云 OSS 的 V1 签名会把 Content-Type
+ * 计入待签串，签名时为空、上传时非空会触发 SignatureDoesNotMatch。
  */
 function putToStorage(uploadUrl, arrayBuffer) {
+  const isLocalBackendUpload = uploadUrl.indexOf('/api/v1/media-files/local-uploads/') !== -1
   return new Promise((resolve, reject) => {
     wx.request({
       url: uploadUrl,
       method: 'PUT',
       data: arrayBuffer,
+      header: isLocalBackendUpload ? { 'Content-Type': 'application/octet-stream' } : {},
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res)
@@ -156,11 +160,23 @@ function uploadChatImage(filePath) {
   return uploadMediaFile(BIZ_TYPE.CHAT_IMAGE, filePath, { maxBytes: MAX_IMAGE_BYTES, label: '图片' })
 }
 
+/** 上传血糖仪照片，返回可供 OCR 任务引用的 GLUCOSE mediaId。 */
+function uploadGlucoseImage(filePath) {
+  return uploadMediaFile(BIZ_TYPE.GLUCOSE, filePath, { maxBytes: MAX_IMAGE_BYTES, label: '血糖仪照片' })
+}
+
+/** 上传正餐照片，返回可供 meal-records 引用的 MEAL mediaId。 */
+function uploadMealImage(filePath) {
+  return uploadMediaFile(BIZ_TYPE.MEAL, filePath, { maxBytes: MAX_IMAGE_BYTES, label: '餐食照片' })
+}
+
 module.exports = {
   BIZ_TYPE,
   MAX_IMAGE_BYTES,
   DEFAULT_MAX_BYTES,
   uploadChatImage,
   uploadMediaFile,
+  uploadGlucoseImage,
+  uploadMealImage,
   sniffImageMime
 }
