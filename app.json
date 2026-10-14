@@ -34,7 +34,7 @@
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "custom": false,
+    "custom": true,
     "color": "#7a7a7a",
     "selectedColor": "#07c160",
     "backgroundColor": "#fafafa",
@@ -42,33 +42,23 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页",
-        "iconPath": "assets/tabbar/home.png",
-        "selectedIconPath": "assets/tabbar/home-active.png"
+        "text": "首页"
       },
       {
         "pagePath": "pages/voice/voice",
-        "text": "语音",
-        "iconPath": "assets/tabbar/voice.png",
-        "selectedIconPath": "assets/tabbar/voice-active.png"
+        "text": "语音"
       },
       {
         "pagePath": "pages/ai/ai",
-        "text": "记录",
-        "iconPath": "assets/tabbar/record.png",
-        "selectedIconPath": "assets/tabbar/record-active.png"
+        "text": "AI"
       },
       {
         "pagePath": "pages/stats/stats",
-        "text": "统计",
-        "iconPath": "assets/tabbar/stats.png",
-        "selectedIconPath": "assets/tabbar/stats-active.png"
+        "text": "统计"
       },
       {
         "pagePath": "pages/mine/mine",
-        "text": "我的",
-        "iconPath": "assets/tabbar/mine.png",
-        "selectedIconPath": "assets/tabbar/mine-active.png"
+        "text": "我的"
       }
     ]
   },
