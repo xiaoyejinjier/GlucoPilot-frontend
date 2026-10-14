@@ -2,6 +2,7 @@ const { fetchGlucoseSummary, fetchGlucoseRecords, fetchDayMeals } = require('../
 const { GLUCOSE_NODES } = require('../../utils/constants')
 const { applyDisplayToCurrentPage, getTheme, getDisplaySettings } = require('../../utils/display')
 const { parseLocalDate, getNaturalWeek, getWeekRangeText, getMonthWeeks } = require('../../utils/stats-week')
+const { buildMealDetails } = require('../../utils/meal-details')
 
 /** 同时拉取六个血糖节点和三个正餐节点，供“日”视图拼成完整九时段。 */
 function recordsOfDay(year, month, day) {
@@ -48,6 +49,7 @@ Page({
     weekdays: ['一', '二', '三', '四', '五', '六', '日'],
     calendarDays: [],
     dayRecords: [],
+    expandedMealId: '',
     dayLoading: false,
     dayLoadFailed: false,
     dayCompleted: 0,
@@ -88,6 +90,7 @@ Page({
   },
 
   onHide() {
+    this.setData({ expandedMealId: '' })
     this.cancelWeekChartDraw()
     this._summaryRequestVersion = (this._summaryRequestVersion || 0) + 1
     this._dayRequestVersion = (this._dayRequestVersion || 0) + 1
@@ -113,6 +116,7 @@ Page({
   },
 
   loadSummary() {
+    this.setData({ expandedMealId: '' })
     const { year, month } = this.data
     const weekRange = this.getSelectedWeek()
     const requestVersion = (this._summaryRequestVersion || 0) + 1
@@ -180,6 +184,7 @@ Page({
   },
 
   buildDayRecords(day) {
+    this.setData({ expandedMealId: '' })
     if (!day) {
       this.setData({ dayRecords: [], dayCompleted: 0, dayCompletion: 0, dayGlucoseAvg: '--' })
       return
@@ -190,7 +195,7 @@ Page({
     this.setData({ dayLoading: true, dayLoadFailed: false, dayRecords: [],
       dayCompleted: 0, dayCompletion: 0, dayGlucoseAvg: '--' })
     return recordsOfDay(year, month, day)
-      .then(({ glucoseRecords, meals }) => {
+      .then(({ date, glucoseRecords, meals }) => {
         if (requestVersion !== this._dayRequestVersion) return
         const glucoseByNode = {}
         const mealByNode = {}
@@ -209,6 +214,7 @@ Page({
               name: node.name,
               kind: 'meal',
               recorded: !!meal,
+              detail: meal ? buildMealDetails(meal, date) : null,
               text: meal
                 ? (meal.foodsText ? `已记录 · ${meal.foodsText}` : '正餐已记录')
                 : '未记录'
@@ -253,21 +259,37 @@ Page({
       })
   },
 
+  onMealDetailTap(e) {
+    if (this.data.activeView !== 'calendar' || this.data.viewMode !== 'day'
+      || this.data.dayLoading || this.data.dayLoadFailed) return
+    const id = e.currentTarget.dataset.id
+    const record = this.data.dayRecords.find((item) => item.id === id)
+    if (!record || record.kind !== 'meal' || !record.recorded || !record.detail) return
+    this.setData({ expandedMealId: this.data.expandedMealId === id ? '' : id })
+  },
+
+  onPreviewMealPhoto(e) {
+    const record = this.data.dayRecords.find((item) => item.id === e.currentTarget.dataset.id)
+    if (this.data.activeView !== 'calendar' || this.data.viewMode !== 'day' || this.data.dayLoading
+      || !record || record.id !== this.data.expandedMealId || !record.detail || !record.detail.mediaUrl) return
+    wx.previewImage({ current: record.detail.mediaUrl, urls: [record.detail.mediaUrl] })
+  },
+
   onSwitchView(e) {
     const view = e.currentTarget.dataset.view
-    this.setData({ activeView: view, showWeekPicker: false }, () => {
+    this.setData({ activeView: view, showWeekPicker: false, expandedMealId: '' }, () => {
       if (view === 'glucose') this.scheduleWeekChart()
       else this.cancelWeekChartDraw()
     })
   },
 
   onSwitchToCalendar() {
-    this.setData({ activeView: 'calendar', viewMode: 'month', showWeekPicker: false })
+    this.setData({ activeView: 'calendar', viewMode: 'month', showWeekPicker: false, expandedMealId: '' })
     this.cancelWeekChartDraw()
   },
 
   onSwitchToGlucose() {
-    this.setData({ activeView: 'glucose' }, () => this.scheduleWeekChart())
+    this.setData({ activeView: 'glucose', expandedMealId: '' }, () => this.scheduleWeekChart())
   },
 
   onPrevMonth() {
@@ -523,7 +545,7 @@ Page({
     if (mode === this.data.viewMode) return
     if (mode === 'month') {
       this._dayRequestVersion = (this._dayRequestVersion || 0) + 1
-      this.setData({ viewMode: mode, dayLoading: false })
+      this.setData({ viewMode: mode, dayLoading: false, expandedMealId: '' })
       return
     }
     this.setData({ viewMode: mode }, () => {

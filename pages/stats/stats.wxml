@@ -126,14 +126,45 @@
         <button class="btn-ghost btn-sm calendar-retry" bindtap="onRetryDay">重新加载明细</button>
       </view>
       <view wx:else class="day-node-list">
-        <view wx:for="{{dayRecords}}" wx:key="id" class="day-row day-row-{{item.kind}} {{item.recorded ? 'recorded' : 'missing'}}">
+        <block wx:for="{{dayRecords}}" wx:key="id">
+        <view class="day-row day-row-{{item.kind}} {{item.recorded ? 'recorded' : 'missing'}} {{item.kind === 'meal' && item.recorded ? 'meal-clickable' : ''}}" data-id="{{item.id}}" bindtap="onMealDetailTap">
           <view class="day-name-wrap">
             <text class="day-status-dot"></text>
             <text class="day-name">{{item.name}}</text>
             <text class="day-kind">{{item.kind === 'meal' ? '正餐' : '血糖'}}</text>
           </view>
-          <text class="day-val">{{item.text}}</text>
+          <view class="day-value-wrap">
+            <text class="day-val">{{item.text}}</text>
+            <text wx:if="{{item.kind === 'meal' && item.recorded}}" class="meal-detail-toggle">{{expandedMealId === item.id ? '收起 ⌃' : '详情 ›'}}</text>
+          </view>
         </view>
+        <view wx:if="{{expandedMealId === item.id && item.detail}}" class="meal-detail-panel">
+          <view class="meal-detail-heading">{{item.name}}详情 · {{item.detail.recordDate}}</view>
+          <text class="meal-detail-label">完整食物内容</text>
+          <text class="meal-detail-full-text">{{item.detail.foodsText}}</text>
+          <view wx:if="{{item.detail.items.length}}" class="meal-food-list">
+            <view wx:for="{{item.detail.items}}" wx:for-item="food" wx:key="key" class="meal-food-item">
+              <view class="meal-food-heading">
+                <text class="meal-food-name">{{food.name}}</text>
+                <text class="meal-food-weight">份量 {{food.weightText}}</text>
+              </view>
+              <text class="meal-food-nutrients">碳水 {{food.carbsText}} · 热量 {{food.caloriesText}}</text>
+            </view>
+          </view>
+          <view class="meal-detail-meta">
+            <text>总碳水：{{item.detail.carbsText}}</text>
+            <text>总热量：{{item.detail.caloriesText}}</text>
+            <text>饱腹感：{{item.detail.hungerText}}</text>
+            <text>记录时间：{{item.detail.recordedAt}}</text>
+          </view>
+          <text class="meal-detail-label">补充 / 备注</text>
+          <text class="meal-detail-full-text">{{item.detail.supplementText}}</text>
+          <view wx:if="{{item.detail.mediaUrl}}" class="meal-photo-wrap" data-id="{{item.id}}" bindtap="onPreviewMealPhoto">
+            <image src="{{item.detail.mediaUrl}}" mode="aspectFit" class="meal-detail-photo"></image>
+            <text class="meal-photo-tip">点击查看原图</text>
+          </view>
+        </view>
+        </block>
       </view>
       <view class="actions-row" style="margin-top: 20rpx;">
         <button class="btn-ghost btn-sm" bindtap="onGoAi">去记录</button>

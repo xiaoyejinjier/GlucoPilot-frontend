@@ -11,7 +11,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve))
 
 function createPage(options = {}) {
   let definition
-  const calls = { summaries: [], glucose: [], meals: [], updates: 0 }
+  const calls = { summaries: [], glucose: [], meals: [], photos: [], updates: 0 }
   const api = {
     fetchGlucoseSummary: async (query) => {
       calls.summaries.push({ ...query })
@@ -30,11 +30,12 @@ function createPage(options = {}) {
   }
   const dependencies = {
     '../../services/api': api, '../../utils/constants': { GLUCOSE_NODES }, '../../utils/stats-week': dates,
+    '../../utils/meal-details': require('../../utils/meal-details'),
     '../../utils/display': { applyDisplayToCurrentPage() {}, getTheme: () => ({ brand: '#07c160' }), getDisplaySettings: () => ({}) }
   }
   vm.runInNewContext(source, { Page: (value) => { definition = value },
     require: (name) => { if (!dependencies[name]) throw new Error(name); return dependencies[name] },
-    wx: { showToast() {}, navigateTo() {}, switchTab() {}, nextTick: (callback) => callback() }, setTimeout, clearTimeout })
+    wx: { showToast() {}, navigateTo() {}, switchTab() {}, previewImage: (photo) => calls.photos.push(photo), nextTick: (callback) => callback() }, setTimeout, clearTimeout })
   const page = { ...definition, data: JSON.parse(JSON.stringify(definition.data)) }
   page.setData = function (values, callback) { calls.updates++; Object.assign(this.data, values); if (callback) callback() }
   page.drawWeekChart = () => {}
@@ -45,6 +46,110 @@ function createPage(options = {}) {
 const monthEvent = (month) => ({ currentTarget: { dataset: { month } } })
 const dayEvent = (day) => ({ currentTarget: { dataset: { day } } })
 const modeEvent = (mode) => ({ currentTarget: { dataset: { mode } } })
+const mealEvent = (id) => ({ currentTarget: { dataset: { id } } })
+
+test('点击已记录正餐展开完整食物明细，再次点击收起，可切换正餐', async () => {
+  const { page } = createPage({ meals: () => ({ meals: [
+    { nodeCode: 'breakfast', foodsText: '米饭、鸡蛋、豆腐、青菜以及水果', items: [{ foodName: '米饭', weightG: 100, carbsG: 26, caloriesKcal: 116 }] },
+    { nodeCode: 'lunch', foodsText: '面条、牛肉' }
+  ] }) })
+  await page.onMonthTap(monthEvent(10))
+  await flush()
+  page.onMealDetailTap(mealEvent('breakfast'))
+  assert.equal(page.data.expandedMealId, 'breakfast')
+  const detail = page.data.dayRecords.find((item) => item.id === 'breakfast').detail
+  assert.equal(detail.foodsText, '米饭、鸡蛋、豆腐、青菜以及水果')
+  assert.equal(detail.recordDate, '2026-10-14')
+  assert.equal(detail.items[0].weightText, '100 g')
+  page.onMealDetailTap(mealEvent('lunch'))
+  assert.equal(page.data.expandedMealId, 'lunch')
+  page.onMealDetailTap(mealEvent('lunch'))
+  assert.equal(page.data.expandedMealId, '')
+})
+
+test('未记录正餐、血糖行、无效节点及隐藏/加载/失败状态不打开详情', async () => {
+  const { page } = createPage({ meals: () => ({ meals: [{ nodeCode: 'breakfast', foodsText: '鸡蛋' }] }),
+    glucose: () => ({ records: [{ nodeCode: 'before_breakfast', value: 6 }] }) })
+  await page.buildDayRecords(14)
+  page.data.viewMode = 'day'
+  for (const id of ['dinner', 'before_breakfast', 'invalid']) page.onMealDetailTap(mealEvent(id))
+  assert.equal(page.data.expandedMealId, '')
+  for (const values of [{ activeView: 'glucose' }, { viewMode: 'month' }, { dayLoading: true }, { dayLoadFailed: true }]) {
+    page.setData({ activeView: 'calendar', viewMode: 'day', dayLoading: false, dayLoadFailed: false, ...values })
+    page.onMealDetailTap(mealEvent('breakfast'))
+    assert.equal(page.data.expandedMealId, '')
+  }
+})
+
+test('更换日期立即收起旧正餐明细，并展示新日期的完整快照', async () => {
+  const { page } = createPage({ meals: (date) => ({ meals: [{ nodeCode: 'breakfast', foodsText: date }] }) })
+  await page.onMonthTap(monthEvent(10))
+  await flush()
+  page.onMealDetailTap(mealEvent('breakfast'))
+  page.onDayTap(dayEvent(15))
+  assert.equal(page.data.expandedMealId, '')
+  await flush()
+  page.onMealDetailTap(mealEvent('breakfast'))
+  assert.equal(page.data.dayRecords.find((item) => item.id === 'breakfast').detail.foodsText, '2026-10-15')
+})
+
+test('重新读取失败清空正餐详情，旧日期响应不会重新打开详情', async () => {
+  let fail = false
+  const { page } = createPage({ meals: () => {
+    if (fail) throw new Error('读取失败')
+    return { meals: [{ nodeCode: 'breakfast', foodsText: '米饭' }] }
+  } })
+  await page.onMonthTap(monthEvent(10))
+  await flush()
+  page.onMealDetailTap(mealEvent('breakfast'))
+  fail = true
+  await page.onRetryDay()
+  assert.equal(page.data.expandedMealId, '')
+  assert.equal(page.data.dayRecords.length, 0)
+  assert.equal(page.data.dayLoadFailed, true)
+})
+
+test('返回月视图、切换血糖视图或离开页面会收起正餐', () => {
+  for (const action of [(page) => page.onViewMode(modeEvent('month')), (page) => page.onSwitchToCalendar(),
+    (page) => page.onSwitchToGlucose(), (page) => page.onSwitchView({ currentTarget: { dataset: { view: 'glucose' } } }),
+    (page) => page.onHide()]) {
+    const { page } = createPage()
+    page.setData({ viewMode: 'day', expandedMealId: 'breakfast' })
+    action(page)
+    assert.equal(page.data.expandedMealId, '')
+  }
+})
+
+test('只有当前展开且有真实照片的正餐可以预览原图', async () => {
+  const { page, calls } = createPage({ meals: () => ({ meals: [
+    { nodeCode: 'breakfast', foodsText: '米饭', mediaUrl: '/photo/example.jpg' },
+    { nodeCode: 'lunch', foodsText: '面条' }
+  ] }) })
+  await page.onMonthTap(monthEvent(10))
+  await flush()
+  page.onPreviewMealPhoto(mealEvent('breakfast'))
+  assert.equal(calls.photos.length, 0)
+  page.onMealDetailTap(mealEvent('breakfast'))
+  page.onPreviewMealPhoto(mealEvent('breakfast'))
+  assert.equal(calls.photos.length, 1)
+  assert.equal(calls.photos[0].current, '/photo/example.jpg')
+  assert.equal(calls.photos[0].urls[0], '/photo/example.jpg')
+  page.onMealDetailTap(mealEvent('lunch'))
+  page.onPreviewMealPhoto(mealEvent('breakfast'))
+  page.onPreviewMealPhoto(mealEvent('lunch'))
+  assert.equal(calls.photos.length, 1)
+})
+
+test('正餐详情使用可换行文本和快照，不限制行数；逐项循环不覆盖外层 item', () => {
+  const template = fs.readFileSync(path.join(directory, 'stats.wxml'), 'utf8')
+  const style = fs.readFileSync(path.join(directory, 'stats.wxss'), 'utf8')
+  assert.match(template, /bindtap="onMealDetailTap"/)
+  assert.match(template, /expandedMealId === item.id && item.detail/)
+  assert.match(template, /wx:for-item="food"/)
+  assert.match(template, /item.detail.foodsText/)
+  assert.match(style, /\.meal-detail-full-text\s*\{[^}]*white-space:\s*pre-wrap;[^}]*word-break:\s*break-all;/)
+  assert.doesNotMatch(style, /\.meal-detail-full-text\s*\{[^}]*(line-clamp|text-overflow)/)
+})
 
 test('月视图包含1～12月入口，不伪造每月记录数', () => {
   const { page } = createPage()
