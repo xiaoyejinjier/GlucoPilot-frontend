@@ -169,6 +169,16 @@ function uploadGlucoseImage(filePath) {
 function uploadMealImage(filePath) {
   return uploadMediaFile(BIZ_TYPE.MEAL, filePath, { maxBytes: MAX_IMAGE_BYTES, label: '餐食照片' })
 }
+/** 上传血糖仪照片，返回可供 OCR 任务引用的 GLUCOSE mediaId。 */
+function uploadGlucoseImage(filePath) {
+  return uploadMediaFile(BIZ_TYPE.GLUCOSE, filePath, { maxBytes: MAX_IMAGE_BYTES, label: '血糖仪照片' })
+}
+
+/** 上传正餐照片，返回可供 meal-records 引用的 MEAL mediaId。 */
+function uploadMealImage(filePath) {
+  return uploadMediaFile(BIZ_TYPE.MEAL, filePath, { maxBytes: MAX_IMAGE_BYTES, label: '餐食照片' })
+}
+
 module.exports = {
   BIZ_TYPE,
   MAX_IMAGE_BYTES,
@@ -177,4 +187,7 @@ module.exports = {
   uploadMediaFile,
   uploadGlucoseImage,
   uploadMealImage,  sniffImageMime
+  uploadGlucoseImage,
+  uploadMealImage,
+  sniffImageMime
 }
