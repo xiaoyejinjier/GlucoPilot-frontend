@@ -33,21 +33,23 @@
 
 ## SSE 自检工具
 
-小程序端无法在 CI 里跑，而 SSE 解析是最容易静默出错的一段（chunk 边界切断多字节 UTF-8、切断事件行）。
-`tools/sse-check/` 用真实后端抓下来的字节流当夹具，在 Node 里按任意分片粒度重放 `utils` 里的解析逻辑。
-**在本仓根目录执行**：
+小程序端无法在 CI 里跑，而 SSE 解析是最容易静默出错的一段（chunk 边界切断多字节 UTF-8、切断事件行、
+切断 `\r\n` 行尾）。`tools/sse-check/` 用真实后端抓下来的字节流当夹具，在 Node 里按任意分片粒度重放
+`utils/sse.js` 的解析逻辑。第二个参数是前端项目目录，拆仓后就是本仓根 `.`。**在本仓根目录执行**：
 
 ```bash
 # 正常流：任意分片粒度下，delta 拼接结果必须等于 done.contentText
-node tools/sse-check/sse_harness.js tools/sse-check/fixtures/sse_raw.bin frontend 1
-node tools/sse-check/sse_harness.js tools/sse-check/fixtures/sse_raw.bin frontend 7
-node tools/sse-check/sse_harness.js tools/sse-check/fixtures/sse_raw.bin frontend 997
+node tools/sse-check/sse_harness.js tools/sse-check/fixtures/sse_raw.bin . 1
+node tools/sse-check/sse_harness.js tools/sse-check/fixtures/sse_raw.bin . 7
+node tools/sse-check/sse_harness.js tools/sse-check/fixtures/sse_raw.bin . 997
 
 # 错误流：开流前的校验失败（HTTP 4xx + 统一 JSON）必须转成 onError 且 code/message 原样透出
-node tools/sse-check/sse_err_harness.js tools/sse-check/fixtures/err404.bin frontend 404
-node tools/sse-check/sse_err_harness.js tools/sse-check/fixtures/err401.bin frontend 401
+node tools/sse-check/sse_err_harness.js tools/sse-check/fixtures/err404.bin . 404
+node tools/sse-check/sse_err_harness.js tools/sse-check/fixtures/err401.bin . 401
 ```
 
-用法与夹具更新方式见 [`tools/sse-check/README.md`](./tools/sse-check/README.md)。
+这套自检在 2026-10-14 抓到过一个真实缺陷：换行归一化做在了逐块上，chunk 边界切开 `\r\n` 时
+整条流一个事件都解析不出来（真机表现为"回答卡住不出字"）；修法与证据见
+[`tools/sse-check/README.md`](./tools/sse-check/README.md)。
 该目录原在单仓的 `project/tools/`，刻意放在 `frontend/` 之外以免被微信打包；拆仓后它落在本仓根的
 `tools/`，因此已在 `project.config.json` 的 `packOptions.ignore` 里加上 `tools`，保持同一约束。
