@@ -186,7 +186,7 @@ module.exports = {
   uploadChatImage,
   uploadMediaFile,
   uploadGlucoseImage,
-  uploadMealImage,  sniffImageMime
+  uploadMealImage,
   uploadGlucoseImage,
   uploadMealImage,
   sniffImageMime
