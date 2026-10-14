@@ -16,91 +16,162 @@
     </view>
   </view>
 
-  <!-- 顶部月度指标（两视图共用） -->
-  <view class="card">
-    <view class="section-title">本月指标</view>
-    <view class="metric-row">
-      <view class="metric-box">
-        <text class="metric-val">{{monthRecordDays}}</text>
-        <text class="metric-label">打卡天数</text>
+  <!-- 血糖视图保留所选月份指标；日历视图按“月份 → 日期 → 明细”展示。 -->
+  <view wx:if="{{activeView === 'glucose'}}" class="card">
+      <view class="section-title">{{year}}年{{month}}月指标</view>
+      <view class="metric-row">
+        <view class="metric-box">
+          <text class="metric-val">{{monthRecordDays}}</text>
+          <text class="metric-label">打卡天数</text>
+        </view>
+        <view class="metric-box">
+          <text class="metric-val">{{monthTotal}}</text>
+          <text class="metric-label">记录次数</text>
+        </view>
+        <view class="metric-box">
+          <text class="metric-val">{{compliance}}%</text>
+          <text class="metric-label">记录率</text>
+        </view>
       </view>
-      <view class="metric-box">
-        <text class="metric-val">{{monthTotal}}</text>
-        <text class="metric-label">记录次数</text>
-      </view>
-      <view class="metric-box">
-        <text class="metric-val">{{compliance}}%</text>
-        <text class="metric-label">达标率</text>
-      </view>
-    </view>
   </view>
 
   <view wx:if="{{activeView === 'calendar'}}" class="card">
-    <view class="section-title">
-      <view class="month-nav">
+    <view class="section-title calendar-heading">
+      <view wx:if="{{viewMode === 'month'}}" class="month-nav">
+        <text class="month-btn" bindtap="onPrevYear">‹</text>
+        <text>{{year}} 年</text>
+        <text class="month-btn" bindtap="onNextYear">›</text>
+      </view>
+      <view wx:else class="month-nav">
         <text class="month-btn" bindtap="onPrevMonth">‹</text>
         <text>{{year}} 年 {{month}} 月</text>
         <text class="month-btn" bindtap="onNextMonth">›</text>
       </view>
       <view class="calendar-tools">
-        <text class="tool-item {{viewMode === 'month' ? 'on' : ''}}" data-mode="month" bindtap="onViewMode">月</text>
-        <text class="tool-item {{viewMode === 'day' ? 'on' : ''}}" data-mode="day" bindtap="onViewMode">日</text>
+        <text class="tool-item {{viewMode === 'month' ? 'on' : ''}}" data-mode="month" bindtap="onViewMode">月视图</text>
+        <text class="tool-item {{viewMode === 'day' ? 'on' : ''}}" data-mode="day" bindtap="onViewMode">日视图</text>
         <text class="tool-item export" bindtap="onExport">导出</text>
       </view>
     </view>
 
-    <view class="weekdays">
-      <text wx:for="{{weekdays}}" wx:key="*this">{{item}}</text>
-    </view>
-
-    <view class="calendar">
-      <view wx:for="{{calendarDays}}" wx:key="index" class="cal-cell">
-        <view
-          wx:if="{{item.day}}"
-          class="cal-day {{item.level}} {{selectedDay === item.day ? 'selected' : ''}}"
-          data-day="{{item.day}}"
-          bindtap="onDayTap"
-        >
-          <text class="cal-num">{{item.day}}</text>
-          <text wx:if="{{item.count}}" class="cal-count">{{item.count}}</text>
+    <block wx:if="{{viewMode === 'month'}}">
+      <view class="month-grid">
+        <view wx:for="{{months}}" wx:key="month" class="month-tile {{month === item.month ? 'selected' : ''}}" data-month="{{item.month}}" bindtap="onMonthTap">
+          <text class="month-tile-title">{{item.month}}月</text>
+          <text class="month-tile-hint">查看日期</text>
         </view>
       </view>
-    </view>
+      <view class="calendar-tip">点击月份进入日视图，查看日期和记录明细</view>
+    </block>
 
-    <view class="legend">
-      <text class="legend-item"><text class="legend-dot c"></text>1–3 次</text>
-      <text class="legend-item"><text class="legend-dot b"></text>4–6 次</text>
-      <text class="legend-item"><text class="legend-dot a"></text>7 次以上</text>
-    </view>
+    <block wx:else>
+      <view wx:if="{{loading && !calendarDays.length}}" class="empty-tip">正在加载日期日历…</view>
+      <view wx:elif="{{weekLoadFailed && !calendarDays.length}}" class="empty-tip">
+        <text>日期日历加载失败</text>
+        <button class="btn-ghost btn-sm calendar-retry" bindtap="onRetryCalendar">重新加载</button>
+      </view>
+      <block wx:else>
+      <view class="weekdays">
+        <text wx:for="{{weekdays}}" wx:key="*this">{{item}}</text>
+      </view>
+
+      <view class="calendar">
+        <view wx:for="{{calendarDays}}" wx:key="index" class="cal-cell">
+          <view
+            wx:if="{{item.day}}"
+            class="cal-day {{item.level}} {{selectedDay === item.day ? 'selected' : ''}}"
+            data-day="{{item.day}}"
+            bindtap="onDayTap"
+          >
+            <text class="cal-num">{{item.day}}</text>
+            <text wx:if="{{item.count}}" class="cal-count">{{item.count}}/9</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="legend">
+        <text class="legend-item"><text class="legend-dot c"></text>1–3 时段</text>
+        <text class="legend-item"><text class="legend-dot b"></text>4–6 时段</text>
+        <text class="legend-item"><text class="legend-dot a"></text>7–9 时段</text>
+      </view>
+      <view class="calendar-tip">点击日期，下方显示当天的九时段记录</view>
+      </block>
+    </block>
   </view>
 
-  <view wx:if="{{activeView === 'calendar' && selectedDay}}" class="card">
-    <view class="section-title">{{month}}月{{selectedDay}}日明细</view>
-    <view wx:if="{{dayRecords.length === 0}}" class="empty-tip">当日暂无记录，去 AI 页补记</view>
-    <view wx:for="{{dayRecords}}" wx:key="id" class="day-row">
-      <text class="day-name">{{item.name}}</text>
-      <text class="day-val">{{item.text}}</text>
-    </view>
-    <view class="actions-row" style="margin-top: 20rpx;">
-      <button class="btn-ghost btn-sm" bindtap="onGoAi">去补记</button>
-      <button class="btn-primary btn-sm" bindtap="onSwitchToGlucose">血糖趋势</button>
-    </view>
+  <view wx:if="{{activeView === 'calendar' && viewMode === 'day'}}" class="card day-details-card">
+      <view class="section-title">当日记录明细</view>
+      <view class="day-detail-nav">
+        <text class="month-btn" bindtap="onPrevDay">‹</text>
+        <text class="day-detail-date">{{year}}年{{month}}月{{selectedDay}}日</text>
+        <text class="month-btn" bindtap="onNextDay">›</text>
+      </view>
+      <view class="metric-row day-detail-metrics">
+        <view class="metric-box">
+          <text class="metric-val">{{dayLoading || dayLoadFailed ? '—' : dayCompleted + '/9'}}</text>
+          <text class="metric-label">完成时段</text>
+        </view>
+        <view class="metric-box">
+          <text class="metric-val">{{dayGlucoseAvg}}</text>
+          <text class="metric-label">实测均糖</text>
+        </view>
+        <view class="metric-box">
+          <text class="metric-val">{{dayLoading || dayLoadFailed ? '—' : dayCompletion + '%'}}</text>
+          <text class="metric-label">完成率</text>
+        </view>
+      </view>
+      <view wx:if="{{dayLoading}}" class="empty-tip">正在加载当日记录…</view>
+      <view wx:elif="{{dayLoadFailed}}" class="empty-tip">
+        <text>当日记录加载失败</text>
+        <button class="btn-ghost btn-sm calendar-retry" bindtap="onRetryDay">重新加载明细</button>
+      </view>
+      <view wx:else class="day-node-list">
+        <view wx:for="{{dayRecords}}" wx:key="id" class="day-row day-row-{{item.kind}} {{item.recorded ? 'recorded' : 'missing'}}">
+          <view class="day-name-wrap">
+            <text class="day-status-dot"></text>
+            <text class="day-name">{{item.name}}</text>
+            <text class="day-kind">{{item.kind === 'meal' ? '正餐' : '血糖'}}</text>
+          </view>
+          <text class="day-val">{{item.text}}</text>
+        </view>
+      </view>
+      <view class="actions-row" style="margin-top: 20rpx;">
+        <button class="btn-ghost btn-sm" bindtap="onGoAi">去记录</button>
+        <button class="btn-primary btn-sm" bindtap="onSwitchToGlucose">血糖趋势</button>
+      </view>
   </view>
 
   <block wx:if="{{activeView === 'glucose'}}">
     <view class="card">
       <view class="section-title">
         <text>血糖一周曲线</text>
-        <text class="chart-label">按日均值</text>
+        <text class="chart-label">日均值 · mmol/L</text>
       </view>
-      <canvas type="2d" id="weekChart" class="chart-canvas"></canvas>
+      <view class="week-selector" bindtap="onOpenWeekPicker">
+        <view class="week-selector-main">
+          <text class="week-selector-title">{{weekRangeText || '选择查看的周'}}</text>
+          <text class="week-selector-hint">{{weekAnchorDate ? '已手动选周' : '跟随日历选中日期'}} · 点击切换</text>
+        </view>
+        <text class="week-selector-arrow">⌄</text>
+      </view>
+      <view wx:if="{{loading}}" class="empty-tip week-chart-status">正在加载所选周…</view>
+      <view wx:elif="{{weekLoadFailed}}" class="empty-tip week-chart-status">
+        <text>该周数据加载失败</text>
+        <button class="btn-ghost btn-sm week-retry" bindtap="onRetryWeek">重新加载</button>
+      </view>
+      <block wx:else>
+        <!-- 弹窗期间移除 Canvas 原生渲染层，等高占位避免页面跳动。 -->
+        <view wx:if="{{showWeekPicker}}" class="chart-canvas"></view>
+        <canvas wx:else type="2d" id="weekChart" class="chart-canvas"></canvas>
+        <view wx:if="{{weekChartError && !showWeekPicker}}" class="empty-tip">图表暂未绘制，请切换页面后重试</view>
+      </block>
       <view class="legend">
-        <text class="legend-item"><text class="legend-dot a"></text>日均血糖（无记录日断开）</text>
+        <text class="legend-item"><text class="legend-dot a"></text>日均血糖（连接有记录日期）</text>
       </view>
     </view>
 
     <view class="card">
-      <view class="section-title">本周摘要</view>
+      <view class="section-title">所选周摘要</view>
       <view class="metric-row">
         <view class="metric-box">
           <text class="metric-val">{{weekAvg}}</text>
@@ -118,7 +189,7 @@
     </view>
 
     <view class="card">
-      <view class="section-title">时段分布</view>
+      <view class="section-title">{{year}}年{{month}}月时段分布</view>
       <view class="dist-row" wx:for="{{slotStats}}" wx:key="name">
         <text class="dist-name">{{item.name}}</text>
         <view class="dist-bar-bg">
@@ -132,4 +203,29 @@
       </view>
     </view>
   </block>
+
+  <view wx:if="{{showWeekPicker}}" class="week-picker-mask" bindtap="onCloseWeekPicker" catchtouchmove="onWeekPickerContentTap">
+    <view class="week-picker-sheet" catchtap="onWeekPickerContentTap">
+      <view class="section-title">
+        <text>选择查看的周</text>
+        <text class="week-picker-close" bindtap="onCloseWeekPicker">关闭</text>
+      </view>
+      <view class="week-picker-month-nav">
+        <text class="month-btn" bindtap="onPrevWeekPickerMonth">‹</text>
+        <picker mode="date" fields="month" value="{{weekPickerMonthValue}}" start="1970-01-01" end="2099-12-31" bindchange="onWeekPickerMonthChange" class="week-picker-month">
+          <view>{{weekPickerYear}} 年 {{weekPickerMonth}} 月 <text class="week-picker-month-hint">⌄</text></view>
+        </picker>
+        <text class="month-btn" bindtap="onNextWeekPickerMonth">›</text>
+      </view>
+      <text class="week-picker-tip">周一至周日，跨月的周也会完整显示</text>
+      <scroll-view scroll-y class="week-picker-options">
+        <view wx:for="{{weekPickerOptions}}" wx:key="startDate" class="week-picker-option {{item.selected ? 'selected' : ''}}" data-start="{{item.startDate}}" bindtap="onSelectWeek">
+          <text>{{item.label}}</text>
+          <text class="week-picker-check">{{item.selected ? '已选择' : '选择'}}</text>
+        </view>
+      </scroll-view>
+      <button class="btn-ghost btn-block btn-sm week-follow-button" bindtap="onFollowCalendarWeek">跟随日历选中日期所在周</button>
+      <text class="week-picker-tip">仅切换周曲线与周摘要，不改变日历选中的日期</text>
+    </view>
+  </view>
 </view>

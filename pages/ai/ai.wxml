@@ -4,27 +4,77 @@
       <text>今日血糖曲线图</text>
       <text class="tag tag-ok">已记 {{recordCount}}/9</text>
     </view>
-    <canvas type="2d" id="glucoseChart" class="chart-canvas"></canvas>
-    <text class="tip">X轴固定 9 时段（灰点=未记录）· Y轴血糖 mmol/L</text>
+    <canvas type="2d" id="glucoseChart" class="chart-canvas"
+      bindtouchstart="onChartTouchStart" bindtouchmove="onChartTouchMove"
+      bindtouchend="onChartTouchEnd" bindtouchcancel="onChartTouchCancel"></canvas>
+    <view class="chart-axis-note">
+      <text>X 轴：9 时段</text>
+      <text class="axis-divider">·</text>
+      <text>Y 轴：血糖 mmol/L</text>
+    </view>
+    <view class="chart-touch-hint">点击实心点查看对应记录，空心点表示无实测血糖</view>
+    <view wx:if="{{chartSelection}}" class="chart-details">
+      <view class="chart-details-heading">
+        <text class="chart-details-name">{{chartSelection.nodeName}}</text>
+        <text class="chart-details-close" bindtap="onCloseChartDetails">收起</text>
+      </view>
+      <view class="chart-details-value">
+        <text>{{chartSelection.value}}</text><text class="chart-details-unit">mmol/L · 实测血糖</text>
+      </view>
+      <view class="chart-details-row"><text>记录时间</text><text>{{chartSelection.recordedAtText}}</text></view>
+      <view class="chart-details-row"><text>记录来源</text><text>{{chartSelection.sourceText}}</text></view>
+      <view wx:if="{{chartSelection.remark}}" class="chart-details-row chart-details-remark"><text>备注</text><text>{{chartSelection.remark}}</text></view>
+    </view>
   </view>
 
   <view class="card">
-    <view class="section-title">九时段节点</view>
+    <view class="section-title">今日九时段记录</view>
+    <view class="time-rule-hint">
+      <text class="time-rule-icon">时</text>
+      <text>{{timeRuleHint}}</text>
+    </view>
     <view class="nodes">
       <view
         wx:for="{{nodes}}"
         wx:key="id"
-        class="node {{item.status}} {{item.isMeal ? 'meal' : ''}}"
+        class="node {{item.status}} {{item.isMeal ? 'meal' : ''}} {{item.hasRecord ? 'recorded' : ''}} {{item.locked ? 'locked' : ''}}"
         data-id="{{item.id}}"
         bindtap="onNodeTap"
       >
         <view class="node-dot"></view>
         <text class="node-name">{{item.name}}</text>
         <text wx:if="{{item.value != null}}" class="node-val">{{item.value}}</text>
+        <text wx:elif="{{item.hasRecord}}" class="node-recorded">已记录</text>
         <text wx:else class="node-empty">未记录</text>
         <text wx:if="{{item.isMeal}}" class="meal-tag">餐</text>
+        <text wx:if="{{item.locked}}" class="lock-tag">已截止</text>
       </view>
     </view>
-    <text class="tip">灰=未记 · 绿正常 · 橙偏高 · 红异常 · 带「餐」为饮食识别</text>
+    <view class="status-legend">
+      <view class="status-legend-item">
+        <text class="status-legend-dot is-empty"></text>
+        <text>未记录</text>
+      </view>
+      <view class="status-legend-item">
+        <text class="status-legend-dot is-ok"></text>
+        <text>正常</text>
+      </view>
+      <view class="status-legend-item">
+        <text class="status-legend-dot is-warn"></text>
+        <text>偏高</text>
+      </view>
+      <view class="status-legend-item">
+        <text class="status-legend-dot is-danger"></text>
+        <text>异常</text>
+      </view>
+      <view class="status-legend-item meal-legend-item">
+        <text class="status-meal-badge">餐</text>
+        <text>饮食记录</text>
+      </view>
+      <view class="status-legend-item">
+        <text class="status-lock-badge">止</text>
+        <text>时段截止</text>
+      </view>
+    </view>
   </view>
 </view>

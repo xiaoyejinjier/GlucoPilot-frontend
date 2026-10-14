@@ -19,17 +19,62 @@
   background: #e8eee9;
 }
 
-.manual-check {
+.ocr-result {
+  border-radius: 20rpx;
+  padding: 24rpx;
   display: flex;
-  align-items: center;
-  gap: 8rpx;
-  font-size: var(--fs-small);
-  font-weight: 600;
-  margin-bottom: 16rpx;
+  flex-direction: column;
+  gap: 10rpx;
 }
 
-.check-icon {
+.ocr-result.success {
+  border: 2rpx solid var(--brand);
+  background: #f2fff6;
+}
+
+.ocr-result.failed {
+  border: 2rpx solid #e5a33d;
+  background: #fff9ee;
+}
+
+.ocr-value {
   color: var(--brand);
+  font-size: var(--fs-hero);
+  font-weight: 800;
+}
+
+.ocr-unit {
+  color: #6b7280;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  margin-left: 12rpx;
+}
+
+.ocr-confidence,
+.ocr-raw,
+.ocr-message {
+  color: #667085;
+  font-size: var(--fs-small);
+}
+
+.ocr-failed-title {
+  color: #9a5b00;
+  font-weight: 700;
+  font-size: var(--fs-body);
+}
+
+.ocr-choice-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+
+.btn-choice {
+  flex: 1;
+  margin: 0;
+  padding: 0 12rpx;
+  font-size: var(--fs-small);
 }
 
 .value-box {

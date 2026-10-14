@@ -3,6 +3,8 @@ const { getTodayKey, saveRecord } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { readShotImage, clearShotImage } = require('../../utils/shot')
 const { getToken } = require('../../utils/request')
+const { readPendingOcr, clearPendingOcr } = require('../../utils/ocr/index')
+const { getNodeRecordWindow } = require('../../utils/record-window')
 
 const { GLUCOSE_NODES } = require('../../utils/constants')
 
@@ -14,26 +16,39 @@ Page({
     nodeId: '',
     nodeName: '',
     imagePath: '',
-    /** 没有识别结果时留空，必须由用户输入（本项目尚未接入 OCR） */
+    recognitionStatus: 'none',
+    recognizedValue: '',
+    confidence: 0,
+    rawText: '',
+    recognitionMessage: '',
+    mediaId: '',
     value: '',
     manualEdit: true,
     busy: false
   },
 
   onLoad(options) {
+    const nodeId = options.nodeId || 'after_breakfast'
     const nodeName = decodeURIComponent(options.nodeName || '早餐后')
     const imagePath = readShotImage()
-    /** 传入 value 时视为已有识别结果（供将来接入 OCR 用），否则直接进编辑态 */
-    const recognized = options.value || ''
+    const ocr = readPendingOcr() || {}
+    const recognized = ocr.status === 'success' ? ocr.suggestedValue : ''
 
     this.setData({
-      nodeId: options.nodeId || 'after_breakfast',
+      nodeId,
       nodeName,
+      recognitionStatus: ocr.status || 'none',
+      recognizedValue: recognized,
+      confidence: ocr.confidence || 0,
+      rawText: ocr.rawText || '',
+      recognitionMessage: ocr.errorMessage || '',
+      mediaId: ocr.mediaId || '',
       value: recognized,
       manualEdit: !recognized,
       imagePath
     })
     wx.setNavigationBarTitle({ title: nodeName + ' · 确认入库' })
+    this.rejectClosedWindow(nodeId)
   },
 
   onShow() {
@@ -46,11 +61,18 @@ Page({
 
   onBack() {
     if (this.data.busy) return
+    clearPendingOcr()
+    clearShotImage()
     wx.navigateBack()
   },
 
-  onToggleManual() {
-    this.setData({ manualEdit: !this.data.manualEdit })
+  onUseManual() {
+    this.setData({ manualEdit: true, value: '' })
+  },
+
+  onAcceptRecognized() {
+    if (!this.data.recognizedValue) return
+    this.setData({ manualEdit: false, value: this.data.recognizedValue }, () => this.onConfirm())
   },
 
   onValueInput(e) {
@@ -59,6 +81,8 @@ Page({
 
   onConfirm() {
     if (this.data.busy) return
+
+    if (this.rejectClosedWindow(this.data.nodeId)) return
 
     if (!getToken()) {
       wx.showModal({
@@ -71,9 +95,9 @@ Page({
     }
 
     const nodeId = this.data.nodeId
-    // 餐点节点走饮食记录，本期后端未实现，先明确提示而不是静默丢弃
+    // 餐点节点应走 food-confirm / food-analysis 流程，避免误写进血糖记录。
     if (MEAL_NODES.indexOf(nodeId) >= 0) {
-      wx.showToast({ title: '餐点记录功能尚未开放', icon: 'none' })
+      wx.showToast({ title: '请从正餐拍照入口记录', icon: 'none' })
       return
     }
 
@@ -89,11 +113,12 @@ Page({
       recordDate,
       nodeCode: nodeId,
       glucoseValue: value,
-      // 数值由用户自己输入，标 MANUAL(1)。接上真 OCR 后再改用 2(OCR)。
-      sourceType: 1
+      sourceType: this.data.manualEdit ? 1 : 2,
+      mediaId: this.data.mediaId || undefined
     })
       .then(() => {
         clearShotImage()
+        clearPendingOcr()
         saveRecord(nodeId, { value, type: 'glucose' }, recordDate)
         wx.showToast({ title: '保存成功', icon: 'success' })
         setTimeout(() => {
@@ -122,5 +147,25 @@ Page({
         }
         wx.showToast({ title: err.message || '血糖保存失败', icon: 'none' })
       })
+  },
+
+  rejectClosedWindow(nodeId) {
+    const recordWindow = getNodeRecordWindow(nodeId, new Date())
+    if (!recordWindow.locked) return false
+    if (this._windowModalVisible) return true
+    this._windowModalVisible = true
+    wx.showModal({
+      title: '该时段已截止',
+      content: recordWindow.lockReason,
+      showCancel: false,
+      confirmText: '返回记录页',
+      complete: () => {
+        this._windowModalVisible = false
+        clearShotImage()
+        clearPendingOcr()
+        wx.switchTab({ url: '/pages/ai/ai' })
+      }
+    })
+    return true
   }
 })

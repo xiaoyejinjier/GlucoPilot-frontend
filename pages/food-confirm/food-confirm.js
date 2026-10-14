@@ -1,5 +1,6 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { readShotImage, clearShotImage, persistShotImage } = require('../../utils/shot')
+const { getNodeRecordWindow } = require('../../utils/record-window')
 
 Page({
   data: {
@@ -11,13 +12,15 @@ Page({
   },
 
   onLoad(options) {
-    const imagePath = readShotImage() || '/assets/foods/rice.svg'
+    const nodeId = options.nodeId || 'breakfast'
+    const imagePath = readShotImage() || ''
 
     this.setData({
-      nodeId: options.nodeId || 'breakfast',
+      nodeId,
       nodeName: decodeURIComponent(options.nodeName || '早餐'),
       imagePath
     })
+    this.rejectClosedWindow(nodeId)
   },
 
   onShow() {
@@ -30,10 +33,8 @@ Page({
   },
 
   onImgError() {
-    const fallback = '/assets/foods/rice.svg'
-    if (this.data.imagePath !== fallback) {
-      this.setData({ imagePath: fallback })
-    }
+    this.setData({ imagePath: '' })
+    wx.showToast({ title: '照片无法读取，请重新拍摄', icon: 'none' })
   },
 
   onImgLoad() {
@@ -55,8 +56,13 @@ Page({
 
   onConfirm() {
     if (this.data.busy) return
+    if (!this.data.imagePath) {
+      wx.showToast({ title: '请先拍摄餐食照片', icon: 'none' })
+      return
+    }
+    if (this.rejectClosedWindow(this.data.nodeId)) return
     this.setData({ busy: true })
-    wx.showLoading({ title: '分析中...', mask: true })
+    wx.showLoading({ title: '准备照片...', mask: true })
     const { nodeId, nodeName, imagePath } = this.data
     persistShotImage(imagePath).then(() => {
       wx.hideLoading()
@@ -64,6 +70,29 @@ Page({
         url: `/pages/food-analysis/food-analysis?nodeId=${nodeId}&nodeName=${encodeURIComponent(nodeName)}`,
         complete: () => this.setData({ busy: false })
       })
+    }).catch((error) => {
+      wx.hideLoading()
+      this.setData({ busy: false })
+      wx.showToast({ title: error.message || '照片保存失败，请重新拍照', icon: 'none' })
     })
+  },
+
+  rejectClosedWindow(nodeId) {
+    const recordWindow = getNodeRecordWindow(nodeId, new Date())
+    if (!recordWindow.locked) return false
+    if (this._windowModalVisible) return true
+    this._windowModalVisible = true
+    wx.showModal({
+      title: '该时段已截止',
+      content: recordWindow.lockReason,
+      showCancel: false,
+      confirmText: '返回记录页',
+      complete: () => {
+        this._windowModalVisible = false
+        clearShotImage()
+        wx.switchTab({ url: '/pages/ai/ai' })
+      }
+    })
+    return true
   }
 })

@@ -10,11 +10,27 @@
   </view>
 
   <view class="card">
-    <view class="section-title">本次血糖值</view>
-    <view class="manual-check" bindtap="onToggleManual">
-      <text class="check-icon">{{manualEdit ? '☑' : '☐'}}</text>
-      <text>手动修改</text>
+    <view class="section-title">OCR 识别结果</view>
+    <view wx:if="{{recognitionStatus === 'success'}}" class="ocr-result success">
+      <view>
+        <text class="ocr-value">{{recognizedValue}}</text>
+        <text class="ocr-unit">mmol/L</text>
+      </view>
+      <text class="ocr-confidence">识别置信度 {{confidence}}%</text>
+      <text wx:if="{{rawText}}" class="ocr-raw">图片原文：{{rawText}}</text>
     </view>
+    <view wx:else class="ocr-result failed">
+      <text class="ocr-failed-title">未可靠识别出血糖值</text>
+      <text class="ocr-message">{{recognitionMessage || '请检查照片清晰度，或直接手动输入。'}}</text>
+    </view>
+    <view wx:if="{{recognizedValue}}" class="ocr-choice-row">
+      <button class="btn-primary btn-choice" bindtap="onAcceptRecognized" disabled="{{busy}}">结果正确，直接记录</button>
+      <button class="btn-ghost btn-choice" bindtap="onUseManual" disabled="{{busy}}">结果不对，手动输入</button>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">{{manualEdit ? '手动输入血糖值' : '本次记录值'}}</view>
     <view class="value-box">
       <input
         wx:if="{{manualEdit}}"
@@ -23,7 +39,7 @@
         placeholder="请输入血糖值"
         value="{{value}}"
         bindinput="onValueInput"
-        focus
+        focus="{{manualEdit}}"
       />
       <text wx:else class="value-num">{{value || '待填写'}}</text>
       <text class="value-unit">mmol/L</text>
@@ -31,7 +47,7 @@
     <text class="warn-text">血糖值必须经你确认后才会保存。</text>
     <view class="actions-row">
       <button class="btn-ghost btn-sm" bindtap="onBack" disabled="{{busy}}">返回</button>
-      <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{busy}}">确认</button>
+      <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{busy}}">{{manualEdit ? '保存手动值' : '确认并记录'}}</button>
     </view>
   </view>
 

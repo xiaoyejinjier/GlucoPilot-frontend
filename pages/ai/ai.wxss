@@ -1,6 +1,33 @@
 .chart-canvas {
+  display: block;
   width: 100%;
   height: 240rpx;
+}
+
+.chart-touch-hint { margin-top: 16rpx; text-align: center; color: #7a817e; font-size: var(--fs-small); line-height: 1.5; }
+.chart-details { margin-top: 24rpx; padding: 24rpx; border-radius: 18rpx; background: var(--brand-soft); border: 1rpx solid #c8dfd2; }
+.chart-details-heading { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-bottom: 16rpx; }
+.chart-details-name { color: var(--brand-dark); font-size: var(--fs-body); font-weight: 700; }
+.chart-details-close { flex-shrink: 0; color: #6b7280; padding: 8rpx; font-size: var(--fs-small); }
+.chart-details-value { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12rpx; margin-bottom: 20rpx; font-size: var(--fs-metric); font-weight: 800; color: var(--brand-dark); }
+.chart-details-unit { font-size: var(--fs-small); font-weight: 500; color: #526358; }
+.chart-details-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20rpx; margin-top: 12rpx; color: #526358; font-size: var(--fs-small); line-height: 1.6; }
+.chart-details-row > text:first-child { flex-shrink: 0; }
+.chart-details-row > text:last-child { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.chart-details-remark > text:last-child { white-space: pre-wrap; word-break: break-all; }
+
+.chart-axis-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12rpx;
+  color: #7a817e;
+  font-size: var(--fs-small);
+}
+
+.axis-divider {
+  margin: 0 12rpx;
+  color: #b7bdb9;
 }
 
 .nodes {
@@ -8,6 +35,32 @@
   flex-direction: row;
   flex-wrap: wrap;
   margin: 0 -6rpx;
+}
+
+.time-rule-hint {
+  display: flex;
+  align-items: center;
+  margin: -2rpx 0 14rpx;
+  padding: 14rpx 16rpx;
+  border-radius: 14rpx;
+  background: #f4f7f5;
+  color: #58615d;
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+.time-rule-icon {
+  flex: none;
+  margin-right: 10rpx;
+  width: 34rpx;
+  height: 34rpx;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--brand);
+  font-size: 19rpx;
+  font-weight: 700;
+  line-height: 34rpx;
+  text-align: center;
 }
 
 .node {
@@ -54,6 +107,35 @@
   font-weight: 600;
 }
 
+.node-recorded {
+  margin-top: 6rpx;
+  color: var(--brand-dark);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.lock-tag {
+  position: absolute;
+  left: 8rpx;
+  bottom: 8rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+  color: #737a76;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 18rpx;
+  font-weight: 700;
+}
+
+.node.locked {
+  border-color: #d8ddda;
+  filter: grayscale(0.45);
+  opacity: 0.66;
+}
+
+.node.locked .node-dot {
+  background: #aeb5b1;
+}
+
 .meal-tag {
   position: absolute;
   top: 8rpx;
@@ -95,4 +177,76 @@
 
 .node.meal .node-name {
   color: #1f6b4a;
+}
+
+.status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14rpx 22rpx;
+  margin-top: 22rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 16rpx;
+  background: #f7f9f8;
+}
+
+.status-legend-item {
+  display: flex;
+  align-items: center;
+  color: #5f6763;
+  font-size: var(--fs-small);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-legend-dot {
+  width: 18rpx;
+  height: 18rpx;
+  margin-right: 8rpx;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.status-legend-dot.is-empty {
+  background: #fff;
+  border: 3rpx solid #b8bfbc;
+}
+
+.status-legend-dot.is-ok {
+  background: var(--brand);
+}
+
+.status-legend-dot.is-warn {
+  background: #fa9d3b;
+}
+
+.status-legend-dot.is-danger {
+  background: #fa5151;
+}
+
+.meal-legend-item {
+  color: #287657;
+}
+
+.status-meal-badge {
+  margin-right: 8rpx;
+  padding: 4rpx 8rpx;
+  border-radius: 7rpx;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 18rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.status-lock-badge {
+  margin-right: 8rpx;
+  padding: 4rpx 8rpx;
+  border-radius: 7rpx;
+  color: #6e7571;
+  background: #e4e8e6;
+  font-size: 18rpx;
+  font-weight: 700;
+  line-height: 1;
 }

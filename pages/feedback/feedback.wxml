@@ -1,6 +1,6 @@
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="page-intro">
-    <text class="page-intro-text">欢迎提出产品建议与问题反馈</text>
+    <text class="page-intro-text">您的每一条建议都会被认真查看，处理进度将在本页更新</text>
   </view>
 
   <view class="card">
@@ -21,21 +21,91 @@
     <view class="textarea-box">
       <textarea
         class="feedback-textarea"
-        placeholder="请写下您的意见和建议"
+        placeholder="请尽量描述清楚遇到的问题或您的建议"
         value="{{content}}"
         bindinput="onInput"
         maxlength="500"
       />
-      <text class="char-count">{{content.length}}/500</text>
+      <view class="textarea-footer">
+        <text class="char-count">{{content.length}}/500</text>
+      </view>
     </view>
-    <view class="actions-row">
-      <button class="btn-ghost btn-sm" bindtap="onViewList">查看反馈</button>
-      <button class="btn-primary btn-sm" disabled="{{submitting}}" bindtap="onSubmit">提交留言</button>
+    <view class="submit-actions">
+      <button
+        class="clear-button"
+        disabled="{{!content.length || submitting}}"
+        bindtap="onClear"
+      ><text class="action-button-text">清空内容</text></button>
+      <button
+        class="submit-button"
+        disabled="{{submitting}}"
+        bindtap="onSubmit"
+      ><text class="action-button-text">{{submitting ? '提交中…' : '提交反馈'}}</text></button>
+    </view>
+    <text class="submit-hint">提交成功后，新反馈会立即显示在下方。</text>
+  </view>
+
+  <view class="history-header">
+    <view class="history-title-wrap">
+      <text class="history-title">我的反馈</text>
+      <text wx:if="{{total > 0}}" class="history-count">{{total}}</text>
+    </view>
+    <view class="refresh-action {{loading ? 'disabled' : ''}}" bindtap="onRefreshTap">
+      <text class="refresh-icon">↻</text>
+      <text>{{loading && list.length ? '更新中' : '刷新'}}</text>
     </view>
   </view>
 
-  <view class="card tip-card">
-    <text class="tip-line">提交后可在「查看反馈」中查看处理状态。</text>
-    <text class="tip-line">有官方回复时，会在状态下方显示回复内容。</text>
+  <view wx:if="{{!loading && loadFailed && list.length === 0}}" class="card state-card">
+    <text class="state-title">暂时无法加载反馈</text>
+    <text class="state-desc">请检查网络后点击刷新</text>
+    <button class="retry-button" bindtap="onRefreshTap">重新加载</button>
+  </view>
+
+  <view wx:elif="{{!loading && !loadFailed && list.length === 0}}" class="card state-card">
+    <view class="empty-icon">✦</view>
+    <text class="state-title">还没有反馈记录</text>
+    <text class="state-desc">提交第一条留言后，会立即显示在这里</text>
+  </view>
+
+  <view wx:if="{{list.length > 0}}" class="feedback-timeline">
+    <view wx:for="{{list}}" wx:key="id" class="timeline-item">
+      <view class="timeline-rail">
+        <view class="timeline-dot {{index === 0 ? 'latest' : ''}}"></view>
+        <view wx:if="{{index < list.length - 1}}" class="timeline-line"></view>
+      </view>
+
+      <view class="feedback-card">
+        <view class="feedback-head">
+          <view class="feedback-tags">
+            <text class="type-tag">{{item.type}}</text>
+            <text wx:if="{{index === 0}}" class="latest-tag">最新</text>
+          </view>
+          <text class="status-tag status-{{item.statusCode}}">{{item.status}}</text>
+        </view>
+        <text class="feedback-time">{{item.time}}</text>
+        <text class="feedback-content">{{item.content}}</text>
+
+        <view wx:if="{{item.officialReply}}" class="official-reply">
+          <view class="official-head">
+            <text class="official-badge">官方回复</text>
+            <text wx:if="{{item.replyTime}}" class="official-time">{{item.replyTime}}</text>
+          </view>
+          <text class="official-text">{{item.officialReply}}</text>
+        </view>
+        <view wx:else class="pending-reply">
+          <text class="pending-dot"></text>
+          <text>{{item.statusHint}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="list-footer">正在加载反馈…</view>
+  <view wx:elif="{{list.length > 0 && hasMore}}" class="list-footer list-footer-action" bindtap="onReachBottom">继续加载</view>
+  <view wx:elif="{{list.length > 0}}" class="list-footer">已展示全部反馈</view>
+
+  <view class="privacy-tip">
+    <text>请勿在留言中填写密码、验证码等敏感信息。</text>
   </view>
 </view>

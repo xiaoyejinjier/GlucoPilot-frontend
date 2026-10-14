@@ -86,6 +86,12 @@ const DIABETES_TYPE_TEXT = ['未填写', '1 型糖尿病', '2 型糖尿病', '�
 const GENDER_TEXT = ['未填写', '男', '女']
 const FEEDBACK_TYPE_TEXT = ['', '产品建议', 'Bug问题', '功能诉求', '其他']
 const FEEDBACK_STATUS_TEXT = ['已收到', '处理中', '已处理', '已关闭']
+const FEEDBACK_STATUS_HINT = [
+  '已收到，处理进度会在这里更新',
+  '正在处理中，请耐心等待',
+  '反馈已处理，感谢您的建议',
+  '本条反馈已关闭'
+]
 const SOURCE_TYPE_TEXT = ['', '手动录入', '拍照识别', '设备同步']
 
 /** 后端数字枚举 ↔ 端上展示键（utils/display 用的是中文名与英文主题 id） */
@@ -199,6 +205,7 @@ function mapDayBoard(board) {
     hasRecord: !!n.hasRecord,
     recordKind: n.recordKind || '',
     value: n.glucose ? n.glucose.glucoseValue : null,
+    sourceType: n.glucose ? n.glucose.sourceType : null,
     remark: n.glucose ? n.glucose.remark || '' : ''
   }))
   return {
@@ -266,8 +273,11 @@ function mapFeedback(f) {
     content: f.contentText || '',
     statusCode: f.replyStatus,
     status: FEEDBACK_STATUS_TEXT[f.replyStatus] || '已收到',
+    statusHint: FEEDBACK_STATUS_HINT[f.replyStatus] || FEEDBACK_STATUS_HINT[0],
     officialReply: f.officialReply || '',
     repliedAt: f.repliedAt,
+    replyTime: formatDateTime(f.repliedAt),
+    createdAt: f.createdAt,
     time: formatDateTime(f.createdAt)
   }
 }

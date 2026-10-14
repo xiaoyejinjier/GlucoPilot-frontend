@@ -1,87 +1,94 @@
 <view class="page-no-tab page-embed-tab food-page" style="{{displayStyle}}">
-  <view class="page-intro">
-    <text class="page-intro-text">确认后再分析 · 两段式预测</text>
+  <view class="page-intro"><text class="page-intro-text">餐食识别 · 食品库匹配 · 确认后保存</text></view>
+
+  <view class="card">
+    <image wx:if="{{imagePath}}" class="photo-meal-img" src="{{imagePath}}" mode="aspectFill" />
+    <view wx:else class="photo-meal">未找到餐食照片，请重新拍照</view>
+    <view class="metrics">
+      <view class="metric"><text class="metric-val">{{metrics.glucose}}</text><text class="metric-label">实测血糖</text></view>
+      <view class="metric"><text class="metric-val">{{metrics.carbs}}</text><text class="metric-label">本餐碳水</text></view>
+      <view class="metric"><text class="metric-val">{{metrics.extra}}</text><text class="metric-label">本餐热量</text></view>
+    </view>
+  </view>
+
+  <view wx:if="{{recognizing}}" class="card recognition-status">
+    <text class="section-title">正在识别餐食并匹配食品库…</text>
+    <text class="result-desc">照片上传后进行真实识别，请稍候。</text>
+  </view>
+  <view wx:if="{{analysisError}}" class="card recognition-error">
+    <text class="section-title">本次识别未完成</text>
+    <text class="result-desc">{{analysisError}}</text>
+    <view class="meal-actions">
+      <button class="btn-primary btn-sm" bindtap="onRetry" disabled="{{busy}}">重新识别</button>
+      <button class="btn-ghost btn-sm" bindtap="onRetake" disabled="{{busy}}">重新拍照</button>
+    </view>
+  </view>
+
+  <view wx:if="{{hasAnalysis && !recognizing && !analysisError && !needsReanalysis}}" class="card score-card">
+    <view class="score-header">
+      <text class="section-title">模拟预测评分</text>
+      <text class="score-badge">演示数据</text>
+    </view>
+    <text wx:if="{{scoreLoading}}" class="recognition-tip">正在生成模拟评分…</text>
+    <view wx:if="{{scorePreview}}" class="score-result">
+      <view class="score-value-row">
+        <text class="score-value">{{scorePreview.score}}</text>
+        <text class="score-unit">/ {{scorePreview.maxScore}} 分</text>
+      </view>
+      <text class="score-label">{{scorePreview.label}}</text>
+      <text class="recognition-tip">{{scorePreview.description}}</text>
+    </view>
+    <text wx:if="{{scoreError}}" class="recognition-warning">{{scoreError}}</text>
+    <text class="score-note">真实预测模块尚未接入，此分数不写入记录，也不用于健康判断。</text>
+    <button class="btn-ghost btn-block btn-sm" bindtap="onRefreshScore" disabled="{{busy || scoreLoading}}">重新生成模拟评分</button>
+  </view>
+
+  <view wx:if="{{hasAnalysis}}" class="card">
+    <view class="section-title">识别的食物与营养</view>
+    <text class="recognition-summary">食品库匹配 {{matchedCount}} 项 · 新增待审核 {{newFoodsCount}} 项</text>
+    <text class="recognition-tip">照片识别的名称和份量需要确认，可修改下方重量。识别错误时在补充信息中说明后重新识别。</text>
+    <view wx:for="{{items}}" wx:key="key" class="meal-food-item">
+      <view class="meal-food-head">
+        <text class="meal-food-name">{{item.foodName}}</text>
+        <text class="nutrition-source {{item.nutritionSource === 'AI_ESTIMATE' ? 'estimated' : ''}}">{{item.sourceText}}</text>
+      </view>
+      <text class="meal-nutrition">{{item.per100Text}}</text>
+      <view class="meal-weight">
+        <text>食用重量</text>
+        <input type="digit" value="{{item.weightInput}}" placeholder="确认克数" data-index="{{index}}" bindinput="onWeightInput" disabled="{{busy}}" />
+        <text>g</text>
+      </view>
+      <text class="meal-nutrition">{{item.portionText}}</text>
+    </view>
+    <text wx:for="{{warnings}}" wx:key="*this" class="recognition-warning">{{item}}</text>
   </view>
 
   <view class="card">
-    <image
-      wx:if="{{imagePath}}"
-      class="photo-meal-img"
-      src="{{imagePath}}"
-      mode="aspectFill"
-    />
-    <view wx:else class="photo-meal">已确认的餐食照片</view>
-    <view class="metrics">
-      <view class="metric"><text class="metric-val">{{metrics.glucose}}</text><text class="metric-label">血糖</text></view>
-      <view class="metric"><text class="metric-val">{{metrics.carbs}}</text><text class="metric-label">碳水</text></view>
-      <view class="metric"><text class="metric-val">{{metrics.extra}}</text><text class="metric-label">待定</text></view>
-    </view>
+    <view class="section-title">补充食物信息</view>
+    <textarea class="voice-input" placeholder="例如：这份是糙米饭，只吃了100克；左侧是豆腐，不是鸡肉" value="{{supplement}}" maxlength="200" bindinput="onSupplementInput" disabled="{{busy}}" />
+    <button class="btn-primary btn-block btn-sm" bindtap="onReAnalyze" disabled="{{busy}}">按补充信息重新识别</button>
   </view>
 
   <view class="card">
     <view class="section-title">当前饱腹感</view>
     <view class="fullness-row">
-      <view
-        wx:for="{{hungerOptions}}"
-        wx:key="*this"
-        class="fullness-item {{hunger === item ? 'on' : ''}}"
-        data-val="{{item}}"
-        bindtap="onHunger"
-      >{{item}}</view>
+      <view wx:for="{{hungerOptions}}" wx:key="*this" class="fullness-item {{hunger === item ? 'on' : ''}}" data-val="{{item}}" bindtap="onHunger">{{item}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{hasAnalysis}}" class="card">
+    <view class="section-title">当前实测血糖（可选）</view>
+    <text class="recognition-tip">如有真实测量值，可填写用于页面展示。模拟评分不依赖此项，不填写也能保存饮食记录；不会生成模拟血糖数值。</text>
+    <view class="meal-weight">
+      <text>当前血糖</text>
+      <input type="digit" value="{{currentGlucose}}" placeholder="实测值" bindinput="onCurrentGlucoseInput" disabled="{{busy}}" />
+      <text>mmol/L</text>
     </view>
   </view>
 
   <view class="card">
-    <view class="result-card">
-      <view class="result-icon">①</view>
-      <view class="result-body">
-        <text class="result-title">识别的食物与营养</text>
-        <text class="result-desc">{{foodsText}}</text>
-      </view>
-    </view>
-    <view class="result-card warn">
-      <view class="result-icon">②</view>
-      <view class="result-body">
-        <text class="result-title">预测约 1 小时后血糖</text>
-        <text class="result-big">{{predictNow}} <text class="result-unit">mmol/L</text></text>
-      </view>
-    </view>
-    <view class="result-card">
-      <view class="result-icon">③</view>
-      <view class="result-body">
-        <text class="result-title">建议吃的量</text>
-        <text class="result-desc">{{suggestText}}</text>
-      </view>
-    </view>
-    <view class="result-card ok">
-      <view class="result-icon">④</view>
-      <view class="result-body">
-        <text class="result-title">按建议量再预测 1 小时血糖</text>
-        <text class="result-big">{{predictSuggest}} <text class="result-unit">mmol/L</text></text>
-        <text class="result-compare">现状 {{predictNow}} → 建议后 {{predictSuggest}}</text>
-      </view>
-    </view>
+    <button class="btn-primary btn-block btn-sm" bindtap="onSave" disabled="{{busy || !analysisReady}}">确认食物及份量，保存饮食记录</button>
+    <text wx:if="{{hasAnalysis && !analysisReady}}" class="recognition-tip">请确认重量和营养；修改补充信息后请重新识别。</text>
   </view>
-
-  <view class="card voice-card">
-    <view class="section-title">语音补充信息</view>
-    <view class="voice-row">
-      <button class="btn-ghost btn-sm voice-btn" bindtap="onVoiceFill" disabled="{{busy}}">语音转文字</button>
-      <text class="voice-hint">原型演示：点一下填入示例补充</text>
-    </view>
-    <textarea
-      class="voice-input"
-      placeholder="例如：米饭只吃了一半，红烧肉吃了两块"
-      value="{{supplement}}"
-      maxlength="200"
-      bindinput="onSupplementInput"
-    />
-    <button class="btn-primary btn-block btn-sm" bindtap="onRePredict" disabled="{{busy}}">确认后再预测</button>
-  </view>
-
-  <view class="card">
-    <button class="btn-primary btn-block btn-sm" bindtap="onSave" disabled="{{busy}}">确认保存饮食记录</button>
-  </view>
-
   <tab-bar selected="{{2}}"></tab-bar>
 </view>

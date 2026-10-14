@@ -156,6 +156,31 @@
   margin-top: 2rpx;
 }
 
+.calendar-tip {
+  margin-top: 18rpx;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+.month-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20rpx; margin-top: 24rpx; }
+.calendar-heading .month-nav { flex: 1 1 100%; justify-content: space-between; }
+.calendar-heading .month-nav > text:nth-child(2) { flex: 1; text-align: center; }
+.calendar-heading .calendar-tools { width: 100%; justify-content: flex-end; margin-top: 8rpx; }
+.month-tile { min-height: 130rpx; padding: 20rpx 12rpx; box-sizing: border-box; border: 1rpx solid #e1e8e4; border-radius: 18rpx; background: #f5f8f6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12rpx; }
+.month-tile.selected { background: var(--brand-soft); border-color: var(--brand); }
+.month-tile-title { font-size: var(--fs-title); font-weight: 700; color: var(--ink); }
+.month-tile.selected .month-tile-title { color: var(--brand-dark); }
+.month-tile-hint { font-size: var(--fs-small); color: #6b7280; }
+.day-detail-nav { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin: 20rpx 0 24rpx; }
+.day-detail-date { flex: 1; min-width: 0; text-align: center; font-size: var(--fs-body); font-weight: 700; line-height: 1.5; color: var(--ink); }
+.day-detail-metrics { margin-bottom: 24rpx; }
+.calendar-retry { margin: 20rpx auto 0 !important; }
+
+.day-date-nav > text:nth-child(2) {
+  text-align: center;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -218,6 +243,44 @@
   border-bottom: none;
 }
 
+.day-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  min-width: 210rpx;
+}
+
+.day-status-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #c8cecb;
+  flex-shrink: 0;
+}
+
+.day-row.recorded .day-status-dot {
+  background: var(--brand);
+  box-shadow: 0 0 0 6rpx var(--brand-soft);
+}
+
+.day-kind {
+  padding: 3rpx 10rpx;
+  border-radius: 999rpx;
+  background: #edf7f3;
+  color: var(--brand-dark);
+  font-size: 18rpx;
+  white-space: nowrap;
+}
+
+.day-row-meal .day-kind {
+  background: #fff4e5;
+  color: #a65d00;
+}
+
+.day-row.missing .day-val {
+  color: #a8aeab;
+}
+
 .day-name {
   font-size: var(--fs-body);
   font-weight: 700;
@@ -249,6 +312,56 @@
   color: var(--brand);
   font-weight: 600;
 }
+
+.week-selector {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx 24rpx;
+  margin: 8rpx 0 20rpx;
+  background: var(--brand-soft);
+  border: 1rpx solid #d4e5dc;
+  border-radius: 16rpx;
+}
+
+.week-selector-main { flex: 1; min-width: 0; }
+.week-selector-title { display: block; font-size: var(--fs-body); font-weight: 700; color: var(--brand-dark); line-height: 1.5; }
+.week-selector-hint { display: block; margin-top: 6rpx; font-size: var(--fs-small); color: #6b7280; }
+.week-selector-arrow { flex-shrink: 0; font-size: 36rpx; color: var(--brand-dark); }
+.week-chart-status { min-height: 240rpx; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20rpx; }
+.week-retry { margin: 0 !important; }
+
+.week-picker-mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+}
+
+.week-picker-sheet {
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 90vh;
+  padding: 32rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
+  border-radius: 28rpx 28rpx 0 0;
+  background: #fff;
+}
+
+.week-picker-close { color: #6b7280; font-size: var(--fs-small); padding: 8rpx 12rpx; }
+.week-picker-month-nav { display: flex; align-items: center; gap: 16rpx; padding: 16rpx 0; }
+.week-picker-month { flex: 1; min-width: 0; text-align: center; font-size: var(--fs-body); font-weight: 700; color: var(--ink); }
+.week-picker-month-hint { margin-left: 8rpx; color: #6b7280; }
+.week-picker-tip { display: block; margin: 12rpx 0; font-size: var(--fs-small); color: #6b7280; line-height: 1.5; }
+.week-picker-options { height: 42vh; }
+.week-picker-option { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; min-height: 84rpx; box-sizing: border-box; padding: 20rpx; margin-bottom: 12rpx; border: 1rpx solid #e5e7eb; border-radius: 14rpx; color: var(--ink); font-size: var(--fs-body); line-height: 1.5; }
+.week-picker-option.selected { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark); font-weight: 700; }
+.week-picker-check { flex-shrink: 0; color: var(--brand-dark); font-size: var(--fs-small); }
+.week-follow-button { margin-top: 16rpx; }
 
 .metric-row {
   display: flex;
