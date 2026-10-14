@@ -63,3 +63,12 @@ admin/dev-run.log
 /miniprogram_npm/
 project.private.config.json
 *.log
+
+### 文档与设计稿（本地保留，不上传）###
+*.xlsx
+ui-design.html
+
+### 其他临时文件 ###
+*.tmp
+*.temp
+desktop.ini
