@@ -26,7 +26,8 @@ Page({
     recordCount: 0,
     timeRuleHint: '',
     selectedChartNodeId: '',
-    chartSelection: null
+    chartSelection: null,
+    noticeVisible: false
   },
 
   onShow() {
@@ -65,6 +66,19 @@ Page({
 
   onResize() {
     this.scheduleChartDraw(this.data.nodes)
+  },
+
+  onAddDevice() { wx.navigateTo({ url: '/pages/device-add/device-add' }) },
+
+  onReminderVisibilityChange(e) {
+    const visible = !!e.detail.visible
+    this._chartGeometry = null
+    this._chartTouch = null
+    this._chartTapVersion = (this._chartTapVersion || 0) + 1
+    this.cancelChartDraw()
+    this.setData({ noticeVisible: visible }, () => {
+      if (!visible && this._visible !== false) this.scheduleChartDraw(this.data.nodes)
+    })
   },
 
   syncTodayFromServer() {
@@ -181,7 +195,7 @@ Page({
   },
 
   scheduleChartDraw(nodes) {
-    if (this._visible === false) return
+    if (this._visible === false || this.data.noticeVisible) return
     this._chartGeometry = null
     this._pendingChartNodes = nodes || []
     this.cancelChartDraw()
@@ -234,10 +248,10 @@ Page({
   },
 
   drawChart(nodes, drawVersion = this._chartDrawVersion) {
-    if (drawVersion !== this._chartDrawVersion || this._visible === false) return
+    if (drawVersion !== this._chartDrawVersion || this._visible === false || this.data.noticeVisible) return
     const query = wx.createSelectorQuery().in(this)
     query.select('#glucoseChart').fields({ node: true, size: true }).exec(res => {
-      if (drawVersion !== this._chartDrawVersion || this._visible === false) return
+      if (drawVersion !== this._chartDrawVersion || this._visible === false || this.data.noticeVisible) return
       if (!res[0] || !res[0].node) return
       const canvas = res[0].node
       const ctx = canvas.getContext('2d')
@@ -250,7 +264,7 @@ Page({
       ctx.scale(dpr, dpr)
 
       // 左侧为 Y 轴数值留空间，右侧避免最后一个中文标签被 Canvas 裁掉。
-      const padding = { left: 42, right: 24, top: 16, bottom: 32 }
+      const padding = { left: 42, right: 24, top: 28, bottom: 26 }
       const chartW = width - padding.left - padding.right
       const chartH = height - padding.top - padding.bottom
       if (chartW <= 0 || chartH <= 0) return
@@ -282,8 +296,14 @@ Page({
       const yTicks = []
       for (let value = minY; value <= maxY; value += tickStep) yTicks.push(value)
 
-      // Y 轴刻度与数值
+      // 单位置于纵轴最高刻度正上方，预留顶部空间，避免占用图表下方两行。
       ctx.font = '10px sans-serif'
+      ctx.fillStyle = '#888'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'bottom'
+      ctx.fillText('mmol/L', padding.left - 12, padding.top - 10)
+
+      // Y 轴刻度与数值
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
       yTicks.forEach((val) => {
@@ -408,6 +428,10 @@ Page({
     const node = this.data.nodes.find((item) => item.id === point.nodeId)
     const details = getPointDetails(node)
     if (!details) return
+    if (this.data.chartSelection && this.data.selectedChartNodeId === point.nodeId) {
+      this.onCloseChartDetails()
+      return
+    }
     this.setData({ selectedChartNodeId: point.nodeId, chartSelection: details }, () => {
       this.scheduleChartDraw(this.data.nodes)
     })

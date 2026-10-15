@@ -4,6 +4,7 @@
     "pages/index/index",
     "pages/voice/voice",
     "pages/ai/ai",
+    "pages/device-add/device-add",
     "pages/stats/stats",
     "pages/mine/mine",
     "pages/news-detail/news-detail",

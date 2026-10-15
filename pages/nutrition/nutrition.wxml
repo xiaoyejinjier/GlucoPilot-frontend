@@ -1,8 +1,4 @@
 <view class="page-no-tab" style="{{displayStyle}}">
-  <view class="page-intro">
-    <text class="page-intro-text">按大类浏览 · 点进查看营养成分</text>
-  </view>
-
   <view class="card">
     <input
       class="search-input"

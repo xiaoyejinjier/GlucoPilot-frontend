@@ -321,6 +321,11 @@ function fetchGlucoseNodes() {
   return get('/dict/glucose-nodes', null, { auth: false })
 }
 
+/** 当前登录用户的异常事件公开回复；内部备注由服务端隔离。 */
+function fetchGlucoseAlertReplies(pageNum, pageSize) {
+  return get('/glucose-alerts/replies', { pageNum: pageNum || 1, pageSize: pageSize || 3 }, { auth: true })
+}
+
 /** ---------- statistics ---------- */
 function fetchGlucoseSummary(params) {
   const data = {}
@@ -374,6 +379,7 @@ module.exports = {
   deleteGlucoseRecord,
   fetchDayBoard,
   fetchGlucoseNodes,
+  fetchGlucoseAlertReplies,
   fetchGlucoseSummary,
   mapNewsItem,
   mapBanner,
