@@ -1,10 +1,15 @@
 .chart-canvas {
   display: block;
   width: 100%;
-  height: 240rpx;
+  height: 220rpx;
 }
 
-.chart-touch-hint { margin-top: 16rpx; text-align: center; color: #7a817e; font-size: var(--fs-small); line-height: 1.5; }
+.glucose-chart-card, .daily-record-card { margin:12rpx 20rpx; padding:20rpx; }
+.glucose-chart-card .section-title { margin-bottom:4rpx; }
+.daily-record-card .section-title { margin-bottom:10rpx; }
+.record-section-heading { flex-wrap:nowrap; }
+.bind-device-link { flex-shrink:0; margin-left:auto; padding:10rpx 0 10rpx 16rpx; color:#2878dc; font-size:var(--fs-small); font-weight:500; }
+
 .chart-details { margin-top: 24rpx; padding: 24rpx; border-radius: 18rpx; background: var(--brand-soft); border: 1rpx solid #c8dfd2; }
 .chart-details-heading { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-bottom: 16rpx; }
 .chart-details-name { color: var(--brand-dark); font-size: var(--fs-body); font-weight: 700; }
@@ -16,20 +21,6 @@
 .chart-details-row > text:last-child { min-width: 0; text-align: right; overflow-wrap: anywhere; }
 .chart-details-remark > text:last-child { white-space: pre-wrap; word-break: break-all; }
 
-.chart-axis-note {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 12rpx;
-  color: #7a817e;
-  font-size: var(--fs-small);
-}
-
-.axis-divider {
-  margin: 0 12rpx;
-  color: #b7bdb9;
-}
-
 .nodes {
   display: flex;
   flex-direction: row;
@@ -40,8 +31,8 @@
 .time-rule-hint {
   display: flex;
   align-items: center;
-  margin: -2rpx 0 14rpx;
-  padding: 14rpx 16rpx;
+  margin: 0 0 10rpx;
+  padding: 10rpx 14rpx;
   border-radius: 14rpx;
   background: #f4f7f5;
   color: #58615d;
@@ -68,8 +59,8 @@
   width: calc(33.33% - 12rpx);
   margin: 6rpx;
   border-radius: 16rpx;
-  padding: 18rpx 8rpx 16rpx;
-  min-height: 148rpx;
+  padding: 14rpx 8rpx 12rpx;
+  min-height: 140rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -80,11 +71,11 @@
 }
 
 .node-dot {
-  width: 48rpx;
-  height: 48rpx;
+  width: 32rpx;
+  height: 32rpx;
   border-radius: 50%;
   background: #c8c8c8;
-  margin-bottom: 8rpx;
+  margin-bottom: 6rpx;
 }
 
 .node-name {
@@ -94,21 +85,24 @@
 }
 
 .node-val {
-  margin-top: 6rpx;
+  margin-top: 4rpx;
   font-size: var(--fs-body);
   font-weight: 800;
+  line-height: 1.2;
   color: #111;
 }
 
 .node-empty {
-  margin-top: 6rpx;
+  margin-top: 4rpx;
+  line-height: 1.25;
   font-size: var(--fs-small);
   color: #999;
   font-weight: 600;
 }
 
 .node-recorded {
-  margin-top: 6rpx;
+  margin-top: 4rpx;
+  line-height: 1.25;
   color: var(--brand-dark);
   font-size: var(--fs-small);
   font-weight: 700;
@@ -117,12 +111,12 @@
 .lock-tag {
   position: absolute;
   left: 8rpx;
-  bottom: 8rpx;
+  top: 8rpx;
   padding: 2rpx 8rpx;
   border-radius: 6rpx;
   color: #737a76;
   background: rgba(255, 255, 255, 0.9);
-  font-size: 18rpx;
+  font-size: 16rpx;
   font-weight: 700;
 }
 
@@ -184,9 +178,9 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 14rpx 22rpx;
-  margin-top: 22rpx;
-  padding: 16rpx 18rpx;
+  gap: 10rpx 18rpx;
+  margin-top: 12rpx;
+  padding: 12rpx 14rpx;
   border-radius: 16rpx;
   background: #f7f9f8;
 }

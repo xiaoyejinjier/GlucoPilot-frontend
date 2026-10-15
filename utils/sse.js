@@ -1,16 +1,37 @@
 /**
  * 微信小程序 SSE 客户端：wx.request({ enableChunked: true }) + onChunkReceived。
  *
- * 三个必须注意的点（踩了不是乱码就是丢事件）：
+ * 四个必须注意的点（踩了不是乱码就是丢事件）：
  * 1) chunk 边界会切断多字节 UTF-8：必须按字节累积，遇到结尾不完整的序列要留到下一块再解码；
  * 2) 同理不能假设「一个 chunk = 一个事件」：要按空行切事件，并保留半截事件；
- * 3) 不能用 String.fromCharCode 直接转 ArrayBuffer —— 中文必乱码。
+ * 3) 不能用 String.fromCharCode 直接转 ArrayBuffer —— 中文必乱码；
+ * 4) 换行归一化必须在**字节/字符累积之后**做，不能逐块 replace('\r\n')：
+ *    chunk 边界可能正好落在 \r 与 \n 之间，逐块处理永远看不见被切开的 \r\n
+ *    —— 分隔符会一直保持 \r\n\r\n，而事件切分只认 \n\n，结果是整条流一个事件都解析不出来。
+ *    这是 tools/sse-check 在 chunkSize=1 时抓到的真实缺陷（2026-10-14 修复）。
  */
 const config = require('./config')
 const { getToken } = require('./request')
 
 /** 异常情况下防止缓冲无界增长 */
 const MAX_TEXT_BUFFER = 256 * 1024
+
+/**
+ * 把累积缓冲里的换行统一成 {@code \n}。
+ * <p>
+ * 结尾孤立的 {@code \r} 原样保留，留到下一块再判断：它很可能正是被 chunk 切断的 {@code \r\n} 的前半截，
+ * 此刻换成 {@code \n} 会让一个事件分隔符被拆成两个空行（把一条事件切成两半）。
+ * 中间孤立的 {@code \r}（老式 CR 行尾）才换成 {@code \n}。
+ */
+function normalizeNewlines(text) {
+  let head = text
+  let tail = ''
+  if (head.charAt(head.length - 1) === '\r') {
+    head = head.slice(0, -1)
+    tail = '\r'
+  }
+  return head.replace(/\r\n/g, '\n').replace(/\r/g, '\n') + tail
+}
 
 function toUint8Array(data) {
   if (!data) return new Uint8Array(0)
@@ -123,7 +144,8 @@ function openSse(options) {
   }
 
   const handleText = (text) => {
-    textBuffer += text
+    // 归一化放在累积之后，理由见文件头第 4 条与 normalizeNewlines 的注释
+    textBuffer = normalizeNewlines(textBuffer + text)
     if (textBuffer.length > MAX_TEXT_BUFFER) {
       textBuffer = textBuffer.slice(-MAX_TEXT_BUFFER)
     }
@@ -214,10 +236,9 @@ function openSse(options) {
       const decoded = decodeUtf8(bytes)
       pendingBytes = decoded.rest
       if (!decoded.text) return
-      // 统一换行，兼容 \r\n\r\n 分隔的服务端
-      const normalized = decoded.text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-      rawText += normalized
-      handleText(normalized)
+      // 刻意不在这里做换行归一化：chunk 边界会切开 \r\n（见文件头第 4 条）
+      rawText += decoded.text
+      handleText(decoded.text)
     })
   } else {
     finish(new Error('当前微信基础库不支持流式响应，请升级微信版本'))

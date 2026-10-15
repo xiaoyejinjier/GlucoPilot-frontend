@@ -289,6 +289,7 @@
 }
 
 .day-val {
+  display: block;
   font-size: var(--fs-small);
   color: var(--muted);
   text-align: right;
@@ -297,6 +298,25 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.day-value-wrap { flex: 1; min-width: 0; text-align: right; }
+.meal-detail-toggle { display: block; margin-top: 8rpx; color: var(--brand-dark); font-size: var(--fs-small); font-weight: 700; }
+.meal-clickable { min-height: 80rpx; }
+.meal-detail-panel { margin: 12rpx 0 24rpx; padding: 24rpx; border-radius: 16rpx; background: #f6f9f7; border: 1rpx solid #e0ebe5; }
+.meal-detail-heading { margin-bottom: 24rpx; color: var(--ink); font-size: var(--fs-body); font-weight: 700; line-height: 1.6; }
+.meal-detail-label { display: block; margin-top: 20rpx; margin-bottom: 10rpx; color: var(--muted); font-size: var(--fs-small); }
+.meal-detail-full-text { display: block; color: var(--ink); font-size: var(--fs-body); line-height: 1.8; white-space: pre-wrap; word-break: break-all; }
+.meal-food-list { margin-top: 24rpx; }
+.meal-food-item { padding: 20rpx 0; border-bottom: 1rpx solid #e0ebe5; }
+.meal-food-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12rpx; }
+.meal-food-name { min-width: 0; color: var(--ink); font-size: var(--fs-body); font-weight: 600; line-height: 1.6; word-break: break-all; }
+.meal-food-weight { color: var(--muted); font-size: var(--fs-small); }
+.meal-food-nutrients { display: block; margin-top: 8rpx; color: var(--muted); font-size: var(--fs-small); line-height: 1.8; }
+.meal-detail-meta { display: flex; flex-direction: column; gap: 12rpx; margin-top: 24rpx; color: var(--ink); font-size: var(--fs-small); line-height: 1.8; }
+.meal-detail-meta > text { word-break: break-all; }
+.meal-photo-wrap { margin-top: 24rpx; }
+.meal-detail-photo { display: block; width: 100%; height: 280rpx; border-radius: 12rpx; }
+.meal-photo-tip { display: block; margin-top: 12rpx; text-align: center; color: var(--brand-dark); font-size: var(--fs-small); }
 
 .chart-canvas {
   display: block;

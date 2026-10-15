@@ -77,6 +77,46 @@ function tap(page, touch) {
   page.onChartTouchEnd({ changedTouches: [touch] })
 }
 
+test('提醒弹窗移除原生Canvas且取消旧绘图和触摸，关闭后按最新节点恢复', () => {
+  const { page, calls, render } = createPage({ records: { before_breakfast: measured() }, deferDraw: true })
+  render()
+  const oldDraw = calls.drawCallbacks[0]
+  page._chartTouch = { position: { x: 1, y: 1 }, moved: false }
+  page.onReminderVisibilityChange({ detail: { visible: true } })
+  assert.equal(page.data.noticeVisible, true)
+  assert.equal(page._chartGeometry, null)
+  assert.equal(page._chartTouch, null)
+  oldDraw()
+  assert.equal(calls.canvas.length, 0)
+  const queries = calls.drawCallbacks.length
+  page.scheduleChartDraw(page.data.nodes)
+  render()
+  assert.equal(calls.drawCallbacks.length, queries)
+  page.onReminderVisibilityChange({ detail: { visible: false } })
+  assert.equal(page.data.noticeVisible, false)
+  assert.equal(page._pendingChartNodes, page.data.nodes)
+  render()
+  calls.drawCallbacks.at(-1)()
+  assert.ok(page._chartGeometry)
+  const template = fs.readFileSync(path.join(directory, 'ai.wxml'), 'utf8')
+  assert.ok(template.includes('bind:visibilitychange="onReminderVisibilityChange"'))
+  assert.ok(template.includes('<view wx:if="{{noticeVisible}}" class="chart-canvas"></view>'))
+  assert.ok(template.includes('<canvas wx:else'))
+})
+
+test('隐藏页面后关闭提醒弹窗不会重启绘图，原选中数据不因弹窗丢失', () => {
+  const { page, render, calls } = createPage({ records: { before_breakfast: measured() } })
+  render()
+  tap(page, page._chartGeometry.points[0])
+  const selected = page.data.chartSelection
+  page.onReminderVisibilityChange({ detail: { visible: true } })
+  page.onHide()
+  page.onReminderVisibilityChange({ detail: { visible: false } })
+  assert.equal(page.data.chartSelection, selected)
+  assert.equal(page._chartDrawTimer, null)
+  assert.equal(calls.writes.length, 0)
+})
+
 test('只允许有效实测血糖，正餐预测、空值、未记录和非法值不能绘为血糖', () => {
   assert.equal(chart.hasMeasuredGlucose({ value: 6, hasRecord: true }), true)
   for (const node of [{ value: 6, isMeal: true }, { value: 6, hasRecord: false }, { value: null },
@@ -121,6 +161,33 @@ test('真实Canvas保留9个横轴位置，只绘制实测点，不纳入餐点�
   assert.equal(page.data.recordCount, 2)
 })
 
+test('mmol/L画在最高纵轴刻度上方，移除图下两行说明，紧凑布局保留完整九节点', () => {
+  for (const value of [6.2, 18, 39]) {
+    const { calls, render, page } = createPage({ records: { before_breakfast: measured(value) } })
+    render()
+    const labels = calls.canvas.filter((call) => call.method === 'fillText')
+    const unit = labels.find((call) => call.args[0] === 'mmol/L')
+    const ticks = labels.filter((call) => /^\d+$/.test(call.args[0]))
+    const topTick = ticks.reduce((top, call) => call.args[2] < top.args[2] ? call : top)
+    assert.ok(unit)
+    assert.ok(unit.args[2] >= 10)
+    assert.ok(topTick.args[2] - unit.args[2] >= 10)
+    assert.ok(Math.abs(topTick.args[1] - unit.args[1]) <= 6)
+    assert.equal(page._chartGeometry.points.length, 9)
+  }
+  const template = fs.readFileSync(path.join(directory, 'ai.wxml'), 'utf8')
+  for (const removed of ['chart-axis-note', 'chart-touch-hint', 'X 轴：9 时段', '点击实心点查看对应记录']) {
+    assert.equal(template.includes(removed), false)
+  }
+  assert.ok(template.includes('wx:for="{{nodes}}"'))
+  assert.ok(template.includes('bindtap="onNodeTap"'))
+  assert.ok(template.includes('bindtap="onAddDevice"'))
+  const styles = fs.readFileSync(path.join(directory, 'ai.wxss'), 'utf8')
+  assert.match(styles, /\.chart-canvas\s*\{[^}]*height: 220rpx/)
+  assert.match(styles, /\.node\s*\{[^}]*min-height: 140rpx/)
+  assert.equal(/overflow:\s*hidden/.test(styles.match(/\.nodes\s*\{[^}]*\}/)[0]), false)
+})
+
 test('点击实测点显示真实明细并高亮，截止时段仍可查看且不写入记录', () => {
   const { page, calls, render } = createPage({ records: { before_breakfast: measured() } })
   render()
@@ -144,6 +211,29 @@ test('点击空心点和正餐点只提示无实测，不显示虚构数值', ()
   tap(page, page._chartGeometry.points[1])
   assert.equal(page.data.chartSelection, null)
   assert.match(calls.toasts.at(-1).title, /不是实测血糖/)
+})
+
+test('同一实测点可反复打开/收起，支持Canvas和client坐标，收起同步取消高亮且不写入', () => {
+  for (const coordinates of ['local', 'client']) {
+    const { page, render, state, calls } = createPage({ records: { before_breakfast: measured() } })
+    const tapMeasured = () => {
+      render()
+      const point = page._chartGeometry.points[0]
+      tap(page, coordinates === 'local' ? point : { clientX: state.rect.left + point.x, clientY: state.rect.top + point.y })
+    }
+    tapMeasured()
+    assert.equal(page.data.chartSelection.nodeId, 'before_breakfast')
+    state.rect.top = 30
+    tapMeasured()
+    assert.equal(page.data.chartSelection, null)
+    assert.equal(page.data.selectedChartNodeId, '')
+    calls.canvas.length = 0
+    render()
+    assert.equal(calls.canvas.some((call) => call.method === 'arc' && call.args[2] === 8), false)
+    tapMeasured()
+    assert.equal(page.data.chartSelection.value, 6.2)
+    assert.equal(calls.writes.length, 0)
+  }
 })
 
 test('点击空白或收起取消高亮，连续点选可切换到另一个血糖记录', () => {

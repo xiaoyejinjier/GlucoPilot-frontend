@@ -1,18 +1,14 @@
 <view class="page" style="{{displayStyle}}">
-  <view class="card">
+  <glucose-alert-reminder nodes="{{nodes}}" bind:visibilitychange="onReminderVisibilityChange"></glucose-alert-reminder>
+  <view class="card glucose-chart-card">
     <view class="section-title">
       <text>今日血糖曲线图</text>
       <text class="tag tag-ok">已记 {{recordCount}}/9</text>
     </view>
-    <canvas type="2d" id="glucoseChart" class="chart-canvas"
+    <view wx:if="{{noticeVisible}}" class="chart-canvas"></view>
+    <canvas wx:else type="2d" id="glucoseChart" class="chart-canvas"
       bindtouchstart="onChartTouchStart" bindtouchmove="onChartTouchMove"
       bindtouchend="onChartTouchEnd" bindtouchcancel="onChartTouchCancel"></canvas>
-    <view class="chart-axis-note">
-      <text>X 轴：9 时段</text>
-      <text class="axis-divider">·</text>
-      <text>Y 轴：血糖 mmol/L</text>
-    </view>
-    <view class="chart-touch-hint">点击实心点查看对应记录，空心点表示无实测血糖</view>
     <view wx:if="{{chartSelection}}" class="chart-details">
       <view class="chart-details-heading">
         <text class="chart-details-name">{{chartSelection.nodeName}}</text>
@@ -27,8 +23,11 @@
     </view>
   </view>
 
-  <view class="card">
-    <view class="section-title">今日九时段记录</view>
+  <view class="card daily-record-card">
+    <view class="section-title record-section-heading">
+      <text>今日九时段记录</text>
+      <text class="bind-device-link" bindtap="onAddDevice" aria-role="button">绑定设备</text>
+    </view>
     <view class="time-rule-hint">
       <text class="time-rule-icon">时</text>
       <text>{{timeRuleHint}}</text>

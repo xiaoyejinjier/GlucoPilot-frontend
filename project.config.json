@@ -25,6 +25,10 @@
       {
         "value": "agent-transcripts",
         "type": "folder"
+      },
+      {
+        "value": "tools",
+        "type": "folder"
       }
     ],
     "include": []

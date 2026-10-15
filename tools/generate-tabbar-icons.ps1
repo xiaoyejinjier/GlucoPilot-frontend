@@ -1,5 +1,6 @@
 Add-Type -AssemblyName System.Drawing
 
+$outputDirectory = Join-Path $PSScriptRoot '..\assets\tabbar'  # 拆仓后前端即仓根
 $outputDirectory = Join-Path $PSScriptRoot '..\assets\tabbar'
 [System.IO.Directory]::CreateDirectory($outputDirectory) | Out-Null
 
