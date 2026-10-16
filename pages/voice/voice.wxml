@@ -1,39 +1,72 @@
 <view class="page voice-page" style="{{displayStyle}}">
+  <!-- 会话操作条：进历史会话列表 / 开一条新对话 -->
+  <view class="wx-head">
+    <view class="wx-head-main">
+      <text class="wx-head-title">{{sessionTitle || 'AI 控糖助手'}}</text>
+      <text wx:if="{{sessionStatusText}}" class="wx-head-status {{sessionReadOnly ? 'locked' : ''}}">{{sessionStatusText}}</text>
+    </view>
+    <view class="wx-head-actions">
+      <view class="wx-head-btn" bindtap="onOpenHistory" aria-role="button">历史对话</view>
+      <view class="wx-head-btn primary" bindtap="onNewChat" aria-role="button">新对话</view>
+    </view>
+  </view>
+
   <scroll-view class="wx-body" scroll-y scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
+    <view wx:if="{{historyHasMore || historyLoading}}" class="wx-more" bindtap="onLoadEarlier">
+      {{historyLoading ? '加载中…' : '查看更早的对话'}}
+    </view>
     <text class="wx-time">今天 {{currentTime}}</text>
     <view wx:for="{{messages}}" wx:key="id" class="wx-row {{item.role === 'user' ? 'user' : ''}}">
       <view class="wx-avatar">{{item.role === 'user' ? '我' : 'AI'}}</view>
       <view class="wx-bubble">
         <block wx:if="{{item.type === 'image'}}">
           <image
+            wx:if="{{item.fileUrl || item.imagePath}}"
             class="wx-msg-img"
             src="{{item.fileUrl || item.imagePath}}"
             mode="widthFix"
             data-src="{{item.fileUrl || item.imagePath}}"
             bindtap="onPreviewImage"
           />
+          <!-- 历史里的图片可能已被清理（mediaUrl 为空），别渲染成破图 -->
+          <text wx:else class="wx-typing">图片已失效</text>
           <!-- 直传+登记完成前还没有 mediaId，给一个明确的过程提示 -->
           <text wx:if="{{item.uploading}}" class="wx-typing">图片上传中…</text>
         </block>
         <block wx:else>
           <text wx:if="{{item.pending && !item.content}}" class="wx-typing">正在思考…</text>
           <text wx:else>{{item.content}}</text>
-          <view wx:if="{{item.error}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
+          <!-- 会话已结束/已归档时不给重试入口：重发同样会被后端拒绝 -->
+          <view wx:if="{{item.error && !sessionReadOnly}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
         </block>
       </view>
     </view>
     <view id="msg-bottom"></view>
   </scroll-view>
 
+  <!-- 已结束/已归档会话：正常看历史，但不给发送 -->
+  <view wx:if="{{sessionReadOnly}}" class="wx-locked">
+    <text class="wx-locked-text">{{sessionNotice}}</text>
+    <view class="wx-locked-btn" bindtap="onNewChat" aria-role="button">新建对话</view>
+  </view>
+
   <view class="wx-foot">
     <view class="wx-btn" bindtap="onToggleVoiceMode">{{voiceMode ? '键盘' : '语音'}}</view>
     <block wx:if="{{!voiceMode}}">
-      <view class="wx-btn" bindtap="onChooseImage">图片</view>
-      <input class="wx-input" placeholder="请输入问题" value="{{inputValue}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
-      <view class="wx-btn send {{sending ? 'disabled' : ''}}" bindtap="onSend">{{sending ? '回复中' : '发送'}}</view>
+      <view class="wx-btn {{sessionReadOnly ? 'disabled' : ''}}" bindtap="onChooseImage">图片</view>
+      <input
+        class="wx-input"
+        disabled="{{sessionReadOnly}}"
+        placeholder="{{sessionReadOnly ? '当前会话不可发送，请新建对话' : '请输入问题'}}"
+        value="{{inputValue}}"
+        bindinput="onInput"
+        confirm-type="send"
+        bindconfirm="onSend"
+      />
+      <view class="wx-btn send {{sending || sessionReadOnly ? 'disabled' : ''}}" bindtap="onSend">{{sessionReadOnly ? (sessionStatusText || '不可发送') : (sending ? '回复中' : '发送')}}</view>
     </block>
     <block wx:else>
-      <view class="wx-btn" bindtap="onChooseImage">图片</view>
+      <view class="wx-btn {{sessionReadOnly ? 'disabled' : ''}}" bindtap="onChooseImage">图片</view>
       <view
         class="wx-hold {{recording ? 'on' : ''}}"
         bindtouchstart="onHoldStart"

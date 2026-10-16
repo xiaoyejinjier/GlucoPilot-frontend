@@ -1,4 +1,13 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
+const {
+  SESSION_STATUS,
+  DEFAULT_TITLE,
+  HISTORY_PAGE_SIZE,
+  sessionGate,
+  gateFromError,
+  toIdString,
+  mergeHistory
+} = require('../../utils/chat-sessions')
 const api = require('../../services/api')
 const media = require('../../utils/media')
 const app = getApp()
@@ -15,6 +24,10 @@ function genClientMsgId() {
   return `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
 
+function greetingMessage(id) {
+  return { id, role: 'ai', type: 'text', content: GREETING }
+}
+
 Page({
   data: {
     displayStyle: '',
@@ -25,19 +38,40 @@ Page({
     recording: false,
     /** 正在等待/接收 AI 回复 */
     sending: false,
-    messages: []
+    messages: [],
+    /** 当前会话（开历史会话时来自会话列表，未指定时来自 /current） */
+    sessionId: '',
+    sessionTitle: '',
+    sessionStatus: null,
+    sessionStatusText: '',
+    /** 已结束/已归档会话：只展示历史，输入区禁用 */
+    sessionReadOnly: false,
+    sessionNotice: '',
+    /** 会话内历史还有更早的消息可加载 */
+    historyHasMore: false,
+    historyLoading: false
   },
 
-  onLoad() {
+  onLoad(options) {
     this._localSeq = 0
     this._sessionPromise = null
     this._deltaBuffer = ''
     this._deltaTimer = null
     this._currentRound = null
     this._lastRound = null
-    this.setData({
-      messages: [{ id: this.nextLocalId(), role: 'ai', type: 'text', content: GREETING }]
-    })
+    this._sessionVersion = 0
+    this._historyBeforeSeq = null
+    // 支持带参数进入：pages/voice/voice?sessionId=48&sessionStatus=2。
+    // 本页是 tabBar 页，wx.navigateTo 进不来，常规路径是历史列表页写
+    // app.globalData.pendingChatSession 再 switchTab（见 consumePendingSession）；
+    // 保留 query 解析是为了 reLaunch / 分享等"直接以本页为入口"的场景。
+    const query = options || {}
+    this._pendingOpen = query.sessionId
+      ? { id: query.sessionId, sessionStatus: query.sessionStatus, title: query.sessionTitle || '' }
+      : null
+    if (!this._pendingOpen) {
+      this.setData({ messages: [greetingMessage(this.nextLocalId())] })
+    }
   },
 
   onShow() {
@@ -52,8 +86,26 @@ Page({
       wx.reLaunch({ url: '/pages/login/login' })
       return
     }
+
+    // 当前会话在历史列表里被删掉了：留在页面上再发消息只会拿到 404，直接回到"未建会话"状态
+    const event = this.consumeSessionEvent()
+    if (event && event.type === 'deleted' && event.id === this.data.sessionId) {
+      this.resetToFresh()
+    }
+
+    const pending = this.consumePendingSession()
+    if (pending) {
+      this.openSession(pending).catch(() => {})
+      return
+    }
+    if (this.consumePendingNewChat()) {
+      this.onNewChat()
+      return
+    }
     // 提前把会话建好，用户真正发问时少一次往返等待
-    this.ensureSession().catch(() => {})
+    if (!this.data.sessionId) {
+      this.ensureSession().catch(() => {})
+    }
   },
 
   onHide() {
@@ -61,6 +113,8 @@ Page({
   },
 
   onUnload() {
+    // 让在途的历史请求失效，避免页面销毁后回写 setData
+    this._sessionVersion = (this._sessionVersion || 0) + 1
     this.abortStream()
     if (this._deltaTimer) {
       clearTimeout(this._deltaTimer)
@@ -69,6 +123,46 @@ Page({
   },
 
   /** ---------- 会话 ---------- */
+
+  /**
+   * 取"待打开的会话"。历史列表页与对话页都是 tabBar 页，switchTab 不支持带参数，
+   * 所以用 app.globalData 传一次性意图；取走即清，避免下次进页面又跳回同一条历史。
+   */
+  consumePendingSession() {
+    const pending = this._pendingOpen || (app.globalData && app.globalData.pendingChatSession) || null
+    this._pendingOpen = null
+    if (app.globalData) app.globalData.pendingChatSession = null
+    return pending && pending.id ? pending : null
+  },
+
+  /** 历史列表页里发生的删除操作，回本页时消费一次（只关心"删的是不是当前会话"）。 */
+  consumeSessionEvent() {
+    const event = (app.globalData && app.globalData.chatSessionEvent) || null
+    if (app.globalData) app.globalData.chatSessionEvent = null
+    return event
+  },
+
+  /** 列表页空态的「开始新对话」：一次性标记，消费即清。 */
+  consumePendingNewChat() {
+    const pending = !!(app.globalData && app.globalData.pendingNewChat)
+    if (app.globalData) app.globalData.pendingNewChat = false
+    return pending
+  },
+
+  nextSessionVersion() {
+    this._sessionVersion = (this._sessionVersion || 0) + 1
+    return this._sessionVersion
+  },
+
+  /** 把 sessionGate 的结果铺平成页面 data 字段。 */
+  gateData(gate) {
+    return {
+      sessionStatus: gate.sessionStatus,
+      sessionStatusText: gate.sessionStatusText,
+      sessionReadOnly: gate.readOnly,
+      sessionNotice: gate.notice
+    }
+  },
 
   ensureSession() {
     if (this.data.sessionId) {
@@ -80,14 +174,189 @@ Page({
     this._sessionPromise = api
       .getOrCreateChatSession(3)
       .then((session) => {
-        this.setData({ sessionId: session.id })
-        return session.id
+        this.setData(Object.assign({
+          sessionId: toIdString(session.id),
+          sessionTitle: session.title || DEFAULT_TITLE
+        }, this.gateData(sessionGate(session.sessionStatus))))
+        return toIdString(session.id)
       })
       .catch((err) => {
         this._sessionPromise = null
         throw err
       })
     return this._sessionPromise
+  },
+
+  /**
+   * 打开指定会话：拉该会话的历史（后端已按时间正序返回）并渲染，不走 /current。
+   * 已结束/已归档的会话照常展示历史，但输入区禁用并给出明确提示。
+   */
+  openSession(info) {
+    const sessionId = toIdString(info && info.id)
+    if (!sessionId) return Promise.resolve(null)
+    const version = this.nextSessionVersion()
+    this.abortStream()
+    this._sessionPromise = null
+    this._currentRound = null
+    this._lastRound = null
+    this._historyBeforeSeq = null
+
+    this.setData(Object.assign({
+      sessionId,
+      sessionTitle: (info && info.title) || '',
+      messages: [],
+      inputValue: '',
+      scrollIntoView: '',
+      historyHasMore: false,
+      historyLoading: true
+    }, this.gateData(sessionGate(info && info.sessionStatus))))
+
+    return api
+      .fetchChatHistory(sessionId, { pageSize: HISTORY_PAGE_SIZE })
+      .then((page) => {
+        if (version !== this._sessionVersion) return null
+        this._historyBeforeSeq = page.nextBeforeSeq
+        const messages = page.messages.length ? page.messages : this.emptyHistoryMessages()
+        this.setData({
+          messages,
+          historyHasMore: !!page.hasMore,
+          historyLoading: false,
+          scrollIntoView: 'msg-bottom'
+        })
+        return page
+      })
+      .catch((err) => {
+        if (version !== this._sessionVersion) return null
+        this.setData({ historyLoading: false })
+        // 会话已被删除（后端 404 / 40400）：停在一条不存在的会话上没有意义，
+        // 回到初始状态，下次发送时按"取或建当前会话"重新拿一条
+        if (err && (err.code === 40400 || err.statusCode === 404)) {
+          this.resetToFresh()
+          wx.showToast({ title: '该对话已被删除', icon: 'none' })
+          return null
+        }
+        wx.showToast({ title: (err && err.message) || '历史记录加载失败，请稍后重试', icon: 'none' })
+        return null
+      })
+  },
+
+  /** 空历史占位：可发送的会话给问候语，只读会话给一句"没有记录"，都不留白屏。 */
+  emptyHistoryMessages() {
+    if (this.data.sessionReadOnly) {
+      return [{ id: this.nextLocalId(), role: 'ai', type: 'text', content: '这段对话没有可展示的记录' }]
+    }
+    return [greetingMessage(this.nextLocalId())]
+  },
+
+  /** 拉到更早的一页历史，拼到当前消息前面，保持整段对话正序。 */
+  onLoadEarlier() {
+    const sessionId = this.data.sessionId
+    if (!sessionId || this.data.historyLoading) return
+    // hasMore 与 beforeSeq 都要有，缺一个就说明后面没有更早的消息了：
+    // 只判 beforeSeq 不够——最后一页同样会带回一个 nextBeforeSeq，会多打一次空请求
+    if (!this.data.historyHasMore || !this._historyBeforeSeq) {
+      wx.showToast({ title: '已经是全部记录了', icon: 'none' })
+      return
+    }
+    const version = this._sessionVersion
+    const anchor = this.data.messages.length ? this.data.messages[0].id : ''
+    this.setData({ historyLoading: true })
+    api
+      .fetchChatHistory(sessionId, { pageSize: HISTORY_PAGE_SIZE, beforeSeq: this._historyBeforeSeq })
+      .then((page) => {
+        if (version !== this._sessionVersion || sessionId !== this.data.sessionId) return
+        this._historyBeforeSeq = page.nextBeforeSeq
+        this.setData({
+          messages: mergeHistory(page.messages, this.data.messages),
+          historyHasMore: !!page.hasMore,
+          historyLoading: false,
+          // 把原来最上面那条钉在可视区顶部，插进更早的消息后阅读位置不会跳
+          scrollIntoView: anchor
+        })
+      })
+      .catch((err) => {
+        if (version !== this._sessionVersion) return
+        this.setData({ historyLoading: false })
+        wx.showToast({ title: (err && err.message) || '更早的记录加载失败', icon: 'none' })
+      })
+  },
+
+  /** 新对话：后端会把旧会话置为"已结束"，这里清空视图并切到新会话。 */
+  onNewChat() {
+    if (this.data.sending) {
+      wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
+      return Promise.resolve(null)
+    }
+    if (this._creatingSession) return Promise.resolve(null)
+    this._creatingSession = true
+
+    return api
+      .createChatSession(3)
+      .then((session) => {
+        const version = this.nextSessionVersion()
+        this.abortStream()
+        this._sessionPromise = null
+        this._currentRound = null
+        this._lastRound = null
+        this._historyBeforeSeq = null
+        // 本地消息 id 从 1 重新开始：新会话的视图是全新的，不复用旧序号
+        this._localSeq = 0
+        const gate = sessionGate(session && session.sessionStatus != null
+          ? session.sessionStatus
+          : SESSION_STATUS.ACTIVE)
+        this.setData(Object.assign({
+          sessionId: toIdString(session && session.id),
+          sessionTitle: (session && session.title) || DEFAULT_TITLE,
+          messages: [greetingMessage(this.nextLocalId())],
+          inputValue: '',
+          scrollIntoView: 'msg-bottom',
+          historyHasMore: false,
+          historyLoading: false
+        }, this.gateData(gate)))
+        if (version !== this._sessionVersion) return null
+        wx.showToast({ title: '已开启新对话', icon: 'none' })
+        return session
+      })
+      .catch((err) => {
+        wx.showToast({ title: (err && err.message) || '新建对话失败，请稍后重试', icon: 'none' })
+        return null
+      })
+      .then((result) => {
+        this._creatingSession = false
+        return result
+      })
+  },
+
+  /** 打开历史会话列表页 */
+  onOpenHistory() {
+    wx.navigateTo({ url: '/pages/voice/history' })
+  },
+
+  /** 当前会话被删除后回到"还没有会话"的初始状态。 */
+  resetToFresh() {
+    this.nextSessionVersion()
+    this.abortStream()
+    this._sessionPromise = null
+    this._currentRound = null
+    this._lastRound = null
+    this._historyBeforeSeq = null
+    this._localSeq = 0
+    this.setData(Object.assign({
+      sessionId: '',
+      sessionTitle: '',
+      messages: [greetingMessage(this.nextLocalId())],
+      inputValue: '',
+      scrollIntoView: 'msg-bottom',
+      historyHasMore: false,
+      historyLoading: false
+    }, this.gateData(sessionGate(SESSION_STATUS.ACTIVE))))
+  },
+
+  /** 已结束/已归档会话：不进入发送链路（后端也会拒绝，没必要让用户先看到一条失败气泡）。 */
+  blockIfReadOnly() {
+    if (!this.data.sessionReadOnly) return false
+    wx.showToast({ title: this.data.sessionNotice || '该会话已结束，请新建对话', icon: 'none' })
+    return true
   },
 
   /** ---------- 输入 ---------- */
@@ -97,6 +366,7 @@ Page({
   },
 
   onSend() {
+    if (this.blockIfReadOnly()) return
     const text = (this.data.inputValue || '').trim()
     if (!text) return
     if (this.data.sending) {
@@ -123,6 +393,7 @@ Page({
    * 这正是两阶段里阶段 1 的识别线索来源。
    */
   sendImage(filePath) {
+    if (this.blockIfReadOnly()) return
     const caption = (this.data.inputValue || '').trim()
     const userMsg = {
       id: this.nextLocalId(),
@@ -189,6 +460,12 @@ Page({
   },
 
   startRound(payload, aiLocalId) {
+    // 兜底：入口（onSend / onChooseImage / onRetry）都拦了，这里再挡一次，
+    // 保证没有任何路径会把消息发给已结束/已归档的会话
+    if (this.data.sessionReadOnly) {
+      this.failRound(aiLocalId, new Error(this.data.sessionNotice || '该会话已结束，请新建对话'))
+      return
+    }
     const clientMsgId = genClientMsgId()
     this.ensureSession()
       .then((sessionId) =>
@@ -301,6 +578,12 @@ Page({
       : err && err.isUploadError
         ? (err.message || '图片上传失败，请重试')
         : (err && err.message) || 'AI 服务暂时不可用，请稍后重试'
+    // 后端明确拒绝（已结束/已归档）时顺手把输入区切成只读：错误文案本身就是提示，
+    // 但"能不能发"的判断以服务端为准，所以这里跟着服务端把界面状态补上
+    const statusGate = gateFromError(err)
+    if (statusGate) {
+      this.setData(this.gateData(statusGate))
+    }
     // 已经流出的内容保留，只在后面追加重试入口
     this.patchMessage(aiLocalId, (m) => ({
       content: m.content ? `${m.content}\n\n[${message}]` : message,
@@ -318,6 +601,7 @@ Page({
   onRetry(e) {
     const id = e.currentTarget.dataset.id
     if (this.data.sending) return
+    if (this.blockIfReadOnly()) return
     const last = this._lastRound
 
     // 用户消息已入库：复用同一 clientMsgId / replyToMsgId 重开流，
@@ -386,6 +670,7 @@ Page({
    * 只做「选」，上传与发送交给 sendImage，避免这个回调过长难以阅读。
    */
   onChooseImage() {
+    if (this.blockIfReadOnly()) return
     if (this.data.sending) {
       wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
       return

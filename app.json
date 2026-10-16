@@ -3,6 +3,7 @@
     "pages/login/login",
     "pages/index/index",
     "pages/voice/voice",
+    "pages/voice/history",
     "pages/ai/ai",
     "pages/device-add/device-add",
     "pages/stats/stats",

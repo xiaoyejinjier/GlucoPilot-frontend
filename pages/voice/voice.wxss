@@ -155,7 +155,136 @@
   text-decoration: underline;
 }
 
-/* 回复中禁用发送，避免重复提交 */
+/* 回复中或会话不可发送时禁用按钮，避免重复提交 */
+.wx-btn.disabled {
+  opacity: 0.55;
+}
+
 .wx-btn.send.disabled {
   opacity: 0.55;
+}
+
+/* 会话操作条：标题 + 状态标记 + 「历史对话 / 新对话」 */
+.wx-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 20rpx;
+  background: var(--surface);
+  border-bottom: 1rpx solid var(--line);
+  flex-shrink: 0;
+}
+
+.wx-head-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.wx-head-title {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.wx-head-status {
+  flex-shrink: 0;
+  padding: 4rpx 12rpx;
+  border-radius: 10rpx;
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+/* 已结束/已归档：状态标记与提示条同色，一眼能对上 */
+.wx-head-status.locked {
+  background: #fdecea;
+  color: var(--danger);
+}
+
+.wx-head-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12rpx;
+  flex-shrink: 0;
+}
+
+.wx-head-btn {
+  min-height: 60rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1rpx solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wx-head-btn.primary {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+}
+
+/* 会话内历史的"查看更早"，同时也是加载中的占位 */
+.wx-more {
+  margin: 4rpx auto 16rpx;
+  padding: 12rpx 24rpx;
+  width: fit-content;
+  border-radius: 24rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  background: var(--surface);
+  border: 1rpx solid var(--line);
+}
+
+/* 已结束/已归档会话的输入区替代提示 */
+.wx-locked {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 20rpx;
+  background: #fdecea;
+  border-top: 1rpx solid var(--line);
+  flex-shrink: 0;
+}
+
+.wx-locked-text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-small);
+  color: var(--danger);
+  line-height: 1.4;
+}
+
+.wx-locked-btn {
+  flex-shrink: 0;
+  min-height: 60rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wx-input[disabled] {
+  color: var(--muted);
+  background: var(--surface);
 }
