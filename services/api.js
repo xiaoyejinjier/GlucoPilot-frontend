@@ -69,7 +69,7 @@ function mapFood(f, categoryName) {
 
 /** ---------- auth ---------- */
 function wechatLogin(code) {
-  return post('/auth/wechat/sessions', { code }, { auth: false }).then((data) => {
+  return post('/auth/wechat/sessions', { code }, { auth: false, timeout: 15000 }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
     return data
@@ -77,11 +77,11 @@ function wechatLogin(code) {
 }
 
 function sendSmsCode(phone, scene) {
-  return post('/auth/sms/codes', { phone, scene: scene || 'login' }, { auth: false })
+  return post('/auth/sms/codes', { phone, scene: scene || 'login' }, { auth: false, timeout: 15000 })
 }
 
 function phoneLogin(phone, smsCode) {
-  return post('/auth/phone/sessions', { phone, smsCode }, { auth: false }).then((data) => {
+  return post('/auth/phone/sessions', { phone, smsCode }, { auth: false, timeout: 15000 }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
     return data
@@ -149,7 +149,11 @@ function fetchFoodDetail(id) {
 
 /** 2.23 获取或创建进行中的会话 */
 function getOrCreateChatSession(sessionType) {
-  return post('/chat-sessions/current', { sessionType: sessionType || 3 }, { auth: true })
+  return post('/chat-sessions/current', { sessionType: sessionType || 3 }, { auth: true, timeout: 10000 })
+}
+
+function fetchChatMessages(sessionId, params) {
+  return get(`/chat-sessions/${sessionId}/messages`, params || {}, { auth: true, timeout: 10000 })
 }
 
 /** 2.24 发送消息（clientMsgId 幂等，重复提交返回同一条） */
@@ -245,7 +249,7 @@ function defaultMockReadings() {
 
 /** ---------- user / 设置 / 反馈 ---------- */
 function fetchMe() {
-  return get('/users/me', null, { auth: true }).then(mappers.mapUserMe)
+  return get('/users/me', null, { auth: true, timeout: 10000 }).then(mappers.mapUserMe)
 }
 
 function updateProfile(payload) {
@@ -271,7 +275,7 @@ function bindPhone(phone, verifyCode) {
 function fetchAppConfig(groups) {
   const data = {}
   if (groups && groups.length) data.groups = groups.join(',')
-  return get('/app-config', data, { auth: false })
+  return get('/app-config', data, { auth: false, timeout: 10000 })
 }
 
 function submitFeedback(feedbackType, contentText) {
@@ -352,6 +356,7 @@ module.exports = {
   fetchFoods,
   fetchFoodDetail,
   getOrCreateChatSession,
+  fetchChatMessages,
   sendChatMessage,
   streamChatCompletion,
   createMediaUploadCredential,

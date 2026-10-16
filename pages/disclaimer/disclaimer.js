@@ -1,5 +1,6 @@
 const { DISCLAIMER_CONTENT } = require('../../utils/constants')
 const { fetchAppConfig, agreeDisclaimer } = require('../../services/api')
+const { getToken } = require('../../utils/request')
 const app = getApp()
 
 Page({
@@ -13,8 +14,15 @@ Page({
   },
 
   onLoad(options) {
+    if (!this.checkAuthenticated()) return
     this.setData({ forced: !!(options && options.forced === '1') })
-    this.loadDisclaimer()
+    return this.loadDisclaimer()
+  },
+
+  checkAuthenticated() {
+    if (app.globalData.isLoggedIn && getToken()) return true
+    app.openLogin()
+    return false
   },
 
   loadDisclaimer() {
@@ -45,6 +53,7 @@ Page({
   },
 
   onAgree() {
+    if (!this.checkAuthenticated()) return
     if (!this.data.canAgree || this.data.submitting) return
     if (!this.data.version) {
       wx.showToast({ title: '免责声明版本未获取到，请稍后重试', icon: 'none' })
@@ -52,15 +61,17 @@ Page({
     }
 
     this.setData({ submitting: true })
-    agreeDisclaimer(this.data.version)
+    const token = getToken()
+    return agreeDisclaimer(this.data.version)
       .then(() => {
+        if (getToken() !== token || !this.checkAuthenticated()) return
         if (typeof app.markDisclaimerAgreed === 'function') {
           app.markDisclaimerAgreed(this.data.version)
         }
         wx.showToast({ title: '已同意', icon: 'success' })
         setTimeout(() => {
           if (this.data.forced) {
-            wx.switchTab({ url: '/pages/index/index' })
+            wx.switchTab({ url: '/pages/ai/ai' })
           } else {
             wx.navigateBack()
           }
@@ -68,6 +79,11 @@ Page({
       })
       .catch((err) => {
         this.setData({ submitting: false })
+        if (err && err.code === 40100) {
+          app.resetLoginState()
+          app.openLogin()
+          return
+        }
         wx.showToast({ title: err.message || '提交失败', icon: 'none' })
         if (err && err.code === 40001) this.loadDisclaimer()
       })

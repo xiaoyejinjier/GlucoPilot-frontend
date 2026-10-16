@@ -19,6 +19,8 @@ function setToken(token) {
  */
 function request(options) {
   const { url, method = 'GET', data, auth = true, header = {}, timeout } = options
+  const issue = !url.startsWith('http') && typeof config.connectionIssue === 'function' ? config.connectionIssue() : ''
+  if (issue) return Promise.reject(Object.assign(new Error(issue), { configuration: true }))
   const headers = {
     'Content-Type': 'application/json',
     ...header
@@ -62,7 +64,11 @@ function request(options) {
         reject(Object.assign(new Error(msg), { code: body.code, body, statusCode: res.statusCode }))
       },
       fail(err) {
-        reject(Object.assign(new Error(err.errMsg || '网络异常'), { network: true, err }))
+        const detail = (err && err.errMsg) || ''
+        const message = /timeout/i.test(detail) ? '连接超时，请检查后端地址和网络'
+          : /not in domain list|url not in domain|不在.*域名/i.test(detail) ? '请求域名未允许，请检查真机调试设置'
+            : '无法连接后端，请检查服务是否启动及手机网络'
+        reject(Object.assign(new Error(message), { network: true, err }))
       }
     })
   })

@@ -1,6 +1,6 @@
 const { applyDisplayToCurrentPage, saveDisplaySettings } = require('./utils/display')
 const { getUserInfo, saveUserInfo } = require('./utils/storage')
-const { getToken } = require('./utils/request')
+const { getToken, setToken } = require('./utils/request')
 const { fetchMe, fetchAppConfig } = require('./services/api')
 const { fontNameOf, themeIdOf } = require('./utils/mappers')
 const config = require('./utils/config')
@@ -20,32 +20,57 @@ App({
   },
 
   onLaunch() {
-    const loggedIn = wx.getStorageSync('isLoggedIn')
-    const token = getToken()
-    if (loggedIn && token) {
-      this.globalData.isLoggedIn = true
-      this.globalData.userInfo = getUserInfo()
-    } else {
-      wx.setStorageSync('isLoggedIn', false)
-      this.globalData.isLoggedIn = false
-    }
+    // 冷启动由用户选择登录方式，不用上次调试留下的缓存直接跳过登录页。
+    this.resetLoginState()
   },
 
-  onShow() {
+  onShow(options) {
     applyDisplayToCurrentPage()
-    if (this.globalData.isLoggedIn && getToken()) {
-      this.enforceDisclaimer()
+    const pages = getCurrentPages()
+    const current = pages.length ? pages[pages.length - 1].route : (options && options.path) || ''
+    if (!this.globalData.isLoggedIn || !getToken()) {
+      if (current && current !== 'pages/login/login') this.openLogin()
+      return
     }
+    // 登录方式选择页不受后台恢复时的声明检查抢占。
+    if (current !== 'pages/login/login') this.enforceDisclaimer()
+  },
+
+  resetLoginState() {
+    setToken('')
+    wx.setStorageSync('isLoggedIn', false)
+    this.globalData.isLoggedIn = false
+    this.globalData.userInfo = null
+    this.globalData.disclaimerRequired = false
+    this.globalData.disclaimerCurrentVersion = ''
+  },
+
+  openLogin() {
+    const pages = getCurrentPages()
+    const current = pages.length ? pages[pages.length - 1].route : ''
+    if (current === 'pages/login/login' || this._routingLogin) return
+    this._routingLogin = true
+    wx.reLaunch({
+      url: '/pages/login/login',
+      complete: () => { this._routingLogin = false }
+    })
   },
 
   /** 登录态下同步资料，并比较用户已同意版本与当前免责声明版本。 */
   syncProfile() {
+    const token = getToken()
+    if (!this.globalData.isLoggedIn || !token) {
+      return Promise.reject(Object.assign(new Error('请先登录'), { code: 40100 }))
+    }
     if (this._profilePromise) return this._profilePromise
 
     const task = Promise.all([
       fetchMe(),
       fetchAppConfig(['TEXT']).catch(() => null)
     ]).then(([userInfo, appConfig]) => {
+      if (!this.globalData.isLoggedIn || getToken() !== token) {
+        throw Object.assign(new Error('登录状态已变化，请重新登录'), { code: 40100 })
+      }
       const text = (appConfig && appConfig.TEXT) || {}
       const remoteVersion = String(text['text.disclaimer.version'] || '').trim()
       const currentVersion = remoteVersion || wx.getStorageSync('disclaimerCurrentVersion') || ''
@@ -83,29 +108,40 @@ App({
         if (state.needsDisclaimer) this.openRequiredDisclaimer()
         return state
       })
-      .catch(() => null)
+      .catch((error) => {
+        if ((error && error.code === 40100) || !getToken()) {
+          this.resetLoginState()
+          this.openLogin()
+        }
+        return null
+      })
   },
 
-  /** 登录完成后的唯一去向：需要确认则去免责声明，否则进入首页。 */
+  /** 登录完成后的唯一去向：需要确认则去免责声明，否则进入记录页。 */
   goAfterLogin() {
     return this.syncProfile()
       .then((state) => {
         if (state.needsDisclaimer) {
           this.openRequiredDisclaimer()
         } else {
-          wx.switchTab({ url: '/pages/index/index' })
+          wx.switchTab({ url: '/pages/ai/ai' })
         }
         return state
       })
-      .catch(() => {
-        // 登录已经成功但资料暂时取不到时仍先展示声明，避免未经确认进入业务页。
-        this.globalData.disclaimerRequired = true
-        this.openRequiredDisclaimer()
+      .catch((error) => {
+        // 无有效身份或资料校验失败时留在登录流程，不能当成“尚未同意”。
+        this.resetLoginState()
+        this.openLogin()
+        wx.showToast({ title: (error && error.code === 40100) ? '登录已失效，请重新登录' : '资料获取失败，请重试登录', icon: 'none' })
         return null
       })
   },
 
   openRequiredDisclaimer() {
+    if (!this.globalData.isLoggedIn || !getToken()) {
+      this.openLogin()
+      return
+    }
     const pages = getCurrentPages()
     const current = pages.length ? pages[pages.length - 1].route : ''
     if (current === 'pages/disclaimer/disclaimer' || this._routingDisclaimer) return
@@ -130,7 +166,7 @@ App({
 
   checkLogin() {
     if (!this.globalData.isLoggedIn || !getToken()) {
-      wx.reLaunch({ url: '/pages/login/login' })
+      this.openLogin()
       return false
     }
     if (this.globalData.disclaimerRequired) {

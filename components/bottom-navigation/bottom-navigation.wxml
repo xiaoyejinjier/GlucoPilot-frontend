@@ -1,0 +1,17 @@
+<view class="bottom-navigation" style="--brand: {{brandColor}};">
+  <view class="assistant-entry" bindtap="openAssistant"
+    hover-class="navigation-pressed" aria-role="button" aria-label="小语，语音助手">
+    <assistant-mascot variant="nav"></assistant-mascot>
+    <text class="assistant-name">{{assistant.text}}</text>
+  </view>
+  <view class="navigation-pill">
+    <view wx:for="{{items}}" wx:key="pagePath"
+      class="navigation-item {{selected === item.index ? 'navigation-active' : ''}}"
+      data-path="{{item.pagePath}}" data-index="{{item.index}}" bindtap="switchTab"
+      hover-class="navigation-pressed" aria-role="button" aria-label="{{item.text}}">
+      <app-icon name="{{item.icon}}" active="{{selected === item.index}}"
+        color="{{selected === item.index ? brandColor : '#545c66'}}" size="lg"></app-icon>
+      <text class="navigation-label">{{item.text}}</text>
+    </view>
+  </view>
+</view>

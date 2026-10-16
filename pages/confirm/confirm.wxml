@@ -51,5 +51,5 @@
     </view>
   </view>
 
-  <tab-bar selected="{{2}}"></tab-bar>
+  <tab-bar selected="{{0}}"></tab-bar>
 </view>

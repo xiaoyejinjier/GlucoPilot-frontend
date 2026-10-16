@@ -1,6 +1,7 @@
 const { login } = require('../../utils/storage')
 const { applyDisplayToCurrentPage, getDisplayStyle } = require('../../utils/display')
 const { wechatLogin, sendSmsCode, phoneLogin } = require('../../services/api')
+const config = require('../../utils/config')
 const app = getApp()
 
 Page({
@@ -14,11 +15,6 @@ Page({
 
   onLoad() {
     this.setData({ displayStyle: getDisplayStyle() })
-    if (app.globalData.isLoggedIn) {
-      if (typeof app.goAfterLogin === 'function') {
-        app.goAfterLogin()
-      }
-    }
   },
 
   onShow() {
@@ -29,20 +25,28 @@ Page({
     if (this._smsTimer) clearInterval(this._smsTimer)
   },
 
+  checkConnectionSettings() {
+    const issue = config.connectionIssue()
+    if (!issue) return true
+    wx.showToast({ title: '服务连接未就绪，请稍后重试', icon: 'none' })
+    return false
+  },
+
   finishLogin() {
     login()
     app.globalData.isLoggedIn = true
     // 资料、当前声明版本与用户已同意版本校验完成后再决定去向。
     if (typeof app.goAfterLogin === 'function') {
-      app.goAfterLogin()
-      return
+      return app.goAfterLogin()
     }
     wx.reLaunch({ url: '/pages/disclaimer/disclaimer?forced=1' })
   },
 
   onWechatLogin() {
+    if (!this.checkConnectionSettings()) return
     wx.showLoading({ title: '登录中...', mask: true })
     wx.login({
+      timeout: 10000,
       success: (res) => {
         if (!res.code) {
           wx.hideLoading()
@@ -83,6 +87,7 @@ Page({
   },
 
   onSendSms() {
+    if (!this.checkConnectionSettings()) return
     const phone = this.data.phone
     if (!/^1\d{10}$/.test(phone)) {
       wx.showToast({ title: '请输入正确手机号', icon: 'none' })
@@ -114,6 +119,7 @@ Page({
   },
 
   onConfirmPhoneLogin() {
+    if (!this.checkConnectionSettings()) return
     const { phone, smsCode } = this.data
     if (!/^1\d{10}$/.test(phone)) {
       wx.showToast({ title: '请输入正确手机号', icon: 'none' })

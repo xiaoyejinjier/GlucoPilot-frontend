@@ -354,7 +354,7 @@ test('模板触摸事件均有处理函数，详情位于Canvas下方而非遮�
   for (const [, handler] of template.matchAll(/(?:bindtap|bindtouchstart|bindtouchmove|bindtouchend|bindtouchcancel)="(\w+)"/g)) {
     assert.equal(typeof page[handler], 'function', handler)
   }
-  assert.ok(template.indexOf('</canvas>') < template.indexOf('class="chart-details"'))
+  assert.ok(template.indexOf('</canvas>') < template.indexOf('class="chart-details '))
   assert.match(template, /chartSelection.recordedAtText/)
 })
 

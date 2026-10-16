@@ -1,11 +1,12 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const api = require('../../services/api')
 const media = require('../../utils/media')
+const { getToken } = require('../../utils/request')
 const app = getApp()
 
 /** 增量文本合并刷新间隔：模型会推数百个 delta，逐个 setData 在真机上会卡 */
 const DELTA_FLUSH_MS = 60
-const GREETING = '你好，我是 AI 控糖助手。可以问饮食、血糖或今日记录相关问题。'
+const HISTORY_PAGE_SIZE = 20
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -15,35 +16,66 @@ function genClientMsgId() {
   return `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
 
+function mapHistoryMessage(row) {
+  const image = Number(row.msgType) === 2
+  return {
+    id: `history-${row.id}`, serverId: row.id, seqNo: row.seqNo, history: true,
+    role: Number(row.msgRole) === 1 ? 'user' : 'ai', type: image ? 'image' : 'text',
+    content: row.contentText || (Number(row.msgType) === 3 ? '［语音消息］' : image ? '' : '（本条消息没有正文）'),
+    mediaId: row.mediaId, fileUrl: row.fileUrl || '', imageUnavailable: image && !row.fileUrl,
+    timeLabel: row.createdAt ? String(row.createdAt).replace('T', ' ').slice(0, 16) : '',
+    finishReason: row.finishReason, pending: false
+  }
+}
+
 Page({
   data: {
     displayStyle: '',
     currentTime: '09:41',
     inputValue: '',
+    inputFocus: false,
     scrollIntoView: '',
+    viewportHeight: 0,
+    keyboardHeight: 0,
     voiceMode: false,
     recording: false,
     /** 正在等待/接收 AI 回复 */
     sending: false,
-    messages: []
+    messages: [],
+    hasHistory: false,
+    historyReady: false,
+    historyLoading: false,
+    historyError: '',
+    historyHasMore: false,
+    historyCursor: null,
+    suggestions: [
+      '空腹血糖 5.2，怎么看？',
+      '早餐吃馒头和鸡蛋，怎么搭配？',
+      '空腹和餐后血糖有什么区别？',
+      '帮我分析最近 30 天血糖记录',
+      '运动前后有哪些注意事项？'
+    ]
   },
 
   onLoad() {
+    this.refreshChatViewport()
     this._localSeq = 0
     this._sessionPromise = null
     this._deltaBuffer = ''
     this._deltaTimer = null
     this._currentRound = null
     this._lastRound = null
+    this._historyVersion = 0
+    this._historyToken = getToken()
     this.setData({
-      messages: [{ id: this.nextLocalId(), role: 'ai', type: 'text', content: GREETING }]
+      messages: []
     })
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 })
-    }
+    this._visible = true
+    this.refreshChatViewport()
+    this.attachKeyboardListener()
     applyDisplayToCurrentPage()
     const now = new Date()
     this.setData({ currentTime: `${pad2(now.getHours())}:${pad2(now.getMinutes())}` })
@@ -52,15 +84,34 @@ Page({
       wx.reLaunch({ url: '/pages/login/login' })
       return
     }
-    // 提前把会话建好，用户真正发问时少一次往返等待
-    this.ensureSession().catch(() => {})
+    if (this._historyToken !== getToken()) {
+      this.abortStream()
+      this._historyVersion += 1
+      this._historyToken = getToken()
+      this._sessionPromise = null
+      this._lastRound = this._currentRound = null
+      this.setData({ sessionId: null, messages: [], hasHistory: false, sending: false, inputValue: '', historyReady: false,
+        historyLoading: false, historyError: '', historyHasMore: false, historyCursor: null })
+    }
+    if (!this.data.historyReady) this.loadHistory()
   },
 
   onHide() {
+    this._visible = false
+    this._historyVersion += 1
+    this.setData({ historyLoading: false })
+    this._inputFocused = false
+    this._layoutVersion = (this._layoutVersion || 0) + 1
+    this.detachKeyboardListener()
+    this.setData({ keyboardHeight: 0, viewportHeight: this._fullWindowHeight || 0, inputFocus: false })
     this.abortStream()
   },
 
   onUnload() {
+    this._visible = false
+    this._historyVersion += 1
+    this._layoutVersion = (this._layoutVersion || 0) + 1
+    this.detachKeyboardListener()
     this.abortStream()
     if (this._deltaTimer) {
       clearTimeout(this._deltaTimer)
@@ -68,7 +119,155 @@ Page({
     }
   },
 
+  /** 聊天列表与输入区共用同一个可见高度，避免原生输入框自动顶起后遮住消息。 */
+  refreshChatViewport() {
+    let info
+    try {
+      info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+    } catch (_) { return }
+    if (!info || !Number.isFinite(info.windowHeight) || info.windowHeight <= 0) return
+    this._windowHeight = info.windowHeight
+    if (!this._fullWindowHeight || (!this._inputFocused && !this.data.keyboardHeight)) {
+      this._fullWindowHeight = info.windowHeight
+    }
+    this.updateChatViewport()
+  },
+
+  attachKeyboardListener() {
+    if (this._keyboardHandler || !wx.onKeyboardHeightChange || !wx.offKeyboardHeightChange) return
+    this._keyboardHandler = (event) => this.onKeyboardHeightChange(event)
+    wx.onKeyboardHeightChange(this._keyboardHandler)
+  },
+
+  detachKeyboardListener() {
+    if (!this._keyboardHandler) return
+    wx.offKeyboardHeightChange(this._keyboardHandler)
+    this._keyboardHandler = null
+  },
+
+  onInputFocus(event) {
+    this._inputFocused = true
+    this.setData({ inputFocus: true })
+    const height = Number(event.detail && event.detail.height)
+    if (Number.isFinite(height) && height > 0) {
+      this.onKeyboardHeightChange({ height })
+    } else {
+      this.updateChatViewport()
+    }
+  },
+
+  onInputBlur() {
+    this._inputFocused = false
+    this.setData({ inputFocus: false })
+  },
+
+  onKeyboardHeightChange(event) {
+    if (this._visible === false) return
+    const detail = (event && event.detail) || event || {}
+    const height = Number(detail.height)
+    if (!Number.isFinite(height) || height < 0) return
+    this.updateChatViewport(height)
+  },
+
+  onResize(event) {
+    if (this._visible === false) return
+    const height = Number(event.size && event.size.windowHeight)
+    if (!Number.isFinite(height) || height <= 0) return
+    this._windowHeight = height
+    if (!this._inputFocused && !this.data.keyboardHeight) this._fullWindowHeight = height
+    this.updateChatViewport()
+  },
+
+  updateChatViewport(keyboardHeight = this.data.keyboardHeight) {
+    if (!this._fullWindowHeight || this._visible === false) return
+    // 部分真机会先缩小窗口；从完整窗口扣一次键盘高度，避免二次扣减。
+    const viewportHeight = Math.max(1, Math.min(this._windowHeight, this._fullWindowHeight - keyboardHeight))
+    const version = this._layoutVersion = (this._layoutVersion || 0) + 1
+    if (!this.hasCurrentMessages()) {
+      // 本次尚未发问时，保留完整欢迎卡片的位置；键盘只遮挡下半部分。
+      this.setData({ viewportHeight, keyboardHeight, scrollIntoView: '' })
+      return
+    }
+    this.setData({ viewportHeight, keyboardHeight, scrollIntoView: '' }, () => {
+      const scroll = () => {
+        if (this._visible !== false && version === this._layoutVersion) {
+          this.setData({ scrollIntoView: 'msg-bottom' })
+        }
+      }
+      if (wx.nextTick) wx.nextTick(scroll)
+      else scroll()
+    })
+  },
+
   /** ---------- 会话 ---------- */
+
+  hasCurrentMessages() {
+    return this.data.messages.some((message) => !message.history && !message.localWelcome)
+  },
+
+  async loadHistory(older = false) {
+    if (this.data.historyLoading || (older && (!this.data.historyReady || !this.data.historyHasMore))) return
+    const version = ++this._historyVersion
+    const token = getToken()
+    const active = () => this._visible !== false && version === this._historyVersion && this._historyToken === token
+    const anchor = older && this.data.messages.find((message) => message.history)
+    this.setData({ historyLoading: true, historyError: '' })
+    try {
+      const sessionId = await this.ensureSession()
+      if (!active() || token !== getToken()) return
+      const result = await api.fetchChatMessages(sessionId, {
+        pageSize: HISTORY_PAGE_SIZE, ...(older ? { beforeSeqNo: this.data.historyCursor } : {})
+      })
+      if (!active() || token !== getToken()) return
+      if (!result || !Array.isArray(result.records)) throw new Error('历史记录格式异常，请重试')
+      const records = result.records.map(mapHistoryMessage)
+      let messages
+      if (older) {
+        const existing = new Set(this.data.messages.map((message) => message.id))
+        messages = records.filter((message) => !existing.has(message.id)).concat(this.data.messages)
+      } else {
+        messages = records
+        if (records.length) messages.push({ id: this.nextLocalId(), type: 'welcome', localWelcome: true })
+      }
+      this.setData({ messages, hasHistory: older ? this.data.hasHistory : records.length > 0,
+        historyReady: true, historyLoading: false, historyError: '',
+        historyHasMore: !!result.hasMore, historyCursor: result.nextBeforeSeqNo || null,
+        scrollIntoView: '' }, () => {
+        const scroll = () => {
+          if (!active()) return
+          const welcome = messages.find((message) => message.localWelcome)
+          this.setData({ scrollIntoView: anchor ? `message-${anchor.id}`
+            : this.hasCurrentMessages() ? 'msg-bottom' : welcome ? `message-${welcome.id}` : '' })
+        }
+        if (wx.nextTick) wx.nextTick(scroll)
+        else scroll()
+      })
+    } catch (err) {
+      if (!active()) return
+      if (err && err.code === 40100) {
+        this.setData({ historyLoading: false })
+        app.globalData.isLoggedIn = false
+        wx.reLaunch({ url: '/pages/login/login' })
+      } else if (token === getToken()) {
+        const hint = err && err.statusCode === 404 ? '历史接口未就绪，请重启后端后重试'
+          : err && (err.network || err.configuration) ? `${err.message}，点击重试`
+            : '历史记录加载失败，点击重试'
+        this.setData({ historyLoading: false, historyError: hint })
+      }
+    }
+  },
+
+  onLoadOlderHistory() { return this.loadHistory(true) },
+
+  onRetryHistory() { return this.loadHistory(this.data.historyReady) },
+
+  canSend() {
+    if (!this.data.historyReady) {
+      wx.showToast({ title: this.data.historyError ? '请先重试加载历史记录' : '正在恢复历史记录，请稍候', icon: 'none' })
+      return false
+    }
+    return true
+  },
 
   ensureSession() {
     if (this.data.sessionId) {
@@ -77,20 +276,28 @@ Page({
     if (this._sessionPromise) {
       return this._sessionPromise
     }
+    const token = getToken()
     this._sessionPromise = api
       .getOrCreateChatSession(3)
       .then((session) => {
+        if (token !== getToken() || token !== this._historyToken) throw new Error('登录状态已变化')
         this.setData({ sessionId: session.id })
         return session.id
       })
       .catch((err) => {
-        this._sessionPromise = null
+        if (token === this._historyToken) this._sessionPromise = null
         throw err
       })
     return this._sessionPromise
   },
 
   /** ---------- 输入 ---------- */
+
+  onSuggestionTap(event) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || index < 0 || index >= this.data.suggestions.length || this.data.sending) return
+    this.setData({ inputValue: this.data.suggestions[index], voiceMode: false, inputFocus: true })
+  },
 
   onInput(e) {
     this.setData({ inputValue: e.detail.value })
@@ -99,6 +306,7 @@ Page({
   onSend() {
     const text = (this.data.inputValue || '').trim()
     if (!text) return
+    if (!this.canSend()) return
     if (this.data.sending) {
       wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
       return
@@ -123,6 +331,7 @@ Page({
    * 这正是两阶段里阶段 1 的识别线索来源。
    */
   sendImage(filePath) {
+    if (!this.canSend()) return
     const caption = (this.data.inputValue || '').trim()
     const userMsg = {
       id: this.nextLocalId(),
@@ -318,6 +527,7 @@ Page({
   onRetry(e) {
     const id = e.currentTarget.dataset.id
     if (this.data.sending) return
+    if (!this.canSend() || (this.findMessage(id) || {}).history) return
     const last = this._lastRound
 
     // 用户消息已入库：复用同一 clientMsgId / replyToMsgId 重开流，
@@ -386,6 +596,7 @@ Page({
    * 只做「选」，上传与发送交给 sendImage，避免这个回调过长难以阅读。
    */
   onChooseImage() {
+    if (!this.canSend()) return
     if (this.data.sending) {
       wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
       return
@@ -413,7 +624,7 @@ Page({
   },
 
   onToggleVoiceMode() {
-    this.setData({ voiceMode: !this.data.voiceMode, recording: false })
+    this.setData({ voiceMode: !this.data.voiceMode, recording: false, inputFocus: false })
   },
 
   onHoldStart() {

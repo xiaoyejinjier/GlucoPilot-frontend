@@ -1,3 +1,8 @@
 {
-  "navigationBarTitleText": "语音"
+  "navigationBarTitleText": "小语",
+  "navigationStyle": "default",
+  "disableScroll": true,
+  "usingComponents": {
+    "assistant-mascot": "/components/assistant-mascot/assistant-mascot"
+  }
 }

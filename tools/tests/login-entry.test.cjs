@@ -1,0 +1,197 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const vm = require('node:vm')
+const root = path.resolve(__dirname, '../..')
+
+function createFlow(options = {}) {
+  let app
+  const state = {
+    storage: new Map(Object.entries(options.storage || {})),
+    route: options.route || 'pages/login/login',
+    profile: { disclaimerAgreed: false, disclaimerVersion: '', ...options.profile },
+    routes: [], toasts: [], timers: [], profiles: 0, configs: 0, agreements: 0, logins: []
+  }
+  const token = () => state.storage.get('accessToken') || ''
+  const request = { getToken: token, setToken(value) { if (value) state.storage.set('accessToken', value); else state.storage.delete('accessToken') } }
+  const storage = {
+    getUserInfo: () => state.storage.get('userInfo') || null,
+    saveUserInfo: (value) => state.storage.set('userInfo', value),
+    login: () => state.storage.set('isLoggedIn', true)
+  }
+  const display = { applyDisplayToCurrentPage() {}, saveDisplaySettings() {}, getDisplayStyle: () => '' }
+  const services = {
+    async fetchMe() { state.profiles++; if (options.profileError) throw options.profileError; return { ...state.profile } },
+    async fetchAppConfig() { state.configs++; return { TEXT: { 'text.disclaimer.version': 'v1' } } },
+    async agreeDisclaimer(version) {
+      state.agreements++
+      if (options.agreementError) throw options.agreementError
+      state.profile = { ...state.profile, disclaimerAgreed: true, disclaimerVersion: version }
+    },
+    async wechatLogin(code) { state.logins.push(['wechat', code]); request.setToken('new-token'); return { accessToken: token() } },
+    async phoneLogin(phone, code) { state.logins.push(['phone', phone, code]); request.setToken('new-token'); return { accessToken: token() } },
+    async sendSmsCode() {}
+  }
+  const wx = {
+    getStorageSync: (key) => state.storage.get(key),
+    setStorageSync: (key, value) => state.storage.set(key, value),
+    showLoading() {}, hideLoading() {},
+    showToast: (value) => state.toasts.push(value),
+    login: (value) => value.success({ code: 'wechat-code' }),
+    reLaunch(value) { state.routes.push(value.url); state.route = value.url.split('?')[0].slice(1); if (value.complete) value.complete() },
+    switchTab(value) { state.routes.push(value.url); state.route = value.url.slice(1) },
+    navigateBack() { state.routes.push('back') }
+  }
+  const dependencies = {
+    './utils/display': display, './utils/storage': storage, './utils/request': request,
+    './services/api': services, './utils/config': { baseUrl: '' },
+    './utils/mappers': { fontNameOf: () => '标准', themeIdOf: () => 'green' }
+  }
+  const config = { connectionIssue: () => options.connectionIssue || '' }
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), {
+    App: (value) => { app = value }, wx,
+    getCurrentPages: () => state.route ? [{ route: state.route }] : [],
+    require: (name) => { assert.ok(dependencies[name], name); return dependencies[name] }
+  })
+
+  function page(name) {
+    let definition
+    const pageDependencies = {
+      '../../utils/display': display, '../../utils/storage': storage, '../../utils/request': request,
+      '../../services/api': services, '../../utils/constants': { DISCLAIMER_CONTENT: ['声明正文'] },
+      '../../utils/config': config
+    }
+    vm.runInNewContext(fs.readFileSync(path.join(root, `pages/${name}/${name}.js`), 'utf8'), {
+      Page: (value) => { definition = value }, getApp: () => app, wx,
+      require: (dependency) => { assert.ok(pageDependencies[dependency], dependency); return pageDependencies[dependency] },
+      setTimeout: (callback) => { state.timers.push(callback); return state.timers.length },
+      clearInterval() {}, setInterval: () => 1
+    })
+    return { ...definition, data: JSON.parse(JSON.stringify(definition.data)),
+      setData(value) { Object.assign(this.data, value) } }
+  }
+  return { app, state, page, request }
+}
+
+const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+test('服务地址不可用时不发起登录请求，提示重试', () => {
+  const { page, state } = createFlow({ connectionIssue: '未配置地址' })
+  const login = page('login'); login.onLoad(); login.onWechatLogin()
+  assert.equal(state.logins.length, 0)
+  assert.match(state.toasts[0].title, /服务连接.*重试/)
+})
+
+test('真机冷启动忽略旧登录缓存，先展示两个登录按钮且不请求资料或声明', () => {
+  const { app, state, page, request } = createFlow({ storage: { isLoggedIn: true, accessToken: 'cached-token', userInfo: { nickname: 'old' } } })
+  app.onLaunch()
+  app.onShow({ path: 'pages/login/login' })
+  page('login').onLoad()
+  assert.equal(app.globalData.isLoggedIn, false)
+  assert.equal(request.getToken(), '')
+  assert.equal(state.profiles, 0)
+  assert.equal(state.configs, 0)
+  assert.equal(state.routes.length, 0)
+  const template = fs.readFileSync(path.join(root, 'pages/login/login.wxml'), 'utf8')
+  assert.match(template, /微信一键登录/)
+  assert.match(template, /手机号登录/)
+})
+
+test('未登录从调试路径直达声明时返回登录，不能加载或提交同意', () => {
+  const { app, state, page } = createFlow({ route: 'pages/disclaimer/disclaimer' })
+  app.onLaunch()
+  const disclaimer = page('disclaimer')
+  disclaimer.onLoad({ forced: '1' })
+  disclaimer.setData({ canAgree: true, version: 'v1' })
+  disclaimer.onAgree()
+  assert.equal(state.routes[0], '/pages/login/login')
+  assert.equal(state.configs, 0)
+  assert.equal(state.agreements, 0)
+})
+
+test('登录页不会被前台恢复声明检查抢占，缓存标记也不触发页面自动登录', () => {
+  const { app, state, page, request } = createFlow()
+  app.globalData.isLoggedIn = true
+  request.setToken('existing-token')
+  app.onShow()
+  page('login').onLoad()
+  assert.equal(state.profiles, 0)
+  assert.equal(state.routes.length, 0)
+})
+
+test('点击微信登录后才检查声明，读到底并成功提交后进入记录页', async () => {
+  const { app, state, page } = createFlow()
+  app.onLaunch()
+  const login = page('login')
+  login.onLoad()
+  login.onWechatLogin()
+  await flush()
+  assert.equal(state.logins[0][0], 'wechat')
+  assert.equal(state.profiles, 1)
+  assert.equal(state.routes.at(-1), '/pages/disclaimer/disclaimer?forced=1')
+  const disclaimer = page('disclaimer')
+  await disclaimer.onLoad({ forced: '1' })
+  disclaimer.onAgree()
+  assert.equal(state.agreements, 0)
+  disclaimer.onScrollToBottom()
+  await disclaimer.onAgree()
+  assert.equal(state.agreements, 1)
+  assert.equal(app.globalData.disclaimerRequired, false)
+  state.timers.at(-1)()
+  assert.equal(state.routes.at(-1), '/pages/ai/ai')
+})
+
+test('手机号登录且已同意当前版本时直接进入记录页，不重复展示声明', async () => {
+  const { app, state, page } = createFlow({ profile: { disclaimerAgreed: true, disclaimerVersion: 'v1' } })
+  app.onLaunch()
+  const login = page('login')
+  login.onPhoneLogin()
+  assert.equal(login.data.phonePanel, true)
+  login.setData({ phone: '13800000000', smsCode: '123456' })
+  login.onConfirmPhoneLogin()
+  await flush()
+  assert.equal(state.logins[0][0], 'phone')
+  assert.equal(state.routes.at(-1), '/pages/ai/ai')
+  assert.equal(state.routes.some((url) => url.includes('disclaimer')), false)
+})
+
+test('登录后资料获取失败或401留在登录流程，不再强跳免责声明', async () => {
+  for (const error of [new Error('network'), Object.assign(new Error('expired'), { code: 40100 })]) {
+    const { app, state, page, request } = createFlow({ profileError: error })
+    app.onLaunch()
+    page('login').onWechatLogin()
+    await flush()
+    assert.equal(state.route, 'pages/login/login')
+    assert.equal(app.globalData.isLoggedIn, false)
+    assert.equal(request.getToken(), '')
+    assert.equal(state.routes.some((url) => url.includes('disclaimer')), false)
+    assert.equal(state.toasts.length, 1)
+  }
+})
+
+test('切到后台再回来保留本次有效登录，当前声明已同意时不跳登录或声明', async () => {
+  const { app, state, page } = createFlow({ profile: { disclaimerAgreed: true, disclaimerVersion: 'v1' } })
+  app.onLaunch()
+  page('login').onWechatLogin()
+  await flush()
+  const count = state.routes.length
+  app.onShow({ path: 'pages/index/index' })
+  await flush()
+  assert.equal(app.globalData.isLoggedIn, true)
+  assert.equal(state.routes.length, count)
+})
+
+test('声明提交401返回登录，不标记已同意或继续进入首页', async () => {
+  const { app, state, page, request } = createFlow({ route: 'pages/disclaimer/disclaimer', agreementError: Object.assign(new Error('expired'), { code: 40100 }) })
+  app.globalData.isLoggedIn = true
+  request.setToken('valid-token')
+  const disclaimer = page('disclaimer')
+  await disclaimer.onLoad({ forced: '1' })
+  disclaimer.onScrollToBottom()
+  await disclaimer.onAgree()
+  assert.equal(state.routes.at(-1), '/pages/login/login')
+  assert.equal(app.globalData.isLoggedIn, false)
+  assert.equal(state.storage.get('disclaimerAgreed'), undefined)
+  assert.equal(state.timers.length, 0)
+})

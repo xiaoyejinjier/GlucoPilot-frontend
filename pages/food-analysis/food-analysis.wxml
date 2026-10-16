@@ -90,5 +90,5 @@
     <button class="btn-primary btn-block btn-sm" bindtap="onSave" disabled="{{busy || !analysisReady}}">确认食物及份量，保存饮食记录</button>
     <text wx:if="{{hasAnalysis && !analysisReady}}" class="recognition-tip">请确认重量和营养；修改补充信息后请重新识别。</text>
   </view>
-  <tab-bar selected="{{2}}"></tab-bar>
+  <tab-bar selected="{{0}}"></tab-bar>
 </view>

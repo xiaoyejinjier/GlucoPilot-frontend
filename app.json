@@ -4,6 +4,7 @@
     "pages/index/index",
     "pages/voice/voice",
     "pages/ai/ai",
+    "pages/devices/devices",
     "pages/device-add/device-add",
     "pages/stats/stats",
     "pages/mine/mine",
@@ -42,20 +43,16 @@
     "borderStyle": "black",
     "list": [
       {
-        "pagePath": "pages/index/index",
-        "text": "首页"
-      },
-      {
-        "pagePath": "pages/voice/voice",
-        "text": "语音"
-      },
-      {
         "pagePath": "pages/ai/ai",
         "text": "记录"
       },
       {
-        "pagePath": "pages/stats/stats",
-        "text": "统计"
+        "pagePath": "pages/devices/devices",
+        "text": "设备管理"
+      },
+      {
+        "pagePath": "pages/index/index",
+        "text": "社区"
       },
       {
         "pagePath": "pages/mine/mine",

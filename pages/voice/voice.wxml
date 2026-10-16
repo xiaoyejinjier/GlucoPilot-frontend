@@ -1,45 +1,99 @@
-<view class="page voice-page" style="{{displayStyle}}">
-  <scroll-view class="wx-body" scroll-y scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
-    <text class="wx-time">今天 {{currentTime}}</text>
-    <view wx:for="{{messages}}" wx:key="id" class="wx-row {{item.role === 'user' ? 'user' : ''}}">
-      <view class="wx-avatar">{{item.role === 'user' ? '我' : 'AI'}}</view>
-      <view class="wx-bubble">
-        <block wx:if="{{item.type === 'image'}}">
-          <image
-            class="wx-msg-img"
-            src="{{item.fileUrl || item.imagePath}}"
-            mode="widthFix"
-            data-src="{{item.fileUrl || item.imagePath}}"
-            bindtap="onPreviewImage"
-          />
-          <!-- 直传+登记完成前还没有 mediaId，给一个明确的过程提示 -->
-          <text wx:if="{{item.uploading}}" class="wx-typing">图片上传中…</text>
-        </block>
-        <block wx:else>
-          <text wx:if="{{item.pending && !item.content}}" class="wx-typing">正在思考…</text>
-          <text wx:else>{{item.content}}</text>
-          <view wx:if="{{item.error}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
-        </block>
+<template name="assistantWelcome">
+    <view class="welcome-stage">
+      <view class="welcome-hero">
+        <view class="welcome-mascot"><assistant-mascot variant="welcome"></assistant-mascot></view>
+        <text class="welcome-title">您好呀，我是小语</text>
+        <view class="welcome-description"><text>血糖、饮食、运动方面的问题，</text><text>都可以和我聊聊～</text></view>
+      </view>
+      <view class="welcome-suggestions">
+        <text class="suggestions-title">您可以说</text>
+        <view wx:for="{{suggestions}}" wx:key="*this" class="suggestion-item"
+          data-index="{{index}}" bindtap="onSuggestionTap" hover-class="suggestion-pressed"
+          aria-role="button" aria-label="{{item}}">
+          <text class="suggestion-icon" aria-hidden="true">?</text>
+          <text class="suggestion-text">{{item}}</text>
+        </view>
       </view>
     </view>
-    <view id="msg-bottom"></view>
+</template>
+
+<view class="page-no-tab voice-page {{keyboardHeight ? 'keyboard-open' : ''}}"
+  style="{{displayStyle}};{{viewportHeight ? 'height:' + viewportHeight + 'px;' : ''}}">
+  <scroll-view class="wx-body" scroll-y scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
+    <template wx:if="{{!hasHistory}}" is="assistantWelcome" data="{{suggestions: suggestions}}" />
+    <view class="history-status">
+      <text wx:if="{{historyLoading}}">正在加载历史记录…</text>
+      <text wx:elif="{{historyError}}" class="history-action" bindtap="onRetryHistory">{{historyError}}</text>
+      <text wx:elif="{{historyHasMore}}" class="history-action" bindtap="onLoadOlderHistory">查看更早的对话</text>
+    </view>
+    <view wx:if="{{messages.length}}" class="wx-messages">
+      <block wx:for="{{messages}}" wx:key="id">
+      <view id="message-{{item.id}}"
+        style="{{item.localWelcome && index === messages.length - 1 && viewportHeight ? 'min-height:' + viewportHeight + 'px;' : ''}}">
+      <template wx:if="{{item.localWelcome}}" is="assistantWelcome" data="{{suggestions: suggestions}}" />
+      <block wx:else>
+      <text wx:if="{{item.timeLabel}}" class="wx-time">{{item.timeLabel}}</text>
+      <view class="wx-row {{item.role === 'user' ? 'user' : ''}}">
+        <view wx:if="{{item.role === 'user'}}" class="wx-avatar">我</view>
+        <view wx:else class="wx-avatar assistant-avatar"><assistant-mascot variant="avatar"></assistant-mascot></view>
+        <view class="wx-bubble">
+          <block wx:if="{{item.type === 'image'}}">
+            <image
+              wx:if="{{!item.imageUnavailable}}"
+              class="wx-msg-img"
+              src="{{item.fileUrl || item.imagePath}}"
+              mode="widthFix"
+              lazy-load="{{true}}"
+              data-src="{{item.fileUrl || item.imagePath}}"
+              bindtap="onPreviewImage"
+            />
+            <text wx:if="{{item.imageUnavailable}}">［图片已不可用］</text>
+            <text wx:if="{{item.content}}">{{item.content}}</text>
+            <!-- 直传+登记完成前还没有 mediaId，给一个明确的过程提示 -->
+            <text wx:if="{{item.uploading}}" class="wx-typing">图片上传中…</text>
+          </block>
+          <block wx:else>
+            <text wx:if="{{item.pending && !item.content}}" class="wx-typing">正在思考…</text>
+            <text wx:else>{{item.content}}</text>
+            <view wx:if="{{item.error && !item.history}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
+          </block>
+        </view>
+      </view>
+      </block>
+      </view>
+      </block>
+      <view id="msg-bottom"></view>
+    </view>
   </scroll-view>
 
   <view class="wx-foot">
-    <view class="wx-btn" bindtap="onToggleVoiceMode">{{voiceMode ? '键盘' : '语音'}}</view>
-    <block wx:if="{{!voiceMode}}">
-      <view class="wx-btn" bindtap="onChooseImage">图片</view>
-      <input class="wx-input" placeholder="请输入问题" value="{{inputValue}}" bindinput="onInput" confirm-type="send" bindconfirm="onSend" />
-      <view class="wx-btn send {{sending ? 'disabled' : ''}}" bindtap="onSend">{{sending ? '回复中' : '发送'}}</view>
-    </block>
-    <block wx:else>
-      <view class="wx-btn" bindtap="onChooseImage">图片</view>
-      <view
-        class="wx-hold {{recording ? 'on' : ''}}"
-        bindtouchstart="onHoldStart"
-        bindtouchend="onHoldEnd"
-        bindtouchcancel="onHoldEnd"
-      >{{recording ? '松开结束' : '按住 说话'}}</view>
-    </block>
+    <view class="composer-row">
+      <view class="composer-pill">
+        <view class="composer-mode" bindtap="onToggleVoiceMode" hover-class="composer-pressed"
+          aria-role="button" aria-label="{{voiceMode ? '切换到键盘输入' : '切换到语音输入'}}">
+          <view wx:if="{{voiceMode}}" class="keyboard-symbol" aria-hidden="true"></view>
+          <view wx:else class="voice-symbol" aria-hidden="true"><view class="sound-dot"></view><view class="sound-wave wave-inner"></view><view class="sound-wave wave-outer"></view></view>
+        </view>
+        <input wx:if="{{!voiceMode}}" class="wx-input" placeholder="请输入您想咨询的问题"
+          placeholder-class="composer-placeholder" value="{{inputValue}}" focus="{{inputFocus}}" bindinput="onInput"
+          confirm-type="send" bindconfirm="onSend" bindfocus="onInputFocus" bindblur="onInputBlur"
+          bindkeyboardheightchange="onKeyboardHeightChange" adjust-position="{{false}}" />
+        <view wx:else class="wx-hold {{recording ? 'on' : ''}}"
+          bindtouchstart="onHoldStart" bindtouchend="onHoldEnd" bindtouchcancel="onHoldEnd"
+          aria-role="button" aria-label="{{recording ? '松开结束' : '按住说话'}}"
+        >{{recording ? '松开结束' : '按住说话'}}</view>
+        <view wx:if="{{!voiceMode}}" class="composer-send {{sending ? 'is-sending' : ''}}"
+          bindtap="onSend" hover-class="composer-pressed" aria-role="button"
+          aria-label="{{sending ? '正在回复' : '发送消息'}}" aria-disabled="{{sending}}">
+          <view wx:if="{{sending}}" class="send-spinner" aria-hidden="true"></view>
+          <view wx:else class="send-symbol" aria-hidden="true"></view>
+        </view>
+      </view>
+      <view class="composer-add {{sending ? 'is-sending' : ''}}" bindtap="onChooseImage"
+        hover-class="composer-pressed" aria-role="button" aria-label="添加图片" aria-disabled="{{sending}}">
+        <view class="add-symbol" aria-hidden="true"></view>
+      </view>
+    </view>
+    <text class="composer-notice">内容由 AI 生成，仅供参考，不作为医疗诊断</text>
   </view>
 </view>

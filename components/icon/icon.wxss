@@ -156,3 +156,9 @@
   border-radius: 999rpx 999rpx 0 0;
   box-sizing: border-box;
 }
+.device-band { position:absolute; top:0; bottom:0; left:33%; right:33%; border:var(--s) solid var(--icon-color); border-radius:8rpx; }
+.device-case { position:absolute; top:19%; bottom:19%; left:17%; right:17%; border:var(--s) solid var(--icon-color); border-radius:9rpx; background:var(--surface,#fff); }
+.device-indicator { position:absolute; top:45%; left:43%; width:14%; height:14%; border-radius:50%; background:var(--icon-color); }
+.community-back { position:absolute; left:32%; right:4%; top:31%; bottom:4%; border:var(--s) solid var(--icon-color); border-radius:12rpx 12rpx 5rpx 12rpx; }
+.community-front { position:absolute; left:4%; right:25%; top:5%; bottom:28%; border:var(--s) solid var(--icon-color); border-radius:12rpx 12rpx 12rpx 4rpx; background:var(--surface,#fff); }
+.community-front::after { content:''; position:absolute; left:22%; right:22%; top:43%; height:var(--s); border-radius:999rpx; background:var(--icon-color); }
