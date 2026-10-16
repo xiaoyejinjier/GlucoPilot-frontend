@@ -32,6 +32,27 @@ App({
   onLaunch() {
     // 冷启动由用户选择登录方式，不用上次调试留下的缓存直接跳过登录页。
     this.resetLoginState()
+    this.logRuntimeConfig()
+  },
+
+  /**
+   * 启动时把"当前请求打到哪个后端、这个地址是怎么来的"打一条日志。
+   * <p>
+   * 2026-10-16 的登录事故里，最耗时的一步是"确认小程序到底在往哪个地址发请求"——
+   * 后端一条日志都没有，只能靠人肉翻配置。这一行日志 + 请求失败信息里的地址，
+   * 就是为了让同类问题在十秒内定位（配置来源同时暴露：storage 覆盖 / devtools 默认 /
+   * 开发兜底 / 生产）。
+   */
+  logRuntimeConfig() {
+    try {
+      const resolved = typeof config.resolveBaseUrl === 'function'
+        ? config.resolveBaseUrl()
+        : { url: config.baseUrl, source: 'unknown' }
+      console.info('[config] API 地址 = ' + resolved.url + '（来源：' + resolved.source
+        + '，envVersion=' + config.envVersion() + '，platform=' + (config.devicePlatform() || 'unknown') + '）')
+    } catch (e) {
+      console.warn('[config] 运行时配置日志输出失败：' + (e && e.message))
+    }
   },
 
   onShow(options) {

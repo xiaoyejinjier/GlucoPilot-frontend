@@ -65,10 +65,13 @@ function request(options) {
       },
       fail(err) {
         const detail = (err && err.errMsg) || ''
-        const message = /timeout/i.test(detail) ? '连接超时，请检查后端地址和网络'
-          : /not in domain list|url not in domain|不在.*域名/i.test(detail) ? '请求域名未允许，请检查真机调试设置'
-            : '无法连接后端，请检查服务是否启动及手机网络'
-        reject(Object.assign(new Error(message), { network: true, err }))
+        const base = typeof config.baseUrl === 'string' ? config.baseUrl : ''
+        // 报错里带上"实际打到了哪个地址"：这次登录事故（请求根本没发出/发错端口）就是
+        // 因为错误信息里没有任何地址线索，只能靠人肉翻配置才定位到。
+        const message = /timeout/i.test(detail) ? `连接超时：${base}`
+          : /not in domain list|url not in domain|不在.*域名/i.test(detail) ? `请求域名未允许（${base}），请检查真机调试设置`
+            : `无法连接后端（${base}），请确认服务已启动、地址与端口正确`
+        reject(Object.assign(new Error(message), { network: true, err, baseUrl: base }))
       }
     })
   })
