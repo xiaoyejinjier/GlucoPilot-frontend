@@ -58,7 +58,7 @@ function currentBaseUrl() {
 function connectionIssue() {
   const url = currentBaseUrl()
   if (/^https?:\/\/api\.example\.com(?:\/|$)/i.test(url)) {
-    return canConfigureDevelopment() ? '尚未设置后端地址，请打开连接设置' : '服务地址尚未配置，请联系管理员'
+    return '服务地址尚未配置，请联系管理员'
   }
   if (!isDevtools() && /^https?:\/\/(?:localhost|127(?:\.\d{1,3}){3}|\[::1\])(?=[:/]|$)/i.test(url)) {
     return '手机不能使用本机地址，请填写电脑的局域网地址'

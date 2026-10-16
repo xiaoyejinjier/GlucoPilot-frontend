@@ -18,6 +18,7 @@ function createPage() {
     '../../utils/display': { applyDisplayToCurrentPage() {} },
     '../../services/api': { getOrCreateChatSession: async () => ({ id: 1 }) },
     '../../utils/media': {},
+    '../../utils/chat-sessions': require('../../utils/chat-sessions'),
     '../../utils/request': { getToken: () => 'test-token' }
   }
   vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/voice/voice.js'), 'utf8'), {
@@ -92,7 +93,7 @@ test('示例问题仅填入草稿，发送后对话追加在持续保留的欢�
   assert.equal(state.sends[0].contentText, selected)
   assert.equal(page.data.inputValue, '')
   const template = fs.readFileSync(path.join(root, 'pages/voice/voice.wxml'), 'utf8')
-  const welcome = template.indexOf('<template wx:if="{{!hasHistory}}" is="assistantWelcome"')
+  const welcome = template.indexOf('<template wx:if="{{!hasHistory && !sessionReadOnly}}" is="assistantWelcome"')
   const conversation = template.indexOf('<view wx:if="{{messages.length}}" class="wx-messages">')
   const bottom = template.indexOf('id="msg-bottom"')
   assert.ok(welcome >= 0 && conversation > welcome && bottom > conversation)

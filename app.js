@@ -16,7 +16,17 @@ App({
     /** 拍照页传给确认页的临时图，避免 URL 传路径导致黑屏 */
     pendingShotImage: '',
     /** 本次血糖仪拍照的 OCR 结果，只在确认入库流程中短暂使用。 */
-    pendingGlucoseOcr: null
+    pendingGlucoseOcr: null,
+    /**
+     * 历史会话列表 → 对话页的一次性意图。
+     * 历史页与独立小语页面之间通过 globalData 传
+     * { id, sessionStatus, title }，对话页 onShow 取走即清。
+     */
+    pendingChatSession: null,
+    /** 列表页空态点「开始新对话」时置 true，由对话页消费后走新建 */
+    pendingNewChat: false,
+    /** 对话页要消费的会话事件：{ type: 'deleted', id }——当前会话被删掉时清空视图 */
+    chatSessionEvent: null
   },
 
   onLaunch() {

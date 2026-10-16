@@ -23,7 +23,7 @@ test('模拟器默认连电脑本机，手机未设置地址时立即提示', ()
   assert.equal(simulator.config.baseUrl, 'http://127.0.0.1:8080/api/v1')
   assert.equal(simulator.config.connectionIssue(), '')
   const mobile = connection()
-  assert.match(mobile.config.connectionIssue(), /连接设置/)
+  assert.match(mobile.config.connectionIssue(), /服务地址/)
   assert.equal(mobile.config.canConfigureDevelopment(), true)
 })
 
@@ -35,7 +35,7 @@ test('保存开发地址后现有请求模块立即使用新地址，无需重�
   vm.runInNewContext(fs.readFileSync(path.join(root, 'utils/request.js'), 'utf8'), {
     module, wx, require: name => { assert.equal(name, './config'); return config }
   })
-  await assert.rejects(module.exports.get('/app-config'), /连接设置/)
+  await assert.rejects(module.exports.get('/app-config'), /服务地址/)
   assert.equal(calls.length, 0)
   assert.equal(config.saveDevelopmentBaseUrl('  http://192.0.2.10:8080/ '), 'http://192.0.2.10:8080/api/v1')
   await module.exports.get('/app-config', null, { auth: false, timeout: 5000 })
@@ -85,12 +85,13 @@ test('登录/历史/资料使用有限等待，流式回复和照片分析保留
     module, wx: { setStorageSync() {} }, require: name => ({
       '../utils/request': { get: record, post: record, setToken() {} },
       '../utils/mappers': { mapUserMe: value => value },
+      '../utils/chat-sessions': require('../../utils/chat-sessions'),
       '../utils/food-images': {}, '../utils/sse': { openSse: options => calls.push(options) }
     }[name])
   })
   const api = module.exports
   await api.wechatLogin('code'); await api.phoneLogin('phone', 'sms')
-  await api.getOrCreateChatSession(3); await api.fetchChatMessages('9', {})
+  await api.getOrCreateChatSession(3); await api.fetchChatHistory('9', {})
   await api.fetchMe(); await api.fetchAppConfig(['TEXT'])
   assert.equal(calls.slice(0, 2).every(call => call.options.timeout === 15000), true)
   assert.equal(calls.slice(2).every(call => call.options.timeout === 10000), true)

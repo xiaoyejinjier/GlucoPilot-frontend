@@ -4,6 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const vm = require('node:vm')
 const root = path.resolve(__dirname, '../..')
+const chatSessions = require('../../utils/chat-sessions')
 const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve() }
 function deferred() {
   let resolve, reject
@@ -18,12 +19,12 @@ function harness(fetch = async () => ({ records: [row(1), row(2)], hasMore: fals
   const app = { globalData: { isLoggedIn: true } }
   const api = {
     getOrCreateChatSession: async () => ({ id: String(++state.sessionCalls) }),
-    fetchChatMessages: (...args) => { state.fetches.push(args); return fetch(...args) },
+    fetchChatHistory: (...args) => { state.fetches.push(args); return Promise.resolve(fetch(...args)).then(chatSessions.normalizeHistoryPage) },
     sendChatMessage: (...args) => { state.sends.push(args); return Promise.resolve({ id: '99' }) },
     streamChatCompletion: () => ({ abort() {} })
   }
   const dependencies = { '../../utils/display': { applyDisplayToCurrentPage() {} },
-    '../../services/api': api, '../../utils/media': {}, '../../utils/request': { getToken: () => state.token } }
+    '../../services/api': api, '../../utils/chat-sessions': chatSessions, '../../utils/media': {}, '../../utils/request': { getToken: () => state.token } }
   vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/voice/voice.js'), 'utf8'), {
     Page: value => { definition = value }, getApp: () => app,
     require: name => { assert.ok(dependencies[name], name); return dependencies[name] },
@@ -134,7 +135,7 @@ test('加载完成前不能发送或选图，草稿保留；失败后可重试�
 test('更早消息按游标前插并去重，保留新消息与滚动位置', async () => {
   const older = deferred()
   let n = 0
-  const { page, state, render } = harness(() => ++n === 1 ? Promise.resolve({ records: [row(3), row(4)], hasMore: true, nextBeforeSeqNo: 3 }) : older.promise)
+  const { page, state, render } = harness(() => ++n === 1 ? Promise.resolve({ records: [row(3), row(4)], hasMore: true, nextBeforeSeq: 3 }) : older.promise)
   const current = page(); await flush(); render()
   const welcome = current.data.messages.at(-1)
   const loading = current.onLoadOlderHistory()
@@ -142,9 +143,9 @@ test('更早消息按游标前插并去重，保留新消息与滚动位置', as
   current.setData({ messages: current.data.messages.concat({ id: 'new', role: 'user', content: '新问题' }) })
   older.resolve({ records: [row(1), row(2), row(3)], hasMore: false })
   await loading; render()
-  assert.equal(state.fetches[1][1].beforeSeqNo, 3)
-  assert.equal(current.data.messages.map(m => m.id).join(','), `history-1,history-2,history-3,history-4,${welcome.id},new`)
-  assert.equal(current.data.scrollIntoView, 'message-history-3')
+  assert.equal(state.fetches[1][1].beforeSeq, 3)
+  assert.equal(current.data.messages.map(m => m.id).join(','), `h1,h2,h3,h4,${welcome.id},new`)
+  assert.equal(current.data.scrollIntoView, 'message-h3')
   assert.equal(current.data.historyHasMore, false)
 })
 
@@ -174,7 +175,7 @@ test('账号在响应前变化会丢弃旧历史，401 引导重新登录', asyn
 
 test('图片地址从服务端恢复，失效图片和语音仍有可读占位', async () => {
   const { page } = harness(async () => ({ records: [
-    row(1, { msgType: 2, fileUrl: 'https://example.invalid/image.jpg', mediaId: '9007199254740993', contentText: '早餐' }),
+    row(1, { msgType: 2, mediaUrl: 'https://example.invalid/image.jpg', mediaId: '9007199254740993', contentText: '早餐' }),
     row(2, { msgType: 2, fileUrl: null, contentText: '' }), row(3, { msgType: 3, contentText: '' })
   ], hasMore: false }))
   const current = page(); await flush()

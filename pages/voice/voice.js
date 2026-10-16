@@ -2,6 +2,7 @@ const { applyDisplayToCurrentPage } = require('../../utils/display')
 const api = require('../../services/api')
 const media = require('../../utils/media')
 const { getToken } = require('../../utils/request')
+const { SESSION_STATUS, DEFAULT_TITLE, sessionGate, gateFromError, toIdString } = require('../../utils/chat-sessions')
 const app = getApp()
 
 /** 增量文本合并刷新间隔：模型会推数百个 delta，逐个 setData 在真机上会卡 */
@@ -14,18 +15,6 @@ function pad2(n) {
 
 function genClientMsgId() {
   return `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-}
-
-function mapHistoryMessage(row) {
-  const image = Number(row.msgType) === 2
-  return {
-    id: `history-${row.id}`, serverId: row.id, seqNo: row.seqNo, history: true,
-    role: Number(row.msgRole) === 1 ? 'user' : 'ai', type: image ? 'image' : 'text',
-    content: row.contentText || (Number(row.msgType) === 3 ? '［语音消息］' : image ? '' : '（本条消息没有正文）'),
-    mediaId: row.mediaId, fileUrl: row.fileUrl || '', imageUnavailable: image && !row.fileUrl,
-    timeLabel: row.createdAt ? String(row.createdAt).replace('T', ' ').slice(0, 16) : '',
-    finishReason: row.finishReason, pending: false
-  }
 }
 
 Page({
@@ -42,6 +31,12 @@ Page({
     /** 正在等待/接收 AI 回复 */
     sending: false,
     messages: [],
+    sessionId: '',
+    sessionTitle: '',
+    sessionStatus: null,
+    sessionStatusText: '',
+    sessionReadOnly: false,
+    sessionNotice: '',
     hasHistory: false,
     historyReady: false,
     historyLoading: false,
@@ -57,7 +52,7 @@ Page({
     ]
   },
 
-  onLoad() {
+  onLoad(options) {
     this.refreshChatViewport()
     this._localSeq = 0
     this._sessionPromise = null
@@ -67,6 +62,9 @@ Page({
     this._lastRound = null
     this._historyVersion = 0
     this._historyToken = getToken()
+    this._sessionVersion = 0
+    this._pendingOpen = options && options.sessionId
+      ? { id: options.sessionId, sessionStatus: options.sessionStatus, title: options.sessionTitle || '' } : null
     this.setData({
       messages: []
     })
@@ -88,11 +86,16 @@ Page({
       this.abortStream()
       this._historyVersion += 1
       this._historyToken = getToken()
-      this._sessionPromise = null
-      this._lastRound = this._currentRound = null
-      this.setData({ sessionId: null, messages: [], hasHistory: false, sending: false, inputValue: '', historyReady: false,
-        historyLoading: false, historyError: '', historyHasMore: false, historyCursor: null })
+      this.resetToFresh()
+      this._pendingOpen = null
+      app.globalData.pendingChatSession = null
+      app.globalData.pendingNewChat = false
     }
+    const event = this.consumeSessionEvent()
+    if (event && event.type === 'deleted' && toIdString(event.id) === this.data.sessionId) this.resetToFresh()
+    const pending = this.consumePendingSession()
+    if (pending) { this.openSession(pending); return }
+    if (this.consumePendingNewChat()) { this.onNewChat(); return }
     if (!this.data.historyReady) this.loadHistory()
   },
 
@@ -108,6 +111,7 @@ Page({
   },
 
   onUnload() {
+    this._disposed = true
     this._visible = false
     this._historyVersion += 1
     this._layoutVersion = (this._layoutVersion || 0) + 1
@@ -201,6 +205,97 @@ Page({
 
   /** ---------- 会话 ---------- */
 
+  consumePendingSession() {
+    const pending = this._pendingOpen || app.globalData.pendingChatSession
+    this._pendingOpen = null
+    app.globalData.pendingChatSession = null
+    return pending && pending.id ? pending : null
+  },
+
+  consumeSessionEvent() {
+    const event = app.globalData.chatSessionEvent
+    app.globalData.chatSessionEvent = null
+    return event
+  },
+
+  consumePendingNewChat() {
+    const pending = !!app.globalData.pendingNewChat
+    app.globalData.pendingNewChat = false
+    return pending
+  },
+
+  gateData(gate) {
+    return { sessionStatus: gate.sessionStatus, sessionStatusText: gate.sessionStatusText,
+      sessionReadOnly: gate.readOnly, sessionNotice: gate.notice }
+  },
+
+  resetToFresh() {
+    this._sessionVersion += 1
+    this._historyVersion += 1
+    this.abortStream()
+    if (this._deltaTimer) clearTimeout(this._deltaTimer)
+    this._deltaTimer = null
+    this._deltaBuffer = ''
+    this._sessionPromise = null
+    this._currentRound = this._lastRound = null
+    this.setData({ sessionId: '', sessionTitle: '', messages: [], hasHistory: false, sending: false,
+      inputValue: '', scrollIntoView: '', historyReady: false, historyLoading: false,
+      historyHasMore: false, historyCursor: null, historyError: '',
+      ...this.gateData(sessionGate(SESSION_STATUS.ACTIVE)) })
+  },
+
+  openSession(info) {
+    const id = toIdString(info && info.id)
+    if (!id) return Promise.resolve(null)
+    this.resetToFresh()
+    this.setData({ sessionId: id, sessionTitle: info.title || DEFAULT_TITLE,
+      ...this.gateData(sessionGate(info.sessionStatus)) })
+    return this.loadHistory()
+  },
+
+  async onNewChat() {
+    if (this.data.sending) {
+      wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
+      return null
+    }
+    if (this._creatingSession) return null
+    this._creatingSession = true
+    const token = getToken()
+    const version = this._sessionVersion
+    try {
+      const session = await api.createChatSession(3)
+      if (token !== getToken() || token !== this._historyToken || version !== this._sessionVersion) return null
+      this.resetToFresh()
+      this.setData({ sessionId: toIdString(session.id), sessionTitle: session.title || DEFAULT_TITLE,
+        historyReady: true, ...this.gateData(sessionGate(session.sessionStatus == null ? SESSION_STATUS.ACTIVE : session.sessionStatus)) })
+      wx.showToast({ title: '已开启新对话', icon: 'none' })
+      return session
+    } catch (error) {
+      if (token === getToken() && version === this._sessionVersion) {
+        wx.showToast({ title: error.message || '新建对话失败，请稍后重试', icon: 'none' })
+      }
+      return null
+    } finally {
+      this._creatingSession = false
+    }
+  },
+
+  onOpenHistory() { wx.navigateTo({ url: '/pages/voice/history' }) },
+
+  onLoadEarlier() {
+    if (!this.data.historyHasMore || !this.data.historyCursor) {
+      wx.showToast({ title: '已经是全部记录了', icon: 'none' })
+      return Promise.resolve(null)
+    }
+    return this.loadHistory(true)
+  },
+
+  blockIfReadOnly() {
+    if (!this.data.sessionReadOnly) return false
+    wx.showToast({ title: this.data.sessionNotice || '该会话已结束，请新建对话', icon: 'none' })
+    return true
+  },
+
   hasCurrentMessages() {
     return this.data.messages.some((message) => !message.history && !message.localWelcome)
   },
@@ -215,23 +310,23 @@ Page({
     try {
       const sessionId = await this.ensureSession()
       if (!active() || token !== getToken()) return
-      const result = await api.fetchChatMessages(sessionId, {
-        pageSize: HISTORY_PAGE_SIZE, ...(older ? { beforeSeqNo: this.data.historyCursor } : {})
+      const result = await api.fetchChatHistory(sessionId, {
+        pageSize: HISTORY_PAGE_SIZE, ...(older ? { beforeSeq: this.data.historyCursor } : {})
       })
       if (!active() || token !== getToken()) return
-      if (!result || !Array.isArray(result.records)) throw new Error('历史记录格式异常，请重试')
-      const records = result.records.map(mapHistoryMessage)
+      if (!result || !Array.isArray(result.messages)) throw new Error('历史记录格式异常，请重试')
+      const records = result.messages.map(message => ({ ...message, history: true }))
       let messages
       if (older) {
         const existing = new Set(this.data.messages.map((message) => message.id))
         messages = records.filter((message) => !existing.has(message.id)).concat(this.data.messages)
       } else {
         messages = records
-        if (records.length) messages.push({ id: this.nextLocalId(), type: 'welcome', localWelcome: true })
+        if (records.length && !this.data.sessionReadOnly) messages.push({ id: this.nextLocalId(), type: 'welcome', localWelcome: true })
       }
       this.setData({ messages, hasHistory: older ? this.data.hasHistory : records.length > 0,
         historyReady: true, historyLoading: false, historyError: '',
-        historyHasMore: !!result.hasMore, historyCursor: result.nextBeforeSeqNo || null,
+        historyHasMore: !!result.hasMore, historyCursor: result.nextBeforeSeq || null,
         scrollIntoView: '' }, () => {
         const scroll = () => {
           if (!active()) return
@@ -248,6 +343,9 @@ Page({
         this.setData({ historyLoading: false })
         app.globalData.isLoggedIn = false
         wx.reLaunch({ url: '/pages/login/login' })
+      } else if (err && err.code === 40400 && !older) {
+        this.resetToFresh()
+        wx.showToast({ title: '该对话已被删除', icon: 'none' })
       } else if (token === getToken()) {
         const hint = err && err.statusCode === 404 ? '历史接口未就绪，请重启后端后重试'
           : err && (err.network || err.configuration) ? `${err.message}，点击重试`
@@ -262,6 +360,7 @@ Page({
   onRetryHistory() { return this.loadHistory(this.data.historyReady) },
 
   canSend() {
+    if (this.blockIfReadOnly()) return false
     if (!this.data.historyReady) {
       wx.showToast({ title: this.data.historyError ? '请先重试加载历史记录' : '正在恢复历史记录，请稍候', icon: 'none' })
       return false
@@ -277,15 +376,17 @@ Page({
       return this._sessionPromise
     }
     const token = getToken()
+    const version = this._sessionVersion
     this._sessionPromise = api
       .getOrCreateChatSession(3)
       .then((session) => {
-        if (token !== getToken() || token !== this._historyToken) throw new Error('登录状态已变化')
-        this.setData({ sessionId: session.id })
-        return session.id
+        if (token !== getToken() || token !== this._historyToken || version !== this._sessionVersion) throw new Error('会话状态已变化')
+        this.setData({ sessionId: toIdString(session.id), sessionTitle: session.title || DEFAULT_TITLE,
+          ...this.gateData(sessionGate(session.sessionStatus)) })
+        return toIdString(session.id)
       })
       .catch((err) => {
-        if (token === this._historyToken) this._sessionPromise = null
+        if (token === this._historyToken && version === this._sessionVersion) this._sessionPromise = null
         throw err
       })
     return this._sessionPromise
@@ -294,6 +395,7 @@ Page({
   /** ---------- 输入 ---------- */
 
   onSuggestionTap(event) {
+    if (this.data.sessionReadOnly) return
     const index = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(index) || index < 0 || index >= this.data.suggestions.length || this.data.sending) return
     this.setData({ inputValue: this.data.suggestions[index], voiceMode: false, inputFocus: true })
@@ -360,10 +462,14 @@ Page({
   uploadImageThenSend(userLocalId, aiLocalId) {
     const userMsg = this.findMessage(userLocalId)
     if (!userMsg || !userMsg.imagePath) return
+    const version = this._sessionVersion
+    const token = getToken()
+    const active = () => !this._disposed && version === this._sessionVersion && token === getToken()
 
     media
       .uploadChatImage(userMsg.imagePath)
       .then((record) => {
+        if (!active()) return
         // imagePath 登记成功后替换为服务端 fileUrl：本地临时路径页内有效，换屏/重进会失效，
         // 而 fileUrl 由服务端解析、可长期引用（预览、重试均走它）。
         this.patchMessage(userLocalId, (m) => ({
@@ -378,6 +484,7 @@ Page({
         )
       })
       .catch((err) => {
+        if (!active()) return
         this.patchMessage(userLocalId, () => ({ uploading: false }))
         if (err && typeof err === 'object') {
           err.isUploadError = true
@@ -398,10 +505,19 @@ Page({
   },
 
   startRound(payload, aiLocalId) {
+    if (this.data.sessionReadOnly) {
+      this.failRound(aiLocalId, new Error(this.data.sessionNotice || '该会话已结束，请新建对话'))
+      return
+    }
     const clientMsgId = genClientMsgId()
+    const version = this._sessionVersion
+    const token = getToken()
+    const active = () => !this._disposed && version === this._sessionVersion && token === getToken()
     this.ensureSession()
-      .then((sessionId) =>
-        api.sendChatMessage(sessionId, Object.assign({ clientMsgId }, payload)).then((saved) => {
+      .then((sessionId) => {
+        if (!active()) return
+        return api.sendChatMessage(sessionId, Object.assign({ clientMsgId }, payload)).then((saved) => {
+          if (!active()) return
           this._currentRound = {
             sessionId,
             clientMsgId,
@@ -411,8 +527,8 @@ Page({
           this._lastRound = this._currentRound
           this.openStream()
         })
-      )
-      .catch((err) => this.failRound(aiLocalId, err))
+      })
+      .catch((err) => { if (active()) this.failRound(aiLocalId, err) })
   },
 
   /** ---------- SSE ---------- */
@@ -426,6 +542,7 @@ Page({
       { clientMsgId: round.clientMsgId, replyToMsgId: round.replyToMsgId, stream: true },
       {
         onEvent: (name, payload) => {
+          if (this._currentRound !== round) return
           if (name === 'delta') {
             this.pushDelta(payload && payload.delta)
           } else if (name === 'done') {
@@ -434,8 +551,9 @@ Page({
             this.failRound(round.aiLocalId, new Error((payload && payload.message) || 'AI 服务暂时不可用'))
           }
         },
-        onError: (err) => this.failRound(round.aiLocalId, err),
+        onError: (err) => { if (this._currentRound === round) this.failRound(round.aiLocalId, err) },
         onComplete: () => {
+          if (this._currentRound !== round) return
           // 兜底收尾：done 没到也要把缓冲刷出去并解除输入锁
           this.flushDelta()
           if (this.data.sending && this._currentRound) {
@@ -496,6 +614,8 @@ Page({
   },
 
   failRound(aiLocalId, err) {
+    const gate = gateFromError(err)
+    if (gate) this.setData(this.gateData(gate))
     if (this._deltaTimer) {
       clearTimeout(this._deltaTimer)
       this._deltaTimer = null

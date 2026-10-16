@@ -19,12 +19,23 @@
 
 <view class="page-no-tab voice-page {{keyboardHeight ? 'keyboard-open' : ''}}"
   style="{{displayStyle}};{{viewportHeight ? 'height:' + viewportHeight + 'px;' : ''}}">
+  <view class="wx-head">
+    <view class="wx-head-main">
+      <text class="wx-head-title">{{sessionTitle || '小语'}}</text>
+      <text wx:if="{{sessionStatusText}}" class="wx-head-status {{sessionReadOnly ? 'locked' : ''}}">{{sessionStatusText}}</text>
+    </view>
+    <view class="wx-head-actions">
+      <view class="wx-head-btn" bindtap="onOpenHistory" aria-role="button">历史对话</view>
+      <view class="wx-head-btn primary" bindtap="onNewChat" aria-role="button">新对话</view>
+    </view>
+  </view>
   <scroll-view class="wx-body" scroll-y scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
-    <template wx:if="{{!hasHistory}}" is="assistantWelcome" data="{{suggestions: suggestions}}" />
+    <template wx:if="{{!hasHistory && !sessionReadOnly}}" is="assistantWelcome" data="{{suggestions: suggestions}}" />
     <view class="history-status">
       <text wx:if="{{historyLoading}}">正在加载历史记录…</text>
       <text wx:elif="{{historyError}}" class="history-action" bindtap="onRetryHistory">{{historyError}}</text>
-      <text wx:elif="{{historyHasMore}}" class="history-action" bindtap="onLoadOlderHistory">查看更早的对话</text>
+      <text wx:elif="{{historyHasMore}}" class="history-action" bindtap="onLoadEarlier">查看更早的对话</text>
+      <text wx:elif="{{sessionReadOnly && historyReady && !messages.length}}">这段对话没有可展示的记录</text>
     </view>
     <view wx:if="{{messages.length}}" class="wx-messages">
       <block wx:for="{{messages}}" wx:key="id">
@@ -55,7 +66,7 @@
           <block wx:else>
             <text wx:if="{{item.pending && !item.content}}" class="wx-typing">正在思考…</text>
             <text wx:else>{{item.content}}</text>
-            <view wx:if="{{item.error && !item.history}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
+            <view wx:if="{{item.error && !item.history && !sessionReadOnly}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
           </block>
         </view>
       </view>
@@ -66,6 +77,10 @@
     </view>
   </scroll-view>
 
+  <view wx:if="{{sessionReadOnly}}" class="wx-locked">
+    <text class="wx-locked-text">{{sessionNotice}}</text>
+    <view class="wx-locked-btn" bindtap="onNewChat" aria-role="button">新对话</view>
+  </view>
   <view class="wx-foot">
     <view class="composer-row">
       <view class="composer-pill">
@@ -77,7 +92,7 @@
         <input wx:if="{{!voiceMode}}" class="wx-input" placeholder="请输入您想咨询的问题"
           placeholder-class="composer-placeholder" value="{{inputValue}}" focus="{{inputFocus}}" bindinput="onInput"
           confirm-type="send" bindconfirm="onSend" bindfocus="onInputFocus" bindblur="onInputBlur"
-          bindkeyboardheightchange="onKeyboardHeightChange" adjust-position="{{false}}" />
+          bindkeyboardheightchange="onKeyboardHeightChange" adjust-position="{{false}}" disabled="{{sessionReadOnly}}" />
         <view wx:else class="wx-hold {{recording ? 'on' : ''}}"
           bindtouchstart="onHoldStart" bindtouchend="onHoldEnd" bindtouchcancel="onHoldEnd"
           aria-role="button" aria-label="{{recording ? '松开结束' : '按住说话'}}"
