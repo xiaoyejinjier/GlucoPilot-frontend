@@ -156,3 +156,29 @@ test('请求失败信息里带上实际地址（本次事故最难查的一环�
     }
   )
 })
+
+test('开发者工具代理不可用时给出"改代理设置"的明确指引（2026-10-16 事故）', async () => {
+  const requestPath = path.join(__dirname, '..', '..', 'utils', 'request.js')
+  global.wx = Object.assign(wxStub({ platform: 'devtools' }), {
+    request: (options) => options.fail({
+      errMsg: 'request:fail tunneling socket could not be established, cause=connect ECONNREFUSED 127.0.0.1:7890'
+    })
+  })
+  delete require.cache[require.resolve(CONFIG_PATH)]
+  delete require.cache[require.resolve(requestPath)]
+  const request = require(requestPath)
+
+  await assert.rejects(request.get('/users/me'), (err) => {
+    assert.ok(err.proxy, '应被识别为代理问题')
+    assert.ok(err.message.includes('代理'), err.message)
+    assert.ok(err.message.includes('不使用任何代理'), '要直接给出该改的设置：' + err.message)
+    return true
+  })
+})
+
+test('wx.login 因代理失败时也要提示代理设置，而不是含糊的"wx.login 失败"', () => {
+  const login = require('node:fs').readFileSync(path.join(__dirname, '..', '..', 'pages', 'login', 'login.js'), 'utf8')
+
+  assert.ok(login.includes('tunneling socket'), '登录页要识别代理类错误')
+  assert.ok(login.includes('不使用任何代理'), '登录页要给出可执行的修复指引')
+})

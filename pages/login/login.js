@@ -63,9 +63,20 @@ Page({
             wx.showToast({ title: err.message || '登录失败', icon: 'none' })
           })
       },
-      fail: () => {
+      fail: (err) => {
         wx.hideLoading()
-        wx.showToast({ title: 'wx.login 失败', icon: 'none' })
+        // wx.login 需要连微信服务器：开发者工具代理不可用时它同样会失败
+        // （错误形如 tunneling socket could not be established ... ECONNREFUSED 127.0.0.1:7890）。
+        // 只说"wx.login 失败"会让开发者去查后端，而问题其实在工具的代理设置上。
+        const detail = (err && err.errMsg) || ''
+        const proxyBroken = /tunneling socket|ECONNREFUSED|ERR_PROXY|proxy/i.test(detail)
+        wx.showToast({
+          title: proxyBroken
+            ? '开发者工具代理不可用：请在设置→代理设置里选"不使用任何代理"'
+            : `微信登录凭证获取失败：${detail || '请重试'}`,
+          icon: 'none',
+          duration: 5000
+        })
       }
     })
   },

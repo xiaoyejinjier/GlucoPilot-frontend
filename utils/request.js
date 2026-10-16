@@ -66,12 +66,18 @@ function request(options) {
       fail(err) {
         const detail = (err && err.errMsg) || ''
         const base = typeof config.baseUrl === 'string' ? config.baseUrl : ''
-        // 报错里带上"实际打到了哪个地址"：这次登录事故（请求根本没发出/发错端口）就是
-        // 因为错误信息里没有任何地址线索，只能靠人肉翻配置才定位到。
-        const message = /timeout/i.test(detail) ? `连接超时：${base}`
-          : /not in domain list|url not in domain|不在.*域名/i.test(detail) ? `请求域名未允许（${base}），请检查真机调试设置`
-            : `无法连接后端（${base}），请确认服务已启动、地址与端口正确`
-        reject(Object.assign(new Error(message), { network: true, err, baseUrl: base }))
+        // 代理不可用是开发者工具里最隐蔽的一类失败：连"清除缓存"都会报
+        // tunneling socket could not be established ... ECONNREFUSED 127.0.0.1:7890，
+        // 而普通开发者第一反应是"后端没起来"。这里直接给出该改哪个设置。
+        const proxyBroken = /tunneling socket|ECONNREFUSED 127\.0\.0\.1:7890|ERR_PROXY|proxy/i.test(detail)
+        // 报错里带上"实际打到了哪个地址"：2026-10-16 的登录事故里，错误信息没有任何地址线索，
+        // 只能靠人肉翻配置才定位到。
+        const message = proxyBroken
+          ? `开发者工具代理不可用（${detail}）：请在【设置→代理设置】选择"不使用任何代理"，或启动代理软件后重试（当前地址 ${base}）`
+          : /timeout/i.test(detail) ? `连接超时：${base}`
+            : /not in domain list|url not in domain|不在.*域名/i.test(detail) ? `请求域名未允许（${base}），请检查真机调试设置`
+              : `无法连接后端（${base}），请确认服务已启动、地址与端口正确`
+        reject(Object.assign(new Error(message), { network: true, err, baseUrl: base, proxy: proxyBroken }))
       }
     })
   })
