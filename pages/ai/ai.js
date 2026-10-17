@@ -35,7 +35,7 @@ Page({
   onShow() {
     this._visible = true
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 2 })
+      this.getTabBar().setData({ selected: 0 })
     }
     applyDisplayToCurrentPage()
     // 先用本地缓存立即渲染，再用数据库中的当天记录校准页面。
@@ -71,6 +71,12 @@ Page({
   },
 
   onAddDevice() { wx.navigateTo({ url: '/pages/device-add/device-add' }) },
+
+  onOpenStats() {
+    if (this._openingStats) return
+    this._openingStats = true
+    wx.navigateTo({ url: '/pages/stats/stats', complete: () => { this._openingStats = false } })
+  },
 
   onReminderVisibilityChange(e) {
     const visible = !!e.detail.visible
@@ -374,7 +380,7 @@ Page({
 
       const selected = valued.find((point) => point.nodeId === this.data.selectedChartNodeId)
       if (selected) {
-        ctx.strokeStyle = brand
+        ctx.strokeStyle = colors[selected.status] || brand
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.arc(selected.x, selected.y, 8, 0, Math.PI * 2)

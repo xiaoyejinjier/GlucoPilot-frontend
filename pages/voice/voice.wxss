@@ -1,24 +1,44 @@
 .voice-page {
   display: flex;
   flex-direction: column;
-  /*
-   * 关键：必须给"确定高度"，不能让 .page 的 min-height:100vh 兜底。
-   * 原因：.wx-body 用的是 flex:1 + height:0（标准聊天布局），它要求父容器高度确定；
-   * 若父容器只有 min-height，高度会由内容决定 → scroll-view 被撑到等于自身内容高度
-   * → 内部无可滚动空间，同时它又会吃掉落在它身上的滑动手势 → 表现为「内容超出屏幕却滑不动」。
-   * box-sizing 由 .page 提供（border-box），因此这里 100vh 已包含底部 TabBar 的留白。
-   */
+  /* 页面高度由可见窗口与键盘共同决定，必须覆盖 .page-no-tab 的最小高度。 */
+  min-height: 0;
   height: 100vh;
   overflow: hidden;
-  background: var(--bg);
+  background: linear-gradient(155deg,#f5f1ff 0%,#f2f6ff 60%,#f6f8ff 100%);
 }
 
 .wx-body {
   flex: 1;
   height: 0;
-  padding: 16rpx 20rpx;
+  min-height: 0;
+  overflow: hidden;
   box-sizing: border-box;
 }
+.wx-messages { padding:0 0 24rpx; }
+.voice-page.keyboard-open { padding-bottom:0; }
+.keyboard-open .wx-foot { padding-top:16rpx; padding-bottom:16rpx; }
+
+.welcome-stage { padding:24rpx 24rpx 32rpx; }
+.welcome-hero {
+  position:relative;
+  margin-top:100rpx;
+  padding:100rpx 28rpx 38rpx;
+  border:2rpx solid rgba(255,255,255,.9);
+  border-radius:42rpx;
+  background:rgba(255,255,255,.55);
+  text-align:center;
+}
+.welcome-mascot { position:absolute; top:-96rpx; left:50%; width:180rpx; height:166rpx; transform:translateX(-50%); }
+.welcome-title { display:block; color:#2e3544; font-size:var(--fs-title); font-weight:700; line-height:1.4; }
+.welcome-description { display:block; margin-top:18rpx; color:#7b8090; font-size:var(--fs-body); line-height:1.8; }
+.welcome-description text { display:block; }
+.welcome-suggestions { margin-top:28rpx; padding:30rpx 24rpx 28rpx; border:2rpx solid rgba(255,255,255,.9); border-radius:40rpx; background:rgba(255,255,255,.48); }
+.suggestions-title { display:block; margin:0 8rpx 22rpx; color:#2e3544; font-size:var(--fs-title); font-weight:700; line-height:1.4; }
+.suggestion-item { display:flex; align-items:center; gap:14rpx; min-height:80rpx; margin-top:16rpx; padding:18rpx 20rpx; border-radius:40rpx; background:#fff; }
+.suggestion-icon { flex:none; width:32rpx; height:32rpx; border-radius:50%; background:#3e4657; color:#fff; font-size:24rpx; font-weight:600; line-height:32rpx; text-align:center; }
+.suggestion-text { min-width:0; color:#424958; font-size:var(--fs-body); line-height:1.5; word-break:break-all; }
+.suggestion-pressed { background:#edf3ff; }
 
 .wx-time {
   display: block;
@@ -31,7 +51,7 @@
 .wx-row {
   display: flex;
   gap: 12rpx;
-  margin-bottom: 20rpx;
+  margin: 0 20rpx 20rpx;
   align-items: flex-start;
 }
 
@@ -57,6 +77,8 @@
   background: #576b95;
 }
 
+.assistant-avatar { background:#edf5ff; border:1rpx solid #dbe7f7; border-radius:20rpx; }
+
 .wx-bubble {
   max-width: 72%;
   padding: 16rpx 20rpx;
@@ -79,67 +101,89 @@
 }
 
 .wx-foot {
+  position: relative;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12rpx;
-  padding: 12rpx 16rpx calc(12rpx + env(safe-area-inset-bottom));
-  background: var(--surface);
-  border-top: 1rpx solid var(--line);
+  flex-direction: column;
+  gap: 16rpx;
+  padding: 22rpx 24rpx 28rpx;
   flex-shrink: 0;
+  background: #f6f8ff;
 }
+
+.composer-row { display:flex; align-items:center; gap:18rpx; }
+.composer-pill {
+  display:flex;
+  flex:1;
+  align-items:center;
+  gap:12rpx;
+  min-width:0;
+  min-height:104rpx;
+  padding:12rpx 14rpx;
+  border:2rpx solid transparent;
+  border-radius:999rpx;
+  background:linear-gradient(#fff,#fff) padding-box, linear-gradient(110deg,#f0cbd4,#dfddee 52%,#b9ddee) border-box;
+  box-shadow:0 6rpx 24rpx rgba(73,93,137,.04);
+}
+.composer-mode { display:flex; flex:none; align-items:center; justify-content:center; width:56rpx; height:64rpx; color:#35383f; }
+.voice-symbol { position:relative; width:48rpx; height:48rpx; border:3rpx solid currentColor; border-radius:50%; }
+.sound-dot { position:absolute; left:10rpx; top:19rpx; width:6rpx; height:6rpx; border-radius:50%; background:currentColor; }
+.sound-wave { position:absolute; top:50%; border-right:3rpx solid currentColor; border-radius:50%; transform:translateY(-50%); }
+.wave-inner { left:12rpx; width:12rpx; height:18rpx; }
+.wave-outer { left:15rpx; width:17rpx; height:28rpx; }
+.keyboard-symbol { position:relative; width:44rpx; height:32rpx; border:3rpx solid currentColor; border-radius:6rpx; }
+.keyboard-symbol::before { content:''; position:absolute; left:5rpx; right:5rpx; top:5rpx; height:9rpx; background:repeating-linear-gradient(90deg,currentColor 0,currentColor 4rpx,transparent 4rpx,transparent 9rpx); }
+.keyboard-symbol::after { content:''; position:absolute; left:8rpx; right:8rpx; bottom:5rpx; height:3rpx; border-radius:2rpx; background:currentColor; }
 
 .wx-input {
   flex: 1;
   min-width: 0;
   height: 72rpx;
-  border-radius: 12rpx;
-  border: 1rpx solid var(--line);
-  background: var(--bg);
-  padding: 0 16rpx;
+  padding: 0;
+  color: var(--ink);
   font-size: var(--fs-body);
 }
+.composer-placeholder { color:#92959c; }
 
-.wx-btn {
-  min-height: 72rpx;
-  min-width: 72rpx;
-  padding: 0 20rpx;
-  border-radius: 12rpx;
-  font-size: var(--fs-small);
-  font-weight: 700;
-  border: 1rpx solid var(--line);
-  background: var(--bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.composer-send {
+  display:flex;
+  flex:none;
+  align-items:center;
+  justify-content:center;
+  width:64rpx;
+  height:64rpx;
+  border-radius:50%;
+  background:#4285e5;
 }
+.send-symbol { position:relative; width:0; height:0; margin-left:5rpx; border-top:13rpx solid transparent; border-bottom:13rpx solid transparent; border-left:32rpx solid #fff; transform:rotate(-45deg); }
+.send-symbol::after { content:''; position:absolute; left:-32rpx; top:-3rpx; width:0; height:0; border-top:3rpx solid transparent; border-bottom:3rpx solid transparent; border-left:20rpx solid #4285e5; }
+.send-spinner { width:28rpx; height:28rpx; border:3rpx solid rgba(255,255,255,.45); border-top-color:#fff; border-radius:50%; animation:composer-spin .8s linear infinite; }
 
-.wx-btn.send {
-  background: var(--brand);
-  color: #fff;
-  border: none;
-}
+.composer-add { display:flex; flex:none; align-items:center; justify-content:center; width:64rpx; height:64rpx; border:3rpx solid #35383f; border-radius:50%; }
+.add-symbol { position:relative; width:30rpx; height:30rpx; }
+.add-symbol::before, .add-symbol::after { content:''; position:absolute; border-radius:3rpx; background:#35383f; }
+.add-symbol::before { left:0; right:0; top:13rpx; height:4rpx; }
+.add-symbol::after { top:0; bottom:0; left:13rpx; width:4rpx; }
+.composer-pressed { opacity:.65; }
+.is-sending { opacity:.6; }
+.composer-notice { display:block; color:#a0a4af; font-size:var(--fs-tiny); line-height:1.5; text-align:center; }
+@keyframes composer-spin { to { transform:rotate(360deg); } }
 
 .wx-hold {
   flex: 1;
   min-width: 0;
   height: 72rpx;
-  border-radius: 12rpx;
-  background: var(--bg);
-  border: 1rpx solid var(--line);
+  border-radius: 40rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--ink);
+  color: #737985;
 }
 
 .wx-hold.on {
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
+  background: #eef2fb;
+  color: #35435d;
 }
 
 /* 流式进行中：还没有内容时显示占位 */
@@ -154,8 +198,135 @@
   color: var(--brand);
   text-decoration: underline;
 }
+.history-status {
+  text-align: center;
+  color: #8993a7;
+  font-size: 24rpx;
+  padding: 12rpx 24rpx;
+}
+.history-action { color: #4285e5; padding: 16rpx; display: inline-block; }
 
-/* 回复中禁用发送，避免重复提交 */
-.wx-btn.send.disabled {
-  opacity: 0.55;
+/* 会话操作条：标题 + 状态标记 + 「历史对话 / 新对话」 */
+.wx-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 20rpx;
+  background: var(--surface);
+  border-bottom: 1rpx solid var(--line);
+  flex-shrink: 0;
+}
+
+.wx-head-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.wx-head-title {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.wx-head-status {
+  flex-shrink: 0;
+  padding: 4rpx 12rpx;
+  border-radius: 10rpx;
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+/* 已结束/已归档：状态标记与提示条同色，一眼能对上 */
+.wx-head-status.locked {
+  background: #fdecea;
+  color: var(--danger);
+}
+
+.wx-head-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12rpx;
+  flex-shrink: 0;
+}
+
+.wx-head-btn {
+  min-height: 60rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1rpx solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wx-head-btn.primary {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+}
+
+/* 会话内历史的"查看更早"，同时也是加载中的占位 */
+.wx-more {
+  margin: 4rpx auto 16rpx;
+  padding: 12rpx 24rpx;
+  width: fit-content;
+  border-radius: 24rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  background: var(--surface);
+  border: 1rpx solid var(--line);
+}
+
+/* 已结束/已归档会话的输入区替代提示 */
+.wx-locked {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 20rpx;
+  background: #fdecea;
+  border-top: 1rpx solid var(--line);
+  flex-shrink: 0;
+}
+
+.wx-locked-text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-small);
+  color: var(--danger);
+  line-height: 1.4;
+}
+
+.wx-locked-btn {
+  flex-shrink: 0;
+  min-height: 60rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wx-input[disabled] {
+  color: var(--muted);
+  background: var(--surface);
 }

@@ -1,0 +1,136 @@
+.empty-card {
+  text-align: center;
+  padding: 48rpx 24rpx;
+}
+
+.empty-text {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.empty-hint {
+  display: block;
+  margin-top: 8rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.hs-empty-btn {
+  margin-top: 24rpx;
+}
+
+.hs-card.pinned {
+  border-left: 8rpx solid var(--brand);
+}
+
+.hs-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+}
+
+.hs-pin {
+  flex-shrink: 0;
+  padding: 4rpx 12rpx;
+  border-radius: 10rpx;
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.hs-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hs-time {
+  flex-shrink: 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.hs-preview {
+  display: block;
+  margin-top: 12rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hs-foot {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #eef2f1;
+}
+
+.hs-count {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-tiny);
+  color: var(--muted);
+}
+
+.hs-status {
+  flex-shrink: 0;
+  padding: 4rpx 12rpx;
+  border-radius: 10rpx;
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+}
+
+.hs-status.active {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+/* 已结束/已归档：轻量标记，提示点进去不能继续聊 */
+.hs-status.locked {
+  background: #f1f2f3;
+  color: var(--muted);
+}
+
+.hs-more {
+  flex-shrink: 0;
+  min-width: 72rpx;
+  min-height: 56rpx;
+  padding: 0 16rpx;
+  border-radius: 12rpx;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hs-footer {
+  padding: 12rpx 28rpx 24rpx;
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.hs-tip {
+  padding: 0 28rpx calc(24rpx + env(safe-area-inset-bottom));
+  font-size: var(--fs-tiny);
+  color: var(--muted);
+  line-height: 1.5;
+}

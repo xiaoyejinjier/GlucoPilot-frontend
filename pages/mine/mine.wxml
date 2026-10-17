@@ -70,6 +70,9 @@
     <view class="menu-item" data-url="/pages/nutrition/nutrition" bindtap="onMenuTap">
       <text>食物营养查询</text><text class="menu-arrow">›</text>
     </view>
+    <view class="menu-item" data-url="/pages/voice/history" bindtap="onMenuTap">
+      <text>AI 对话历史</text><text class="menu-arrow">›</text>
+    </view>
     <view class="menu-item" data-url="/pages/feedback/feedback" bindtap="onMenuTap">
       <text>留言反馈</text><text class="menu-arrow">›</text>
     </view>

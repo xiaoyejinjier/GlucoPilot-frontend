@@ -29,6 +29,22 @@
       {
         "value": "tools",
         "type": "folder"
+      },
+      {
+        "value": "ProtoType-admin",
+        "type": "folder"
+      },
+      {
+        "value": ".github",
+        "type": "folder"
+      },
+      {
+        "value": ".zip",
+        "type": "suffix"
+      },
+      {
+        "value": ".log",
+        "type": "suffix"
       }
     ],
     "include": []

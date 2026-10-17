@@ -1,6 +1,7 @@
 const { login } = require('../../utils/storage')
 const { applyDisplayToCurrentPage, getDisplayStyle } = require('../../utils/display')
 const { wechatLogin, sendSmsCode, phoneLogin } = require('../../services/api')
+const config = require('../../utils/config')
 const app = getApp()
 
 Page({
@@ -14,11 +15,6 @@ Page({
 
   onLoad() {
     this.setData({ displayStyle: getDisplayStyle() })
-    if (app.globalData.isLoggedIn) {
-      if (typeof app.goAfterLogin === 'function') {
-        app.goAfterLogin()
-      }
-    }
   },
 
   onShow() {
@@ -29,20 +25,28 @@ Page({
     if (this._smsTimer) clearInterval(this._smsTimer)
   },
 
+  checkConnectionSettings() {
+    const issue = config.connectionIssue()
+    if (!issue) return true
+    wx.showToast({ title: '服务连接未就绪，请稍后重试', icon: 'none' })
+    return false
+  },
+
   finishLogin() {
     login()
     app.globalData.isLoggedIn = true
     // 资料、当前声明版本与用户已同意版本校验完成后再决定去向。
     if (typeof app.goAfterLogin === 'function') {
-      app.goAfterLogin()
-      return
+      return app.goAfterLogin()
     }
     wx.reLaunch({ url: '/pages/disclaimer/disclaimer?forced=1' })
   },
 
   onWechatLogin() {
+    if (!this.checkConnectionSettings()) return
     wx.showLoading({ title: '登录中...', mask: true })
     wx.login({
+      timeout: 10000,
       success: (res) => {
         if (!res.code) {
           wx.hideLoading()
@@ -59,9 +63,20 @@ Page({
             wx.showToast({ title: err.message || '登录失败', icon: 'none' })
           })
       },
-      fail: () => {
+      fail: (err) => {
         wx.hideLoading()
-        wx.showToast({ title: 'wx.login 失败', icon: 'none' })
+        // wx.login 需要连微信服务器：开发者工具代理不可用时它同样会失败
+        // （错误形如 tunneling socket could not be established ... ECONNREFUSED 127.0.0.1:7890）。
+        // 只说"wx.login 失败"会让开发者去查后端，而问题其实在工具的代理设置上。
+        const detail = (err && err.errMsg) || ''
+        const proxyBroken = /tunneling socket|ECONNREFUSED|ERR_PROXY|proxy/i.test(detail)
+        wx.showToast({
+          title: proxyBroken
+            ? '开发者工具代理不可用：请在设置→代理设置里选"不使用任何代理"'
+            : `微信登录凭证获取失败：${detail || '请重试'}`,
+          icon: 'none',
+          duration: 5000
+        })
       }
     })
   },
@@ -83,6 +98,7 @@ Page({
   },
 
   onSendSms() {
+    if (!this.checkConnectionSettings()) return
     const phone = this.data.phone
     if (!/^1\d{10}$/.test(phone)) {
       wx.showToast({ title: '请输入正确手机号', icon: 'none' })
@@ -114,6 +130,7 @@ Page({
   },
 
   onConfirmPhoneLogin() {
+    if (!this.checkConnectionSettings()) return
     const { phone, smsCode } = this.data
     if (!/^1\d{10}$/.test(phone)) {
       wx.showToast({ title: '请输入正确手机号', icon: 'none' })

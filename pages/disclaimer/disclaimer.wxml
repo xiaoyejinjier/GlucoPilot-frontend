@@ -32,8 +32,9 @@
     <text class="scroll-hint">{{canAgree ? '内容已阅读完成' : '请向上滑动并阅读至底部'}}</text>
     <button
       class="btn-primary btn-block agree-button {{canAgree ? '' : 'disabled'}}"
-      disabled="{{!canAgree}}"
+      disabled="{{!canAgree || submitting}}"
+      loading="{{submitting}}"
       bindtap="onAgree"
-    >{{canAgree ? '我已阅读并同意' : '请先滑到底部'}}</button>
+    >{{submitting ? '正在提交' : canAgree ? '我已阅读并同意' : '请先滑到底部'}}</button>
   </view>
 </view>

@@ -2,6 +2,12 @@ const { get, post, put, patch, del, setToken } = require('../utils/request')
 const mappers = require('../utils/mappers')
 const { getFoodImage } = require('../utils/food-images')
 const { openSse } = require('../utils/sse')
+const {
+  normalizeSessionPage,
+  normalizeHistoryPage,
+  buildSessionListQuery,
+  buildHistoryQuery
+} = require('../utils/chat-sessions')
 
 const CHANNEL_NAMES = ['', '企业动态', '行业快讯', '设备新知', '控糖科普']
 
@@ -69,7 +75,7 @@ function mapFood(f, categoryName) {
 
 /** ---------- auth ---------- */
 function wechatLogin(code) {
-  return post('/auth/wechat/sessions', { code }, { auth: false }).then((data) => {
+  return post('/auth/wechat/sessions', { code }, { auth: false, timeout: 15000 }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
     return data
@@ -77,11 +83,11 @@ function wechatLogin(code) {
 }
 
 function sendSmsCode(phone, scene) {
-  return post('/auth/sms/codes', { phone, scene: scene || 'login' }, { auth: false })
+  return post('/auth/sms/codes', { phone, scene: scene || 'login' }, { auth: false, timeout: 15000 })
 }
 
 function phoneLogin(phone, smsCode) {
-  return post('/auth/phone/sessions', { phone, smsCode }, { auth: false }).then((data) => {
+  return post('/auth/phone/sessions', { phone, smsCode }, { auth: false, timeout: 15000 }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
     return data
@@ -145,11 +151,50 @@ function fetchFoodDetail(id) {
   return get(`/foods/${id}`, null, { auth: false }).then(mapFood)
 }
 
-/** ---------- chat（接口文档 2.23 / 2.24 / 2.25） ---------- */
+/** ---------- chat（接口文档 2.23 / 2.24 / 2.25，外加 5.3 / 5.4 与历史读取） ---------- */
 
 /** 2.23 获取或创建进行中的会话 */
 function getOrCreateChatSession(sessionType) {
-  return post('/chat-sessions/current', { sessionType: sessionType || 3 }, { auth: true })
+  return post('/chat-sessions/current', { sessionType: sessionType || 3 }, { auth: true, timeout: 10000 })
+}
+
+/**
+ * 2.23 + forceNew 新建会话：后端在同一事务里把旧会话置为"已结束"再建新的。
+ * 不传 forceNew 才是"取或建当前会话"（getOrCreateChatSession），两者语义不同，别混用。
+ */
+function createChatSession(sessionType) {
+  return post('/chat-sessions/current', { sessionType: sessionType || 3, forceNew: true }, { auth: true })
+}
+
+/**
+ * 5.3 会话列表（分页）。
+ * 归一化放在 utils/chat-sessions：id/total 是后端 Long 序列化出来的**字符串**，
+ * 页面侧只当字符串用，所以这里统一过一次，别让每个页面各写一份。
+ */
+function fetchChatSessions(params) {
+  return get('/chat-sessions', buildSessionListQuery(params), { auth: true })
+    .then((page) => normalizeSessionPage(page))
+}
+
+/** 5.4 删除会话（幂等：重复删除同样返回成功；会话内消息一并删除）。 */
+function deleteChatSession(sessionId) {
+  return del(`/chat-sessions/${sessionId}`, null, { auth: true })
+}
+
+/** 置顶 / 取消置顶。 */
+function setChatSessionPinned(sessionId, isPinned) {
+  return patch(`/chat-sessions/${sessionId}/pinned`, { isPinned: !!isPinned }, { auth: true })
+}
+
+/**
+ * 会话内历史消息（全部历史，与模型记忆窗口无关）。
+ * @param {string} sessionId
+ * @param {object} params { pageSize, beforeSeq } —— beforeSeq 传上一页的 nextBeforeSeq
+ * @returns {Promise<{messages: Array, hasMore: boolean, nextBeforeSeq: (number|null)}>}
+ */
+function fetchChatHistory(sessionId, params) {
+  return get(`/chat-sessions/${sessionId}/messages`, buildHistoryQuery(params), { auth: true, timeout: 10000 })
+    .then((page) => normalizeHistoryPage(page))
 }
 
 /** 2.24 发送消息（clientMsgId 幂等，重复提交返回同一条） */
@@ -245,7 +290,7 @@ function defaultMockReadings() {
 
 /** ---------- user / 设置 / 反馈 ---------- */
 function fetchMe() {
-  return get('/users/me', null, { auth: true }).then(mappers.mapUserMe)
+  return get('/users/me', null, { auth: true, timeout: 10000 }).then(mappers.mapUserMe)
 }
 
 function updateProfile(payload) {
@@ -271,7 +316,7 @@ function bindPhone(phone, verifyCode) {
 function fetchAppConfig(groups) {
   const data = {}
   if (groups && groups.length) data.groups = groups.join(',')
-  return get('/app-config', data, { auth: false })
+  return get('/app-config', data, { auth: false, timeout: 10000 })
 }
 
 function submitFeedback(feedbackType, contentText) {
@@ -352,6 +397,11 @@ module.exports = {
   fetchFoods,
   fetchFoodDetail,
   getOrCreateChatSession,
+  createChatSession,
+  fetchChatSessions,
+  fetchChatHistory,
+  deleteChatSession,
+  setChatSessionPinned,
   sendChatMessage,
   streamChatCompletion,
   createMediaUploadCredential,

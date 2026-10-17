@@ -8,19 +8,7 @@
   <view class="discovery-card">
     <view class="discovery-heading"><text>附近设备</text><view class="search-status {{searching ? 'is-searching' : ''}}"><view class="status-dot"></view><text>{{searching ? '搜索中' : scanFinished ? '搜索已结束' : '等待搜索'}}</text></view></view>
     <view wx:if="{{!devices.length}}" class="device-empty">
-      <view class="mascot-scene {{searching ? 'mascot-searching' : ''}}" aria-hidden="true">
-        <view class="mascot-halo"></view><view class="scene-spark spark-one"></view><view class="scene-spark spark-two"></view>
-        <view class="mascot-shadow"></view>
-        <view class="mascot">
-          <view class="mascot-antenna"><view></view></view>
-          <view class="mascot-ear ear-left"></view><view class="mascot-ear ear-right"></view>
-          <view class="mascot-head"><view class="mascot-face"><view class="mascot-eyes"><view class="mascot-eye"></view><view class="mascot-eye"></view></view><view class="mascot-cheek cheek-left"></view><view class="mascot-cheek cheek-right"></view><view class="mascot-smile"></view></view></view>
-          <view class="mascot-arm arm-left"></view><view class="mascot-arm arm-right"></view>
-          <view class="mascot-body"><view class="mascot-heart">+</view></view>
-          <view class="mascot-foot foot-left"></view><view class="mascot-foot foot-right"></view>
-        </view>
-        <view class="signal-bubble"><view class="signal-mark"></view></view>
-      </view>
+      <assistant-mascot class="mascot-scene" searching="{{searching}}"></assistant-mascot>
       <text class="empty-heading">{{searching ? '正在寻找附近的蓝牙设备' : '未搜索到附近蓝牙设备'}}</text>
       <text class="empty-description">请确保设备已开机并打开蓝牙</text>
       <text class="empty-subtitle">将设备靠近手机，并保持可被发现状态</text>

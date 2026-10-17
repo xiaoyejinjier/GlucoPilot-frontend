@@ -12,7 +12,7 @@ page {
   --warn: #fa9d3b;
   --danger: #fa5151;
   --ok: #07c160;
-  --tab-bar-h: 96rpx;
+  --tab-bar-h: 140rpx;
 
   --fs: 28rpx;
   --fs-hero: 52rpx;

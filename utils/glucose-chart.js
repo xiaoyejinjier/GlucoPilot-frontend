@@ -1,3 +1,5 @@
+const { getGlucoseStatus } = require('./constants')
+
 const SOURCE_TEXT = { 1: '手动录入', 2: '拍照识别', 3: '设备同步' }
 
 function hasMeasuredGlucose(node) {
@@ -12,7 +14,7 @@ function formatRecordTime(value) {
 
 function getPointDetails(node) {
   if (!hasMeasuredGlucose(node)) return null
-  return { nodeId: node.id, nodeName: node.name, value: Number(node.value),
+  return { nodeId: node.id, nodeName: node.name, value: Number(node.value), status: getGlucoseStatus(node.value),
     recordedAtText: formatRecordTime(node.recordedAt),
     sourceText: SOURCE_TEXT[node.sourceType] || '来源未提供', remark: node.remark || '' }
 }

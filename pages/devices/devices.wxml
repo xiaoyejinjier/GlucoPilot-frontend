@@ -1,0 +1,8 @@
+<view class="page devices-page" style="{{displayStyle}}">
+  <view class="device-placeholder">
+    <view class="device-placeholder-illustration"><app-icon name="devices" size="lg" color="#5794c5"></app-icon></view>
+    <text class="device-placeholder-title">设备管理即将上线</text>
+    <text class="device-placeholder-description">您的健康设备，将在这里统一管理</text>
+    <text class="device-placeholder-tag">敬请期待</text>
+  </view>
+</view>

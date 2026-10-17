@@ -20,6 +20,15 @@
     <view class="bar bar-b"></view>
     <view class="bar bar-c"></view>
   </view>
+  <view wx:elif="{{name === 'devices'}}" class="glyph">
+    <view class="device-band"></view>
+    <view class="device-case"></view>
+    <view class="device-indicator"></view>
+  </view>
+  <view wx:elif="{{name === 'community'}}" class="glyph">
+    <view class="community-back"></view>
+    <view class="community-front"></view>
+  </view>
   <view wx:elif="{{name === 'mine'}}" class="glyph">
     <view class="user-head"></view>
     <view class="user-body"></view>

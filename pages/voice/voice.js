@@ -1,11 +1,13 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const api = require('../../services/api')
 const media = require('../../utils/media')
+const { getToken } = require('../../utils/request')
+const { SESSION_STATUS, DEFAULT_TITLE, sessionGate, gateFromError, toIdString } = require('../../utils/chat-sessions')
 const app = getApp()
 
 /** 增量文本合并刷新间隔：模型会推数百个 delta，逐个 setData 在真机上会卡 */
 const DELTA_FLUSH_MS = 60
-const GREETING = '你好，我是 AI 控糖助手。可以问饮食、血糖或今日记录相关问题。'
+const HISTORY_PAGE_SIZE = 20
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -20,30 +22,58 @@ Page({
     displayStyle: '',
     currentTime: '09:41',
     inputValue: '',
+    inputFocus: false,
     scrollIntoView: '',
+    viewportHeight: 0,
+    keyboardHeight: 0,
     voiceMode: false,
     recording: false,
     /** 正在等待/接收 AI 回复 */
     sending: false,
-    messages: []
+    messages: [],
+    sessionId: '',
+    sessionTitle: '',
+    sessionStatus: null,
+    sessionStatusText: '',
+    sessionReadOnly: false,
+    sessionNotice: '',
+    hasHistory: false,
+    historyReady: false,
+    historyLoading: false,
+    historyError: '',
+    historyHasMore: false,
+    historyCursor: null,
+    suggestions: [
+      '空腹血糖 5.2，怎么看？',
+      '早餐吃馒头和鸡蛋，怎么搭配？',
+      '空腹和餐后血糖有什么区别？',
+      '帮我分析最近 30 天血糖记录',
+      '运动前后有哪些注意事项？'
+    ]
   },
 
-  onLoad() {
+  onLoad(options) {
+    this.refreshChatViewport()
     this._localSeq = 0
     this._sessionPromise = null
     this._deltaBuffer = ''
     this._deltaTimer = null
     this._currentRound = null
     this._lastRound = null
+    this._historyVersion = 0
+    this._historyToken = getToken()
+    this._sessionVersion = 0
+    this._pendingOpen = options && options.sessionId
+      ? { id: options.sessionId, sessionStatus: options.sessionStatus, title: options.sessionTitle || '' } : null
     this.setData({
-      messages: [{ id: this.nextLocalId(), role: 'ai', type: 'text', content: GREETING }]
+      messages: []
     })
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 })
-    }
+    this._visible = true
+    this.refreshChatViewport()
+    this.attachKeyboardListener()
     applyDisplayToCurrentPage()
     const now = new Date()
     this.setData({ currentTime: `${pad2(now.getHours())}:${pad2(now.getMinutes())}` })
@@ -52,15 +82,40 @@ Page({
       wx.reLaunch({ url: '/pages/login/login' })
       return
     }
-    // 提前把会话建好，用户真正发问时少一次往返等待
-    this.ensureSession().catch(() => {})
+    if (this._historyToken !== getToken()) {
+      this.abortStream()
+      this._historyVersion += 1
+      this._historyToken = getToken()
+      this.resetToFresh()
+      this._pendingOpen = null
+      app.globalData.pendingChatSession = null
+      app.globalData.pendingNewChat = false
+    }
+    const event = this.consumeSessionEvent()
+    if (event && event.type === 'deleted' && toIdString(event.id) === this.data.sessionId) this.resetToFresh()
+    const pending = this.consumePendingSession()
+    if (pending) { this.openSession(pending); return }
+    if (this.consumePendingNewChat()) { this.onNewChat(); return }
+    if (!this.data.historyReady) this.loadHistory()
   },
 
   onHide() {
+    this._visible = false
+    this._historyVersion += 1
+    this.setData({ historyLoading: false })
+    this._inputFocused = false
+    this._layoutVersion = (this._layoutVersion || 0) + 1
+    this.detachKeyboardListener()
+    this.setData({ keyboardHeight: 0, viewportHeight: this._fullWindowHeight || 0, inputFocus: false })
     this.abortStream()
   },
 
   onUnload() {
+    this._disposed = true
+    this._visible = false
+    this._historyVersion += 1
+    this._layoutVersion = (this._layoutVersion || 0) + 1
+    this.detachKeyboardListener()
     this.abortStream()
     if (this._deltaTimer) {
       clearTimeout(this._deltaTimer)
@@ -68,7 +123,250 @@ Page({
     }
   },
 
+  /** 聊天列表与输入区共用同一个可见高度，避免原生输入框自动顶起后遮住消息。 */
+  refreshChatViewport() {
+    let info
+    try {
+      info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+    } catch (_) { return }
+    if (!info || !Number.isFinite(info.windowHeight) || info.windowHeight <= 0) return
+    this._windowHeight = info.windowHeight
+    if (!this._fullWindowHeight || (!this._inputFocused && !this.data.keyboardHeight)) {
+      this._fullWindowHeight = info.windowHeight
+    }
+    this.updateChatViewport()
+  },
+
+  attachKeyboardListener() {
+    if (this._keyboardHandler || !wx.onKeyboardHeightChange || !wx.offKeyboardHeightChange) return
+    this._keyboardHandler = (event) => this.onKeyboardHeightChange(event)
+    wx.onKeyboardHeightChange(this._keyboardHandler)
+  },
+
+  detachKeyboardListener() {
+    if (!this._keyboardHandler) return
+    wx.offKeyboardHeightChange(this._keyboardHandler)
+    this._keyboardHandler = null
+  },
+
+  onInputFocus(event) {
+    this._inputFocused = true
+    this.setData({ inputFocus: true })
+    const height = Number(event.detail && event.detail.height)
+    if (Number.isFinite(height) && height > 0) {
+      this.onKeyboardHeightChange({ height })
+    } else {
+      this.updateChatViewport()
+    }
+  },
+
+  onInputBlur() {
+    this._inputFocused = false
+    this.setData({ inputFocus: false })
+  },
+
+  onKeyboardHeightChange(event) {
+    if (this._visible === false) return
+    const detail = (event && event.detail) || event || {}
+    const height = Number(detail.height)
+    if (!Number.isFinite(height) || height < 0) return
+    this.updateChatViewport(height)
+  },
+
+  onResize(event) {
+    if (this._visible === false) return
+    const height = Number(event.size && event.size.windowHeight)
+    if (!Number.isFinite(height) || height <= 0) return
+    this._windowHeight = height
+    if (!this._inputFocused && !this.data.keyboardHeight) this._fullWindowHeight = height
+    this.updateChatViewport()
+  },
+
+  updateChatViewport(keyboardHeight = this.data.keyboardHeight) {
+    if (!this._fullWindowHeight || this._visible === false) return
+    // 部分真机会先缩小窗口；从完整窗口扣一次键盘高度，避免二次扣减。
+    const viewportHeight = Math.max(1, Math.min(this._windowHeight, this._fullWindowHeight - keyboardHeight))
+    const version = this._layoutVersion = (this._layoutVersion || 0) + 1
+    if (!this.hasCurrentMessages()) {
+      // 本次尚未发问时，保留完整欢迎卡片的位置；键盘只遮挡下半部分。
+      this.setData({ viewportHeight, keyboardHeight, scrollIntoView: '' })
+      return
+    }
+    this.setData({ viewportHeight, keyboardHeight, scrollIntoView: '' }, () => {
+      const scroll = () => {
+        if (this._visible !== false && version === this._layoutVersion) {
+          this.setData({ scrollIntoView: 'msg-bottom' })
+        }
+      }
+      if (wx.nextTick) wx.nextTick(scroll)
+      else scroll()
+    })
+  },
+
   /** ---------- 会话 ---------- */
+
+  consumePendingSession() {
+    const pending = this._pendingOpen || app.globalData.pendingChatSession
+    this._pendingOpen = null
+    app.globalData.pendingChatSession = null
+    return pending && pending.id ? pending : null
+  },
+
+  consumeSessionEvent() {
+    const event = app.globalData.chatSessionEvent
+    app.globalData.chatSessionEvent = null
+    return event
+  },
+
+  consumePendingNewChat() {
+    const pending = !!app.globalData.pendingNewChat
+    app.globalData.pendingNewChat = false
+    return pending
+  },
+
+  gateData(gate) {
+    return { sessionStatus: gate.sessionStatus, sessionStatusText: gate.sessionStatusText,
+      sessionReadOnly: gate.readOnly, sessionNotice: gate.notice }
+  },
+
+  resetToFresh() {
+    this._sessionVersion += 1
+    this._historyVersion += 1
+    this.abortStream()
+    if (this._deltaTimer) clearTimeout(this._deltaTimer)
+    this._deltaTimer = null
+    this._deltaBuffer = ''
+    this._sessionPromise = null
+    this._currentRound = this._lastRound = null
+    this.setData({ sessionId: '', sessionTitle: '', messages: [], hasHistory: false, sending: false,
+      inputValue: '', scrollIntoView: '', historyReady: false, historyLoading: false,
+      historyHasMore: false, historyCursor: null, historyError: '',
+      ...this.gateData(sessionGate(SESSION_STATUS.ACTIVE)) })
+  },
+
+  openSession(info) {
+    const id = toIdString(info && info.id)
+    if (!id) return Promise.resolve(null)
+    this.resetToFresh()
+    this.setData({ sessionId: id, sessionTitle: info.title || DEFAULT_TITLE,
+      ...this.gateData(sessionGate(info.sessionStatus)) })
+    return this.loadHistory()
+  },
+
+  async onNewChat() {
+    if (this.data.sending) {
+      wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
+      return null
+    }
+    if (this._creatingSession) return null
+    this._creatingSession = true
+    const token = getToken()
+    const version = this._sessionVersion
+    try {
+      const session = await api.createChatSession(3)
+      if (token !== getToken() || token !== this._historyToken || version !== this._sessionVersion) return null
+      this.resetToFresh()
+      this.setData({ sessionId: toIdString(session.id), sessionTitle: session.title || DEFAULT_TITLE,
+        historyReady: true, ...this.gateData(sessionGate(session.sessionStatus == null ? SESSION_STATUS.ACTIVE : session.sessionStatus)) })
+      wx.showToast({ title: '已开启新对话', icon: 'none' })
+      return session
+    } catch (error) {
+      if (token === getToken() && version === this._sessionVersion) {
+        wx.showToast({ title: error.message || '新建对话失败，请稍后重试', icon: 'none' })
+      }
+      return null
+    } finally {
+      this._creatingSession = false
+    }
+  },
+
+  onOpenHistory() { wx.navigateTo({ url: '/pages/voice/history' }) },
+
+  onLoadEarlier() {
+    if (!this.data.historyHasMore || !this.data.historyCursor) {
+      wx.showToast({ title: '已经是全部记录了', icon: 'none' })
+      return Promise.resolve(null)
+    }
+    return this.loadHistory(true)
+  },
+
+  blockIfReadOnly() {
+    if (!this.data.sessionReadOnly) return false
+    wx.showToast({ title: this.data.sessionNotice || '该会话已结束，请新建对话', icon: 'none' })
+    return true
+  },
+
+  hasCurrentMessages() {
+    return this.data.messages.some((message) => !message.history && !message.localWelcome)
+  },
+
+  async loadHistory(older = false) {
+    if (this.data.historyLoading || (older && (!this.data.historyReady || !this.data.historyHasMore))) return
+    const version = ++this._historyVersion
+    const token = getToken()
+    const active = () => this._visible !== false && version === this._historyVersion && this._historyToken === token
+    const anchor = older && this.data.messages.find((message) => message.history)
+    this.setData({ historyLoading: true, historyError: '' })
+    try {
+      const sessionId = await this.ensureSession()
+      if (!active() || token !== getToken()) return
+      const result = await api.fetchChatHistory(sessionId, {
+        pageSize: HISTORY_PAGE_SIZE, ...(older ? { beforeSeq: this.data.historyCursor } : {})
+      })
+      if (!active() || token !== getToken()) return
+      if (!result || !Array.isArray(result.messages)) throw new Error('历史记录格式异常，请重试')
+      const records = result.messages.map(message => ({ ...message, history: true }))
+      let messages
+      if (older) {
+        const existing = new Set(this.data.messages.map((message) => message.id))
+        messages = records.filter((message) => !existing.has(message.id)).concat(this.data.messages)
+      } else {
+        messages = records
+        if (records.length && !this.data.sessionReadOnly) messages.push({ id: this.nextLocalId(), type: 'welcome', localWelcome: true })
+      }
+      this.setData({ messages, hasHistory: older ? this.data.hasHistory : records.length > 0,
+        historyReady: true, historyLoading: false, historyError: '',
+        historyHasMore: !!result.hasMore, historyCursor: result.nextBeforeSeq || null,
+        scrollIntoView: '' }, () => {
+        const scroll = () => {
+          if (!active()) return
+          const welcome = messages.find((message) => message.localWelcome)
+          this.setData({ scrollIntoView: anchor ? `message-${anchor.id}`
+            : this.hasCurrentMessages() ? 'msg-bottom' : welcome ? `message-${welcome.id}` : '' })
+        }
+        if (wx.nextTick) wx.nextTick(scroll)
+        else scroll()
+      })
+    } catch (err) {
+      if (!active()) return
+      if (err && err.code === 40100) {
+        this.setData({ historyLoading: false })
+        app.globalData.isLoggedIn = false
+        wx.reLaunch({ url: '/pages/login/login' })
+      } else if (err && err.code === 40400 && !older) {
+        this.resetToFresh()
+        wx.showToast({ title: '该对话已被删除', icon: 'none' })
+      } else if (token === getToken()) {
+        const hint = err && err.statusCode === 404 ? '历史接口未就绪，请重启后端后重试'
+          : err && (err.network || err.configuration) ? `${err.message}，点击重试`
+            : '历史记录加载失败，点击重试'
+        this.setData({ historyLoading: false, historyError: hint })
+      }
+    }
+  },
+
+  onLoadOlderHistory() { return this.loadHistory(true) },
+
+  onRetryHistory() { return this.loadHistory(this.data.historyReady) },
+
+  canSend() {
+    if (this.blockIfReadOnly()) return false
+    if (!this.data.historyReady) {
+      wx.showToast({ title: this.data.historyError ? '请先重试加载历史记录' : '正在恢复历史记录，请稍候', icon: 'none' })
+      return false
+    }
+    return true
+  },
 
   ensureSession() {
     if (this.data.sessionId) {
@@ -77,20 +375,31 @@ Page({
     if (this._sessionPromise) {
       return this._sessionPromise
     }
+    const token = getToken()
+    const version = this._sessionVersion
     this._sessionPromise = api
       .getOrCreateChatSession(3)
       .then((session) => {
-        this.setData({ sessionId: session.id })
-        return session.id
+        if (token !== getToken() || token !== this._historyToken || version !== this._sessionVersion) throw new Error('会话状态已变化')
+        this.setData({ sessionId: toIdString(session.id), sessionTitle: session.title || DEFAULT_TITLE,
+          ...this.gateData(sessionGate(session.sessionStatus)) })
+        return toIdString(session.id)
       })
       .catch((err) => {
-        this._sessionPromise = null
+        if (token === this._historyToken && version === this._sessionVersion) this._sessionPromise = null
         throw err
       })
     return this._sessionPromise
   },
 
   /** ---------- 输入 ---------- */
+
+  onSuggestionTap(event) {
+    if (this.data.sessionReadOnly) return
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || index < 0 || index >= this.data.suggestions.length || this.data.sending) return
+    this.setData({ inputValue: this.data.suggestions[index], voiceMode: false, inputFocus: true })
+  },
 
   onInput(e) {
     this.setData({ inputValue: e.detail.value })
@@ -99,6 +408,7 @@ Page({
   onSend() {
     const text = (this.data.inputValue || '').trim()
     if (!text) return
+    if (!this.canSend()) return
     if (this.data.sending) {
       wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
       return
@@ -123,6 +433,7 @@ Page({
    * 这正是两阶段里阶段 1 的识别线索来源。
    */
   sendImage(filePath) {
+    if (!this.canSend()) return
     const caption = (this.data.inputValue || '').trim()
     const userMsg = {
       id: this.nextLocalId(),
@@ -151,10 +462,14 @@ Page({
   uploadImageThenSend(userLocalId, aiLocalId) {
     const userMsg = this.findMessage(userLocalId)
     if (!userMsg || !userMsg.imagePath) return
+    const version = this._sessionVersion
+    const token = getToken()
+    const active = () => !this._disposed && version === this._sessionVersion && token === getToken()
 
     media
       .uploadChatImage(userMsg.imagePath)
       .then((record) => {
+        if (!active()) return
         // imagePath 登记成功后替换为服务端 fileUrl：本地临时路径页内有效，换屏/重进会失效，
         // 而 fileUrl 由服务端解析、可长期引用（预览、重试均走它）。
         this.patchMessage(userLocalId, (m) => ({
@@ -169,6 +484,7 @@ Page({
         )
       })
       .catch((err) => {
+        if (!active()) return
         this.patchMessage(userLocalId, () => ({ uploading: false }))
         if (err && typeof err === 'object') {
           err.isUploadError = true
@@ -189,10 +505,19 @@ Page({
   },
 
   startRound(payload, aiLocalId) {
+    if (this.data.sessionReadOnly) {
+      this.failRound(aiLocalId, new Error(this.data.sessionNotice || '该会话已结束，请新建对话'))
+      return
+    }
     const clientMsgId = genClientMsgId()
+    const version = this._sessionVersion
+    const token = getToken()
+    const active = () => !this._disposed && version === this._sessionVersion && token === getToken()
     this.ensureSession()
-      .then((sessionId) =>
-        api.sendChatMessage(sessionId, Object.assign({ clientMsgId }, payload)).then((saved) => {
+      .then((sessionId) => {
+        if (!active()) return
+        return api.sendChatMessage(sessionId, Object.assign({ clientMsgId }, payload)).then((saved) => {
+          if (!active()) return
           this._currentRound = {
             sessionId,
             clientMsgId,
@@ -202,8 +527,8 @@ Page({
           this._lastRound = this._currentRound
           this.openStream()
         })
-      )
-      .catch((err) => this.failRound(aiLocalId, err))
+      })
+      .catch((err) => { if (active()) this.failRound(aiLocalId, err) })
   },
 
   /** ---------- SSE ---------- */
@@ -217,6 +542,7 @@ Page({
       { clientMsgId: round.clientMsgId, replyToMsgId: round.replyToMsgId, stream: true },
       {
         onEvent: (name, payload) => {
+          if (this._currentRound !== round) return
           if (name === 'delta') {
             this.pushDelta(payload && payload.delta)
           } else if (name === 'done') {
@@ -225,8 +551,9 @@ Page({
             this.failRound(round.aiLocalId, new Error((payload && payload.message) || 'AI 服务暂时不可用'))
           }
         },
-        onError: (err) => this.failRound(round.aiLocalId, err),
+        onError: (err) => { if (this._currentRound === round) this.failRound(round.aiLocalId, err) },
         onComplete: () => {
+          if (this._currentRound !== round) return
           // 兜底收尾：done 没到也要把缓冲刷出去并解除输入锁
           this.flushDelta()
           if (this.data.sending && this._currentRound) {
@@ -287,6 +614,8 @@ Page({
   },
 
   failRound(aiLocalId, err) {
+    const gate = gateFromError(err)
+    if (gate) this.setData(this.gateData(gate))
     if (this._deltaTimer) {
       clearTimeout(this._deltaTimer)
       this._deltaTimer = null
@@ -318,6 +647,7 @@ Page({
   onRetry(e) {
     const id = e.currentTarget.dataset.id
     if (this.data.sending) return
+    if (!this.canSend() || (this.findMessage(id) || {}).history) return
     const last = this._lastRound
 
     // 用户消息已入库：复用同一 clientMsgId / replyToMsgId 重开流，
@@ -386,6 +716,7 @@ Page({
    * 只做「选」，上传与发送交给 sendImage，避免这个回调过长难以阅读。
    */
   onChooseImage() {
+    if (!this.canSend()) return
     if (this.data.sending) {
       wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
       return
@@ -413,7 +744,7 @@ Page({
   },
 
   onToggleVoiceMode() {
-    this.setData({ voiceMode: !this.data.voiceMode, recording: false })
+    this.setData({ voiceMode: !this.data.voiceMode, recording: false, inputFocus: false })
   },
 
   onHoldStart() {

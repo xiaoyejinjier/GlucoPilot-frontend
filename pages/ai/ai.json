@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "今日记录",
   "usingComponents": {
+    "app-icon": "/components/icon/icon",
     "glucose-alert-reminder": "/components/glucose-alert-reminder/glucose-alert-reminder"
   }
 }

@@ -1,0 +1,45 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">这里是你和助手的全部对话记录，上拉可加载更早的会话。</text>
+  </view>
+
+  <view wx:if="{{loaded && list.length === 0}}" class="card empty-card">
+    <text class="empty-text">还没有对话记录</text>
+    <text class="empty-hint">向 AI 控糖助手提问后，每段对话都会保存在这里</text>
+    <view class="btn-primary btn-block hs-empty-btn" bindtap="onStartNewChat" aria-role="button">开始新对话</view>
+  </view>
+
+  <view
+    wx:for="{{list}}"
+    wx:key="id"
+    class="card hs-card {{item.isPinned ? 'pinned' : ''}} {{item.readOnly ? 'locked' : ''}}"
+    data-id="{{item.id}}"
+    data-status="{{item.sessionStatus}}"
+    data-title="{{item.title}}"
+    data-pinned="{{item.isPinned}}"
+    bindtap="onTapSession"
+    bindlongpress="onLongPress"
+  >
+    <view class="hs-head">
+      <text wx:if="{{item.isPinned}}" class="hs-pin">置顶</text>
+      <text class="hs-title">{{item.title}}</text>
+      <text class="hs-time">{{item.timeText}}</text>
+    </view>
+    <text class="hs-preview">{{item.lastMessagePreview || '暂无消息内容'}}</text>
+    <view class="hs-foot">
+      <text class="hs-count">共 {{item.msgCount}} 条消息</text>
+      <text wx:if="{{item.sessionStatusText}}" class="hs-status {{item.readOnly ? 'locked' : 'active'}}">{{item.sessionStatusText}}</text>
+      <view class="hs-more" data-id="{{item.id}}" data-pinned="{{item.isPinned}}" catchtap="onMore" aria-role="button">···</view>
+    </view>
+  </view>
+
+  <view wx:if="{{list.length > 0}}" class="hs-footer">
+    <text wx:if="{{loading}}">加载中…</text>
+    <text wx:elif="{{hasMore}}" bindtap="load">上拉加载更多</text>
+    <text wx:else>已加载全部 {{total}} 段对话</text>
+  </view>
+
+  <view wx:if="{{archiveIdleDays > 0}}" class="hs-tip">
+    <text>超过 {{archiveIdleDays}} 天没有新消息的会话会自动标记为「已归档」</text>
+  </view>
+</view>

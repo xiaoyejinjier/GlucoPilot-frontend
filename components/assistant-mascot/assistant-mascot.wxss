@@ -1,0 +1,37 @@
+:host { display:block; }
+view { box-sizing:border-box; }
+
+/* 轻量CSS卡通小助手，无外链图片、额外下载或Canvas图层。 */
+.mascot-scene { position:relative; width:330rpx; height:272rpx; margin:6rpx auto 0; }
+.mascot-halo { position:absolute; width:226rpx; height:226rpx; top:12rpx; left:52rpx; border-radius:50%; background:#f1f7ff; }
+.mascot-shadow { position:absolute; left:104rpx; bottom:20rpx; width:128rpx; height:16rpx; border-radius:50%; background:#dfebfb; filter:blur(3rpx); }
+.mascot { position:absolute; left:92rpx; top:32rpx; width:150rpx; height:210rpx; }
+.mascot-antenna { position:absolute; top:0; left:73rpx; width:5rpx; height:25rpx; background:#9cbbe7; }.mascot-antenna>view { position:absolute; width:14rpx; height:14rpx; top:-5rpx; left:-5rpx; border:3rpx solid #d7e7ff; border-radius:50%; background:#6ca3ed; }
+.mascot-head { position:absolute; z-index:3; top:22rpx; left:6rpx; width:138rpx; height:112rpx; border:3rpx solid #c4d9f5; border-radius:42rpx; background:#fff; box-shadow:inset 0 -8rpx 0 #eef5ff; transform:rotate(-5deg); }
+.mascot-face { position:absolute; inset:18rpx 14rpx; border-radius:28rpx; background:#e2f0ff; }.mascot-eyes { display:flex; justify-content:space-between; position:absolute; left:24rpx; right:24rpx; top:23rpx; }.mascot-eye { width:10rpx; height:16rpx; border-radius:8rpx; background:#4777ad; }
+.mascot-cheek { position:absolute; top:43rpx; width:16rpx; height:8rpx; border-radius:50%; background:#f7c8c8; }.cheek-left { left:13rpx; }.cheek-right { right:13rpx; }.mascot-smile { position:absolute; left:44rpx; top:41rpx; width:14rpx; height:9rpx; border:2rpx solid #6a91bd; border-top:0; border-radius:0 0 12rpx 12rpx; }
+.mascot-ear { position:absolute; z-index:2; top:65rpx; width:16rpx; height:33rpx; border-radius:8rpx; background:#98bceb; }.ear-left { left:-4rpx; }.ear-right { right:-4rpx; }
+.mascot-body { position:absolute; z-index:2; top:127rpx; left:31rpx; width:90rpx; height:63rpx; border:3rpx solid #c6dbf6; border-radius:16rpx 16rpx 28rpx 28rpx; background:#fff; box-shadow:inset 0 -7rpx 0 #eef5ff; }.mascot-heart { width:30rpx; height:30rpx; margin:12rpx auto; border-radius:10rpx; background:#dfeeff; color:#7aa5de; font-size:30rpx; line-height:28rpx; font-weight:700; text-align:center; }
+.mascot-arm { position:absolute; z-index:1; top:132rpx; width:22rpx; height:44rpx; border:2rpx solid #c6dbf6; border-radius:14rpx; background:#f8fbff; }.arm-left { left:15rpx; transform:rotate(22deg); }.arm-right { right:9rpx; top:115rpx; transform:rotate(-40deg); }
+.mascot-foot { position:absolute; top:181rpx; width:27rpx; height:18rpx; border-radius:8rpx; background:#9cbce9; }.foot-left { left:42rpx; }.foot-right { right:38rpx; }
+.signal-bubble { position:absolute; right:27rpx; top:18rpx; width:57rpx; height:57rpx; border:3rpx solid #fff; border-radius:19rpx; background:#dfeeff; transform:rotate(10deg); }.signal-mark { position:absolute; left:22rpx; top:12rpx; width:4rpx; height:29rpx; background:#77a4df; }.signal-mark::before,.signal-mark::after { content:''; position:absolute; width:14rpx; height:14rpx; left:-6rpx; border-top:3rpx solid #77a4df; border-right:3rpx solid #77a4df; transform:rotate(45deg); }.signal-mark::before { top:1rpx; }.signal-mark::after { bottom:1rpx; }
+.scene-spark { position:absolute; width:10rpx; height:10rpx; border-radius:3rpx; transform:rotate(45deg); }.spark-one { left:36rpx; top:93rpx; background:#b6d5ff; }.spark-two { right:40rpx; bottom:63rpx; width:14rpx; height:14rpx; background:#f5ddba; }
+.mascot-searching .signal-bubble { animation:device-float 1.8s ease-in-out infinite; }.mascot-searching .mascot-antenna>view { animation:device-pulse 1.2s ease-in-out infinite; }
+@keyframes device-pulse { 50% { opacity:.4; } } @keyframes device-float { 50% { transform:translateY(-8rpx) rotate(5deg); } }
+
+/* Compact variants share the original device mascot. */
+.mascot-nav, .mascot-avatar { margin:0; overflow:hidden; }
+.mascot-nav { width:88rpx; height:68rpx; }
+.mascot-nav .mascot { left:20rpx; top:0; transform:scale(.32); transform-origin:top left; }
+.mascot-nav .mascot-halo { left:14rpx; top:4rpx; width:60rpx; height:60rpx; background:#f1f7ff; }
+.mascot-nav .mascot-shadow { left:24rpx; bottom:1rpx; width:40rpx; height:4rpx; }
+.mascot-nav .signal-bubble, .mascot-nav .scene-spark { display:none; }
+.mascot-avatar { width:62rpx; height:62rpx; }
+.mascot-avatar .mascot { left:-5rpx; top:-11rpx; transform:scale(.48); transform-origin:top left; }
+.mascot-avatar .mascot-halo, .mascot-avatar .mascot-shadow, .mascot-avatar .signal-bubble, .mascot-avatar .scene-spark,
+.mascot-avatar .mascot-body, .mascot-avatar .mascot-arm, .mascot-avatar .mascot-foot { display:none; }
+.mascot-welcome { width:180rpx; height:166rpx; margin:0; }
+.mascot-welcome .mascot { left:30rpx; top:0; transform:scale(.8); transform-origin:top left; }
+.mascot-welcome .mascot-halo { left:10rpx; top:6rpx; width:160rpx; height:160rpx; background:#edf3ff; }
+.mascot-welcome .mascot-shadow { left:38rpx; bottom:0; width:104rpx; height:10rpx; }
+.mascot-welcome .signal-bubble, .mascot-welcome .scene-spark { display:none; }

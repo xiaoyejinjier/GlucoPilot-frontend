@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "设备管理",
+  "usingComponents": {
+    "app-icon": "/components/icon/icon"
+  }
+}

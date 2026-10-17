@@ -1,4 +1,4 @@
-<view class="page" style="{{displayStyle}}">
+<view class="page record-page" style="{{displayStyle}}">
   <glucose-alert-reminder nodes="{{nodes}}" bind:visibilitychange="onReminderVisibilityChange"></glucose-alert-reminder>
   <view class="card glucose-chart-card">
     <view class="section-title">
@@ -9,7 +9,7 @@
     <canvas wx:else type="2d" id="glucoseChart" class="chart-canvas"
       bindtouchstart="onChartTouchStart" bindtouchmove="onChartTouchMove"
       bindtouchend="onChartTouchEnd" bindtouchcancel="onChartTouchCancel"></canvas>
-    <view wx:if="{{chartSelection}}" class="chart-details">
+    <view wx:if="{{chartSelection}}" class="chart-details {{chartSelection.status}}">
       <view class="chart-details-heading">
         <text class="chart-details-name">{{chartSelection.nodeName}}</text>
         <text class="chart-details-close" bindtap="onCloseChartDetails">收起</text>
@@ -22,7 +22,6 @@
       <view wx:if="{{chartSelection.remark}}" class="chart-details-row chart-details-remark"><text>备注</text><text>{{chartSelection.remark}}</text></view>
     </view>
   </view>
-
   <view class="card daily-record-card">
     <view class="section-title record-section-heading">
       <text>今日九时段记录</text>
@@ -75,5 +74,14 @@
         <text>时段截止</text>
       </view>
     </view>
+  </view>
+  <view class="stats-entry" bindtap="onOpenStats" hover-class="stats-entry-pressed"
+    aria-role="button" aria-label="查看数据统计和血糖趋势">
+    <view class="stats-entry-icon"><app-icon name="stats" size="lg" color="#ffffff"></app-icon></view>
+    <view class="stats-entry-copy">
+      <text class="stats-entry-title">数据统计</text>
+      <text class="stats-entry-description">回顾每日记录，查看血糖趋势</text>
+    </view>
+    <view class="stats-entry-arrow" aria-hidden="true"></view>
   </view>
 </view>
