@@ -1,5 +1,4 @@
-const { analyzeMealPhoto, saveMealRecord } = require('../../services/api')
-const { getMealScorePreview } = require('../../services/meal-score-preview')
+const { analyzeMealPhoto, saveMealRecord, predictMealGlucose } = require('../../services/api')
 const { getTodayKey, getRecords, saveRecord } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { readShotImage, clearShotImage } = require('../../utils/shot')
@@ -42,9 +41,10 @@ Page({
     foodsText: '',
     carbsG: null,
     caloriesKcal: null,
-    scorePreview: null,
-    scoreLoading: false,
-    scoreError: '',
+    predictResult: null,
+    predictLoading: false,
+    predictError: '',
+    predictNotice: '',
     metrics: { glucose: '—', carbs: '—', extra: '—' }
   },
 
@@ -69,7 +69,8 @@ Page({
   onUnload() {
     this._alive = false
     this._analysisVersion = (this._analysisVersion || 0) + 1
-    this._scoreVersion = (this._scoreVersion || 0) + 1
+    this._predictVersion = (this._predictVersion || 0) + 1
+    if (this._predictTimer) { clearTimeout(this._predictTimer); this._predictTimer = null }
   },
 
   ensureOpen() {
@@ -114,7 +115,7 @@ Page({
     if (this.data.busy || !this.ensureLogin() || !this.ensureOpen()) return
     const version = (this._analysisVersion || 0) + 1
     this._analysisVersion = version
-    this.clearScorePreview()
+    this.clearPrediction()
     this.setData({ busy: true, recognizing: true, analysisReady: false, analysisError: '' })
     try {
       const mediaId = await this.ensureUploaded()
@@ -184,47 +185,84 @@ Page({
       metrics: { glucose: this.data.currentGlucose || '—', carbs: ready ? rounded(carbs) + 'g' : '待确认',
         extra: ready ? rounded(calories) + 'kcal' : '待确认' }
     })
-    // 展示样例不依赖营养完整度或实测血糖；真实饮食保存仍受 analysisReady 约束。
-    this.refreshScorePreview()
+    // 预测依赖营养完整度与餐前血糖；识别结果/重量变化后防抖重算。
+    this.schedulePredict()
   },
 
-  clearScorePreview() {
-    this._scoreVersion = (this._scoreVersion || 0) + 1
-    this.setData({ scorePreview: null, scoreLoading: false, scoreError: '' })
+  clearPrediction() {
+    this._predictVersion = (this._predictVersion || 0) + 1
+    if (this._predictTimer) { clearTimeout(this._predictTimer); this._predictTimer = null }
+    this.setData({ predictResult: null, predictLoading: false, predictError: '', predictNotice: '' })
   },
 
-  async refreshScorePreview() {
+  schedulePredict() {
     if (!this._alive) return
-    const version = (this._scoreVersion || 0) + 1
-    this._scoreVersion = version
-    if (!this.data.hasAnalysis || this.data.needsReanalysis || this.data.analysisError || !this.data.items.length) {
-      this.setData({ scorePreview: null, scoreLoading: false, scoreError: '' })
+    if (this._predictTimer) clearTimeout(this._predictTimer)
+    this._predictTimer = setTimeout(() => { this._predictTimer = null; this.predict() }, 800)
+  },
+
+  buildPredictInput() {
+    const items = this.data.items || []
+    // 方案 B：预测请求只带已分类且营养完整的食物，碳水同步扣减；保存仍用全量。
+    const validItems = items.filter((item) => {
+      const code = Number(item.categoryCode)
+      return code >= 1 && code <= 9 && item.weightG > 0 && item.carbsG != null
+    })
+    return {
+      ready: this.data.hasAnalysis && !this.data.needsReanalysis && !this.data.analysisError && this.data.analysisReady,
+      dropped: items.length - validItems.length,
+      carbsG: rounded(validItems.reduce((sum, item) => sum + item.carbsG, 0)),
+      glucose: numberOrNull(this.data.currentGlucose),
+      validItems
+    }
+  },
+
+  async predict() {
+    if (!this._alive) return
+    const version = (this._predictVersion || 0) + 1
+    this._predictVersion = version
+    const input = this.buildPredictInput()
+    if (!input.ready || !input.validItems.length || !(input.glucose > 0 && input.glucose < 40)) {
+      // 空态：营养未确认 / 无有效食物 / 未录餐前血糖，均不发起预测。
+      this.setData({ predictResult: null, predictLoading: false, predictError: '', predictNotice: '' })
       return
     }
-    this.setData({ scoreLoading: true, scorePreview: null, scoreError: '' })
+    const fingerprint = [this.data.nodeId, input.glucose, input.carbsG,
+      input.validItems.map((item) => [item.foodName, item.categoryCode, item.weightG, item.carbsG].join(':')).join('|')].join('#')
+    this._predictFingerprint = fingerprint
+    this.setData({
+      predictLoading: true, predictError: '',
+      predictNotice: input.dropped > 0 ? input.dropped + ' 项未分类食物未纳入预测' : ''
+    })
     try {
-      const result = await getMealScorePreview({
+      const result = await predictMealGlucose({
         nodeCode: this.data.nodeId,
-        currentGlucose: numberOrNull(this.data.currentGlucose),
-        carbsG: this.data.carbsG,
-        caloriesKcal: this.data.caloriesKcal,
-        hungerLevel: HUNGER_LEVEL[this.data.hunger] || 2,
-        items: this.data.items.map((item) => ({ foodName: item.foodName, categoryCode: item.categoryCode,
-          weightG: item.weightG, carbsG: item.carbsG, caloriesKcal: item.caloriesKcal }))
+        currentGlucose: input.glucose,
+        carbsG: input.carbsG,
+        items: input.validItems.map((item) => ({ foodName: item.foodName, categoryCode: Number(item.categoryCode),
+          weightG: item.weightG, carbsG: item.carbsG }))
       })
-      if (!this._alive || version !== this._scoreVersion) return
-      if (!result || !Number.isFinite(result.score) || !Number.isFinite(result.maxScore)
-        || result.maxScore <= 0 || result.score < 0 || result.score > result.maxScore) {
-        throw new Error('评分展示数据无效，请重新生成')
+      if (!this._alive || version !== this._predictVersion || fingerprint !== this._predictFingerprint) return
+      if (!result || !Number.isFinite(result.predictNow) || !Number.isFinite(result.predictSuggest)) {
+        throw new Error('预测返回数据无效，请重试')
       }
-      this.setData({ scorePreview: result })
+      this.setData({ predictResult: { predictNow: result.predictNow, predictSuggest: result.predictSuggest,
+        suggestText: result.suggestText || '', predictCarbs: input.carbsG } })
     } catch (error) {
-      if (this._alive && version === this._scoreVersion) {
-        this.setData({ scoreError: error.message || '模拟评分展示失败，可重试；不影响饮食保存' })
+      // P4：失败即清空，保存时不再携带上一次的预测值。
+      if (this._alive && version === this._predictVersion && fingerprint === this._predictFingerprint) {
+        this.setData({ predictResult: null, predictError: error.message || '预测失败，可重试；不影响饮食保存' })
       }
     } finally {
-      if (this._alive && version === this._scoreVersion) this.setData({ scoreLoading: false })
+      if (this._alive && version === this._predictVersion && fingerprint === this._predictFingerprint) {
+        this.setData({ predictLoading: false })
+      }
     }
+  },
+
+  onRetryPredict() {
+    if (this.data.busy || this.data.predictLoading) return
+    return this.predict()
   },
 
   onWeightInput(e) {
@@ -237,19 +275,19 @@ Page({
   },
   onHunger(e) {
     if (this.data.busy) return
+    // 饥饿感不是预测入参，仅随饮食保存落库，不触发预测重算。
     this.setData({ hunger: e.currentTarget.dataset.val })
-    return this.refreshScorePreview()
   },
   onSupplementInput(e) {
     this.setData({ supplement: e.detail.value })
     if (this.data.hasAnalysis) {
       this.setData({ analysisReady: false, needsReanalysis: true })
-      this.clearScorePreview()
+      this.clearPrediction()
     }
   },
   onCurrentGlucoseInput(e) {
     this.setData({ currentGlucose: e.detail.value, 'metrics.glucose': e.detail.value || '—' })
-    return this.refreshScorePreview()
+    this.schedulePredict()
   },
   onRetry() { return this.recognize() },
   onReAnalyze() { return this.recognize() },
@@ -259,27 +297,26 @@ Page({
     wx.redirectTo({ url: '/pages/camera/camera?nodeId=' + this.data.nodeId + '&isMeal=1&nodeName=' + encodeURIComponent(this.data.nodeName) })
   },
 
-  onRefreshScore() {
-    if (this.data.busy || this.data.scoreLoading) return
-    return this.refreshScorePreview()
-  },
-
   async onSave() {
     if (this.data.busy || !this.data.analysisReady || !this.ensureLogin() || !this.ensureOpen()) return
     this.setData({ busy: true })
     wx.showLoading({ title: '保存中...', mask: true })
     try {
+      const prediction = this.data.predictResult
       await saveMealRecord({
         recordDate: this._recordDate, nodeCode: this.data.nodeId, mediaId: this.data.mediaId,
         foodsText: this.data.foodsText, carbsG: this.data.carbsG,
         hungerLevel: HUNGER_LEVEL[this.data.hunger] || 2, supplementText: this.data.supplement || undefined,
+        ...(prediction ? { predictNow: prediction.predictNow, predictSuggest: prediction.predictSuggest,
+          suggestText: prediction.suggestText || undefined } : {}),
         items: this.data.items.map((item) => ({ foodId: item.foodId || undefined, foodName: item.foodName,
           weightG: item.weightG, carbsG: item.carbsG, caloriesKcal: item.caloriesKcal }))
       })
       if (!this._alive) return
       saveRecord(this.data.nodeId, { type: 'meal', foods: this.data.foodsText, carbs: this.data.carbsG,
         hunger: this.data.hunger, supplement: this.data.supplement,
-        predictedGlucose: null, suggestedGlucose: null }, this._recordDate)
+        predictedGlucose: prediction ? prediction.predictNow : null,
+        suggestedGlucose: prediction ? prediction.predictSuggest : null }, this._recordDate)
       clearShotImage()
       wx.showToast({ title: '饮食记录已保存', icon: 'success' })
       wx.switchTab({ url: '/pages/ai/ai' })

@@ -24,23 +24,34 @@
     </view>
   </view>
 
-  <view wx:if="{{hasAnalysis && !recognizing && !analysisError && !needsReanalysis}}" class="card score-card">
-    <view class="score-header">
-      <text class="section-title">模拟预测评分</text>
-      <text class="score-badge">演示数据</text>
-    </view>
-    <text wx:if="{{scoreLoading}}" class="recognition-tip">正在生成模拟评分…</text>
-    <view wx:if="{{scorePreview}}" class="score-result">
-      <view class="score-value-row">
-        <text class="score-value">{{scorePreview.score}}</text>
-        <text class="score-unit">/ {{scorePreview.maxScore}} 分</text>
+  <view wx:if="{{hasAnalysis && !recognizing && !analysisError && !needsReanalysis}}" class="card predict-card">
+    <view class="section-title">餐后血糖预测</view>
+    <text wx:if="{{predictLoading}}" class="recognition-tip">正在计算餐后血糖预测…</text>
+    <view wx:if="{{predictResult}}" class="predict-compare">
+      <view class="predict-col">
+        <text class="predict-col-title">① 当前餐食</text>
+        <view class="predict-value-row">
+          <text class="predict-value">{{predictResult.predictNow}}</text>
+          <text class="predict-unit">mmol/L</text>
+        </view>
+        <text class="predict-col-label">按当前份量吃的餐后血糖</text>
+        <text class="predict-carbs">碳水 {{predictResult.predictCarbs}}g</text>
       </view>
-      <text class="score-label">{{scorePreview.label}}</text>
-      <text class="recognition-tip">{{scorePreview.description}}</text>
+      <view class="predict-divider"></view>
+      <view class="predict-col">
+        <text class="predict-col-title">② 推荐吃法</text>
+        <view class="predict-value-row">
+          <text class="predict-value">{{predictResult.predictSuggest}}</text>
+          <text class="predict-unit">mmol/L</text>
+        </view>
+        <text class="predict-col-label">按推荐份量吃的餐后血糖</text>
+        <text class="predict-suggest-text">{{predictResult.suggestText}}</text>
+      </view>
     </view>
-    <text wx:if="{{scoreError}}" class="recognition-warning">{{scoreError}}</text>
-    <text class="score-note">真实预测模块尚未接入，此分数不写入记录，也不用于健康判断。</text>
-    <button class="btn-ghost btn-block btn-sm" bindtap="onRefreshScore" disabled="{{busy || scoreLoading}}">重新生成模拟评分</button>
+    <text wx:if="{{predictError}}" class="recognition-warning">{{predictError}}</text>
+    <button wx:if="{{predictError}}" class="btn-ghost btn-block btn-sm" bindtap="onRetryPredict" disabled="{{busy || predictLoading}}">重试预测</button>
+    <text wx:if="{{!predictLoading && !predictResult && !predictError}}" class="recognition-tip">填写餐前实测血糖后自动生成预测；不填写也可保存饮食记录。</text>
+    <text wx:if="{{predictNotice}}" class="recognition-tip">{{predictNotice}}</text>
   </view>
 
   <view wx:if="{{hasAnalysis}}" class="card">
@@ -78,7 +89,7 @@
 
   <view wx:if="{{hasAnalysis}}" class="card">
     <view class="section-title">当前实测血糖（可选）</view>
-    <text class="recognition-tip">如有真实测量值，可填写用于页面展示。模拟评分不依赖此项，不填写也能保存饮食记录；不会生成模拟血糖数值。</text>
+    <text class="recognition-tip">如有真实测量值，可填写。餐后血糖预测依赖此项；不填写时不生成预测，仍可保存饮食记录。</text>
     <view class="meal-weight">
       <text>当前血糖</text>
       <input type="digit" value="{{currentGlucose}}" placeholder="实测值" bindinput="onCurrentGlucoseInput" disabled="{{busy}}" />

@@ -18,16 +18,17 @@
 .nutrition-source.estimated { color: #a05b0b; }
 .meal-weight { display: flex; align-items: center; gap: 16rpx; margin: 16rpx 0; font-size: var(--fs-small); }
 .meal-weight input { flex: 1; min-width: 0; padding: 12rpx 16rpx; background: #fff; border: 1rpx solid #d8e0dc; border-radius: 10rpx; }
-.score-card { border: 1rpx solid #cce1d4; }
-.score-header { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
-.score-header .section-title { margin: 0; }
-.score-badge { flex-shrink: 0; padding: 6rpx 16rpx; border-radius: 20rpx; background: #fff3d7; color: #8b590c; font-size: var(--fs-small); }
-.score-result { margin: 24rpx 0 16rpx; padding: 24rpx; border-radius: 16rpx; background: var(--brand-soft); }
-.score-value-row { display: flex; align-items: baseline; gap: 12rpx; }
-.score-value { color: var(--brand-dark); font-size: 80rpx; line-height: 1.2; font-weight: 800; }
-.score-unit { color: #526358; font-size: var(--fs-body); }
-.score-label { display: block; margin-top: 12rpx; color: var(--brand-dark); font-size: var(--fs-body); font-weight: 600; }
-.score-note { display: block; margin: 16rpx 0 20rpx; color: #8b590c; font-size: var(--fs-small); line-height: 1.6; }
+.predict-card { border: 1rpx solid #cce1d4; }
+.predict-compare { display: flex; align-items: stretch; margin: 24rpx 0 8rpx; }
+.predict-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.predict-divider { flex-shrink: 0; width: 1rpx; background: #d8e6dd; margin: 0 24rpx; }
+.predict-col-title { color: #526358; font-size: var(--fs-small); font-weight: 600; }
+.predict-value-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8rpx; margin-top: 16rpx; }
+.predict-value { color: var(--brand-dark); font-size: 64rpx; line-height: 1.2; font-weight: 800; }
+.predict-unit { color: #526358; font-size: var(--fs-small); }
+.predict-col-label { display: block; margin-top: 8rpx; color: var(--brand-dark); font-size: var(--fs-small); font-weight: 600; }
+.predict-carbs { display: block; margin-top: 12rpx; color: #6b7280; font-size: var(--fs-small); }
+.predict-suggest-text { display: block; margin-top: 12rpx; color: #6b7280; font-size: var(--fs-small); line-height: 1.6; word-break: break-all; }
 
 .photo-meal-img {
   width: 100%;
