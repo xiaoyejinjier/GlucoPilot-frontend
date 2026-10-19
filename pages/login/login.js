@@ -1,8 +1,9 @@
 const { login } = require('../../utils/storage')
 const { applyDisplayToCurrentPage, getDisplayStyle } = require('../../utils/display')
-const { wechatLogin, sendSmsCode, phoneLogin } = require('../../services/api')
-const config = require('../../utils/config')
+const { wechatLogin, sendSmsCode, phoneLogin, sendEmailCode, emailLogin } = require('../../services/api')
 const app = getApp()
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 Page({
   data: {
@@ -10,11 +11,18 @@ Page({
     phonePanel: false,
     phone: '',
     smsCode: '',
-    smsCooldown: 0
+    smsCooldown: 0,
+    emailPanel: false,
+    email: '',
+    emailCode: '',
+    emailCooldown: 0
   },
 
   onLoad() {
     this.setData({ displayStyle: getDisplayStyle() })
+    if (app.globalData.isLoggedIn) {
+      wx.switchTab({ url: '/pages/index/index' })
+    }
   },
 
   onShow() {
@@ -23,30 +31,22 @@ Page({
 
   onUnload() {
     if (this._smsTimer) clearInterval(this._smsTimer)
+    if (this._emailTimer) clearInterval(this._emailTimer)
   },
 
-  checkConnectionSettings() {
-    const issue = config.connectionIssue()
-    if (!issue) return true
-    wx.showToast({ title: '服务连接未就绪，请稍后重试', icon: 'none' })
-    return false
-  },
-
-  finishLogin() {
+  finishLogin(session) {
     login()
     app.globalData.isLoggedIn = true
-    // 资料、当前声明版本与用户已同意版本校验完成后再决定去向。
-    if (typeof app.goAfterLogin === 'function') {
-      return app.goAfterLogin()
+    // 资料与偏好由 app.syncProfile 从 /users/me 拉取后回填
+    if (typeof app.syncProfile === 'function') {
+      app.syncProfile()
     }
-    wx.reLaunch({ url: '/pages/disclaimer/disclaimer?forced=1' })
+    wx.switchTab({ url: '/pages/index/index' })
   },
 
   onWechatLogin() {
-    if (!this.checkConnectionSettings()) return
     wx.showLoading({ title: '登录中...', mask: true })
     wx.login({
-      timeout: 10000,
       success: (res) => {
         if (!res.code) {
           wx.hideLoading()
@@ -63,26 +63,15 @@ Page({
             wx.showToast({ title: err.message || '登录失败', icon: 'none' })
           })
       },
-      fail: (err) => {
+      fail: () => {
         wx.hideLoading()
-        // wx.login 需要连微信服务器：开发者工具代理不可用时它同样会失败
-        // （错误形如 tunneling socket could not be established ... ECONNREFUSED 127.0.0.1:7890）。
-        // 只说"wx.login 失败"会让开发者去查后端，而问题其实在工具的代理设置上。
-        const detail = (err && err.errMsg) || ''
-        const proxyBroken = /tunneling socket|ECONNREFUSED|ERR_PROXY|proxy/i.test(detail)
-        wx.showToast({
-          title: proxyBroken
-            ? '开发者工具代理不可用：请在设置→代理设置里选"不使用任何代理"'
-            : `微信登录凭证获取失败：${detail || '请重试'}`,
-          icon: 'none',
-          duration: 5000
-        })
+        wx.showToast({ title: 'wx.login 失败', icon: 'none' })
       }
     })
   },
 
   onPhoneLogin() {
-    this.setData({ phonePanel: true })
+    this.setData({ phonePanel: true, emailPanel: false })
   },
 
   onClosePhonePanel() {
@@ -98,7 +87,6 @@ Page({
   },
 
   onSendSms() {
-    if (!this.checkConnectionSettings()) return
     const phone = this.data.phone
     if (!/^1\d{10}$/.test(phone)) {
       wx.showToast({ title: '请输入正确手机号', icon: 'none' })
@@ -130,7 +118,6 @@ Page({
   },
 
   onConfirmPhoneLogin() {
-    if (!this.checkConnectionSettings()) return
     const { phone, smsCode } = this.data
     if (!/^1\d{10}$/.test(phone)) {
       wx.showToast({ title: '请输入正确手机号', icon: 'none' })
@@ -145,6 +132,76 @@ Page({
       .then((data) => {
         wx.hideLoading()
         this.setData({ phonePanel: false })
+        this.finishLogin(data)
+      })
+      .catch((err) => {
+        wx.hideLoading()
+        wx.showToast({ title: err.message || '登录失败', icon: 'none' })
+      })
+  },
+
+  onEmailLogin() {
+    this.setData({ emailPanel: true, phonePanel: false })
+  },
+
+  onCloseEmailPanel() {
+    this.setData({ emailPanel: false })
+  },
+
+  onEmailInput(e) {
+    this.setData({ email: e.detail.value.trim() })
+  },
+
+  onEmailCodeInput(e) {
+    this.setData({ emailCode: e.detail.value.trim() })
+  },
+
+  onSendEmailCode() {
+    const email = this.data.email
+    if (!EMAIL_RE.test(email)) {
+      wx.showToast({ title: '请输入正确邮箱', icon: 'none' })
+      return
+    }
+    if (this.data.emailCooldown > 0) return
+
+    wx.showLoading({ title: '发送中...', mask: true })
+    sendEmailCode(email, 'login')
+      .then(() => {
+        wx.hideLoading()
+        wx.showToast({ title: '验证码已发送至邮箱', icon: 'none' })
+        this.setData({ emailCooldown: 60 })
+        if (this._emailTimer) clearInterval(this._emailTimer)
+        this._emailTimer = setInterval(() => {
+          const next = this.data.emailCooldown - 1
+          if (next <= 0) {
+            clearInterval(this._emailTimer)
+            this.setData({ emailCooldown: 0 })
+          } else {
+            this.setData({ emailCooldown: next })
+          }
+        }, 1000)
+      })
+      .catch((err) => {
+        wx.hideLoading()
+        wx.showToast({ title: err.message || '发送失败', icon: 'none' })
+      })
+  },
+
+  onConfirmEmailLogin() {
+    const { email, emailCode } = this.data
+    if (!EMAIL_RE.test(email)) {
+      wx.showToast({ title: '请输入正确邮箱', icon: 'none' })
+      return
+    }
+    if (!/^\d{6}$/.test(emailCode)) {
+      wx.showToast({ title: '请输入 6 位验证码', icon: 'none' })
+      return
+    }
+    wx.showLoading({ title: '登录中...', mask: true })
+    emailLogin(email, emailCode)
+      .then((data) => {
+        wx.hideLoading()
+        this.setData({ emailPanel: false })
         this.finishLogin(data)
       })
       .catch((err) => {

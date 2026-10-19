@@ -1,4 +1,5 @@
 const { get, post, put, patch, del, setToken } = require('../utils/request')
+const { baseUrl } = require('../utils/config')
 const mappers = require('../utils/mappers')
 const { getFoodImage } = require('../utils/food-images')
 const { openSse } = require('../utils/sse')
@@ -26,6 +27,17 @@ function formatTime(iso) {
   return s.length >= 16 ? s.slice(0, 16) : s
 }
 
+/** 把管理端保存的 /api/v1/cms/images/{id} 解析成小程序可请求的完整地址。 */
+function resolveCmsImage(url) {
+  const source = String(url || '').trim()
+  if (!source) return ''
+  if (/^https?:\/\//i.test(source)) return source
+  if (/^\/api\/v1\/cms\/images\/\d+$/.test(source)) {
+    return `${String(baseUrl).replace(/\/+$/, '')}${source.slice('/api/v1'.length)}`
+  }
+  return source
+}
+
 function mapNewsItem(n) {
   const type = n.contentType === 2 ? 'video' : 'article'
   return {
@@ -37,7 +49,7 @@ function mapNewsItem(n) {
     type,
     typeLabel: type === 'video' ? '视频' : '图文',
     time: formatTime(n.publishAt),
-    cover: n.coverUrl || '/assets/news/n1.jpg',
+    cover: resolveCmsImage(n.coverUrl) || '/assets/news/n1.jpg',
     coverText: type === 'video' ? '▶' : '资讯',
     videoUrl: n.videoUrl || '',
     contentBody: n.contentBody || '',
@@ -53,7 +65,7 @@ function mapBanner(b) {
     id: b.id,
     title: b.title,
     desc: b.subtitle || '',
-    imageUrl: b.imageUrl || '',
+    imageUrl: resolveCmsImage(b.imageUrl),
     linkUrl: b.linkUrl || ''
   }
 }
@@ -88,6 +100,18 @@ function sendSmsCode(phone, scene) {
 
 function phoneLogin(phone, smsCode) {
   return post('/auth/phone/sessions', { phone, smsCode }, { auth: false, timeout: 15000 }).then((data) => {
+    setToken(data.accessToken)
+    wx.setStorageSync('isLoggedIn', true)
+    return data
+  })
+}
+
+function sendEmailCode(email, scene) {
+  return post('/auth/email/codes', { email, scene: scene || 'login' }, { auth: false })
+}
+
+function emailLogin(email, emailCode) {
+  return post('/auth/email/sessions', { email, emailCode }, { auth: false }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
     return data
@@ -274,7 +298,7 @@ function fetchDayMeals(recordDate) {
 function syncMockGlucose(readings) {
   return post('/device/glucose-sync', {
     provider: 'MOCK',
-    readings: readings || defaultMockReadings()
+    payload: { readings: readings || defaultMockReadings() }
   }, { auth: true })
 }
 
@@ -311,6 +335,10 @@ function agreeDisclaimer(disclaimerVersion) {
 
 function bindPhone(phone, verifyCode) {
   return patch('/users/me/phone', { phone, verifyCode }, { auth: true })
+}
+
+function bindEmail(email, verifyCode) {
+  return patch('/users/me/email', { email, verifyCode }, { auth: true })
 }
 
 function fetchAppConfig(groups) {
@@ -388,6 +416,8 @@ module.exports = {
   wechatLogin,
   sendSmsCode,
   phoneLogin,
+  sendEmailCode,
+  emailLogin,
   logoutRemote,
   fetchBanners,
   fetchNews,
@@ -420,6 +450,7 @@ module.exports = {
   updateSettings,
   agreeDisclaimer,
   bindPhone,
+  bindEmail,
   fetchAppConfig,
   submitFeedback,
   fetchFeedbacks,
