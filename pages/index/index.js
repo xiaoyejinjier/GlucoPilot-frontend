@@ -1,6 +1,7 @@
 const { BANNERS, NEWS_CHANNELS, NEWS_LIST } = require('../../utils/constants')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { fetchBanners, fetchNews } = require('../../services/api')
+const { mapField } = require('../../utils/remote-image')
 const config = require('../../utils/config')
 const app = getApp()
 
@@ -32,21 +33,25 @@ Page({
       fetchBanners().catch(() => null),
       fetchNews('', 1, 20).catch(() => null)
     ]).then(([banners, newsPage]) => {
-      const patch = { loading: false }
-      if (banners && banners.length) {
-        patch.banners = banners
-      } else if (!config.fallbackLocal) {
-        patch.banners = []
-      }
-      if (newsPage && newsPage.records) {
-        patch.filteredNews = newsPage.records
-        patch._allNews = newsPage.records
-        patch.activeChannel = ''
-      } else if (!config.fallbackLocal) {
-        patch.filteredNews = []
-        patch._allNews = []
-      }
-      this.setData(patch)
+      const bannerTask = banners && banners.length ? mapField(banners, 'imageUrl') : Promise.resolve(banners)
+      const newsTask = newsPage && newsPage.records ? mapField(newsPage.records, 'cover') : Promise.resolve(null)
+      return Promise.all([bannerTask, newsTask]).then(([localBanners, localNews]) => {
+        const patch = { loading: false }
+        if (localBanners && localBanners.length) {
+          patch.banners = localBanners
+        } else if (!config.fallbackLocal) {
+          patch.banners = []
+        }
+        if (localNews) {
+          patch.filteredNews = localNews
+          patch._allNews = localNews
+          patch.activeChannel = ''
+        } else if (!config.fallbackLocal) {
+          patch.filteredNews = []
+          patch._allNews = []
+        }
+        this.setData(patch)
+      })
     })
   },
 
@@ -63,9 +68,9 @@ Page({
     fetchNews(channel, 1, 20)
       .then((page) => {
         const list = (page && page.records) || []
-        this.setData({
-          loading: false,
-          filteredNews: list.length ? list : localAll.filter((n) => n.channel === channel)
+        const shown = list.length ? list : localAll.filter((n) => n.channel === channel)
+        return mapField(shown, 'cover').then((localNews) => {
+          this.setData({ loading: false, filteredNews: localNews })
         })
       })
       .catch(() => {

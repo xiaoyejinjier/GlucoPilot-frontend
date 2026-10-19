@@ -8,10 +8,13 @@
     indicator-active-color="#fff"
   >
     <swiper-item wx:for="{{banners}}" wx:key="index">
-      <view class="banner-inner">
-        <text class="banner-badge">公司宣传 {{index + 1}}/{{banners.length}}</text>
-        <text class="banner-title">{{item.title}}</text>
-        <text class="banner-desc">{{item.desc}}</text>
+      <view class="banner-slide">
+        <image wx:if="{{item.imageUrl}}" class="banner-img" src="{{item.imageUrl}}" mode="aspectFill" />
+        <view class="banner-inner">
+          <text class="banner-badge">公司宣传 {{index + 1}}/{{banners.length}}</text>
+          <text class="banner-title">{{item.title}}</text>
+          <text class="banner-desc">{{item.desc}}</text>
+        </view>
       </view>
     </swiper-item>
   </swiper>

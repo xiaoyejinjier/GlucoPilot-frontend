@@ -6,14 +6,30 @@
   overflow: hidden;
 }
 
+.banner-slide {
+  position: relative;
+  height: 100%;
+}
+
+.banner-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .banner-inner {
+  position: relative;
+  z-index: 1;
   height: 100%;
   padding: 36rpx 32rpx;
   color: #fff;
-  background: #2f6f5e;
+  background: linear-gradient(180deg, rgba(47, 111, 94, 0.15), rgba(47, 111, 94, 0.72));
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  box-sizing: border-box;
 }
 
 .banner-badge {

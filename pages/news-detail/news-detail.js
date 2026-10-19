@@ -1,6 +1,7 @@
 const { NEWS_LIST } = require('../../utils/constants')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { fetchNewsDetail, updateNewsAction } = require('../../services/api')
+const { loadRemoteImage } = require('../../utils/remote-image')
 
 Page({
   data: {
@@ -27,16 +28,17 @@ Page({
 
   loadDetail(id) {
     fetchNewsDetail(id)
-      .then((news) => {
+      .then((news) => loadRemoteImage(news && news.cover).then((cover) => {
+        const next = Object.assign({}, news, { cover: cover || (news && news.cover) || '' })
         this.setData({
-          news,
-          liked: !!news.liked,
-          collected: !!news.collected
+          news: next,
+          liked: !!next.liked,
+          collected: !!next.collected
         })
-        if (news.title) {
-          wx.setNavigationBarTitle({ title: news.title })
+        if (next.title) {
+          wx.setNavigationBarTitle({ title: next.title })
         }
-      })
+      }))
       .catch(() => {
         // 保留本地 fallback
       })
