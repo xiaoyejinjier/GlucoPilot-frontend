@@ -12,7 +12,8 @@ const identifiedMeal = () => ({
     carbsPer100g: 25, caloriesPer100g: 116, nutritionSource: 'LIBRARY' }],
   matchedCount: 1, newFoodsCount: 0, warnings: [], model: 'test-vision'
 })
-const defaultPrediction = () => ({ predictNow: 10.6, predictSuggest: 7.8, suggestText: '建议主食适量减少' })
+const defaultPrediction = () => ({ predictNow: 10.6, predictSuggest: 7.8, suggestText: '建议主食适量减少',
+  suggestCarbs: 55, suggestItems: [{ foodName: '米饭', suggestWeight: 112 }] })
 
 // 可手动推进的假定时器：页面防抖 800ms 在测试中由 runPending/flush 触发。
 function createTimers() {
@@ -34,7 +35,7 @@ function createTimers() {
 function createPage(options = {}) {
   let definition
   const timers = createTimers()
-  const calls = { analysis: 0, upload: 0, predictions: 0, predictPayloads: [], payloads: [], records: [], updates: 0 }
+  const calls = { analysis: 0, upload: 0, predictions: 0, predictPayloads: [], payloads: [], records: [], updates: 0, toasts: [], navigations: [], modals: [], setDataKeys: [] }
   const modules = {
     '../../services/api': {
       analyzeMealPhoto: async () => {
@@ -50,14 +51,19 @@ function createPage(options = {}) {
     },
     '../../utils/storage': {
       getTodayKey: () => '2026-10-19',
-      getRecords: () => options.glucose != null ? { before_breakfast: { type: 'glucose', value: options.glucose } } : {},
+      getRecords: () => {
+        if (options.records instanceof Function) return options.records()
+        if (options.records != null) return options.records
+        return options.glucose != null ? { before_breakfast: { type: 'glucose', value: options.glucose } } : {}
+      },
       saveRecord: (...args) => calls.records.push(args)
     },
     '../../utils/display': { applyDisplayToCurrentPage() {} },
     '../../utils/shot': { readShotImage: () => 'meal-photo.jpg', clearShotImage() {} },
     '../../utils/media': { uploadMealImage: async () => { calls.upload++; return { id: 7 } } },
     '../../utils/request': { getToken: () => 'test-token' },
-    '../../utils/record-window': { getNodeRecordWindow: () => ({ locked: false }) }
+    '../../utils/record-window': { getNodeRecordWindow: (nodeId) => (options.windowLocked && nodeId === 'before_lunch' ? { locked: true, lockReason: '该时段已截止' } : { locked: false }) },
+    '../../utils/constants': require('../../utils/constants')
   }
   vm.runInNewContext(pageSource, {
     Page: (page) => { definition = page },
@@ -67,16 +73,25 @@ function createPage(options = {}) {
     },
     setTimeout: timers.setTimeout,
     clearTimeout: timers.clearTimeout,
-    wx: { showModal() {}, showToast() {}, showLoading() {}, hideLoading() {}, switchTab() {}, redirectTo() {} },
+    wx: {
+      showModal: (...args) => calls.modals.push(args),
+      showToast: (...args) => calls.toasts.push(args),
+      navigateTo: (...args) => calls.navigations.push(args),
+      showLoading() {}, hideLoading() {}, switchTab() {}, redirectTo() {}
+    },
     console
   })
   const page = { ...definition, data: JSON.parse(JSON.stringify(definition.data)) }
   page.setData = function (update) {
     calls.updates++
     for (const [key, value] of Object.entries(update)) {
+      calls.setDataKeys.push(key)
       const segments = key.split('.')
       let target = this.data
-      for (const segment of segments.slice(0, -1)) target = target[segment]
+      for (const segment of segments.slice(0, -1)) {
+        const indexed = segment.match(/^(.+)\[(\d+)\]$/)
+        target = indexed ? target[indexed[1]][Number(indexed[2])] : target[segment]
+      }
       target[segments.at(-1)] = value
     }
   }
@@ -104,7 +119,7 @@ test('识别成功且已有餐前血糖，防抖后自动首调真实预测', as
   assert.equal(page.data.predictError, '')
 })
 
-test('未录餐前血糖为空态不发起预测，补充血糖后触发', async () => {
+test('草稿输入不触发预测，点击确定才更新并重算', async () => {
   const { page, calls, timers } = createPage()
   await page.onLoad({})
   await flush()
@@ -113,10 +128,18 @@ test('未录餐前血糖为空态不发起预测，补充血糖后触发', async
   assert.equal(calls.predictions, 0)
   assert.equal(page.data.predictResult, null)
   assert.equal(page.data.predictError, '')
-  page.onCurrentGlucoseInput({ detail: { value: '6.2' } })
+  page.onGlucoseInput({ detail: { value: '6.2' } })
+  await flush()
+  await timers.flush()
+  assert.equal(page.data.glucoseInput, '6.2')
+  assert.equal(page.data.currentGlucose, '')
+  assert.equal(calls.predictions, 0)
+  page.onConfirmGlucose()
   await timers.flush()
   assert.equal(calls.predictions, 1)
   assert.equal(calls.predictPayloads[0].currentGlucose, 6.2)
+  assert.equal(page.data.currentGlucose, '6.2')
+  assert.equal(page.data.predictResult.predictNow, 10.6)
 })
 
 test('未分类食物不入预测且碳水扣减，保存仍用全量（方案B）', async () => {
@@ -237,16 +260,163 @@ test('补充信息或退出页面后，迟到响应不回写旧结果', async ()
   }
 })
 
-test('切换饥饿感不触发预测重算', async () => {
+test('确定校验：空值/非数字/超范围拦截并提示，边界值通过', async () => {
+  for (const bad of ['', 'abc', '0', '0.05', '30.1']) {
+    const { page, calls, timers } = createPage()
+    await page.onLoad({})
+    await flush()
+    await timers.flush()
+    page.onGlucoseInput({ detail: { value: bad } })
+    page.onConfirmGlucose()
+    await timers.flush()
+    assert.equal(calls.predictions, 0, 'input=' + bad)
+    assert.equal(page.data.currentGlucose, '', 'input=' + bad)
+    assert.equal(calls.toasts.length, 1, 'input=' + bad)
+    assert.ok(String(calls.toasts[0][0].title).includes('0.1-30'), 'input=' + bad)
+  }
+  const edge = createPage()
+  await edge.page.onLoad({})
+  await flush()
+  await edge.timers.flush()
+  edge.page.onGlucoseInput({ detail: { value: '30' } })
+  edge.page.onConfirmGlucose()
+  await edge.timers.flush()
+  assert.equal(edge.page.data.currentGlucose, '30')
+  assert.equal(edge.calls.predictions, 1)
+})
+
+test('餐前血糖或本餐已有记录时隐藏手动输入卡', async () => {
+  const none = createPage()
+  await none.page.onLoad({})
+  await flush()
+  assert.equal(none.page.data.beforeMealRecorded, false)
+
+  const glucoseRecorded = createPage({ records: { before_breakfast: { type: 'glucose', value: 5.6 } } })
+  await glucoseRecorded.page.onLoad({})
+  await flush()
+  await glucoseRecorded.timers.flush()
+  assert.equal(glucoseRecorded.page.data.beforeMealRecorded, true)
+  assert.equal(glucoseRecorded.page.data.currentGlucose, '5.6')
+  assert.equal(glucoseRecorded.calls.predictions, 1)
+
+  const mealRecorded = createPage({ records: { breakfast: { type: 'meal', foods: '米饭' } } })
+  await mealRecorded.page.onLoad({})
+  await flush()
+  assert.equal(mealRecorded.page.data.beforeMealRecorded, true)
+  assert.equal(mealRecorded.page.data.currentGlucose, '')
+})
+
+test('打卡返回后 onShow 自动刷新血糖并重算', async () => {
+  let records = {}
+  const { page, calls, timers } = createPage({ records: () => records })
+  await page.onLoad({})
+  await flush()
+  await timers.flush()
+  assert.equal(page.data.beforeMealRecorded, false)
+  assert.equal(calls.predictions, 0)
+  // 模拟「去拍照记录」完成打卡：餐前血糖写入缓存
+  records = { before_breakfast: { type: 'glucose', value: 5.8 } }
+  page.onShow()
+  await flush()
+  assert.equal(page.data.beforeMealRecorded, true)
+  assert.equal(page.data.currentGlucose, '5.8')
+  assert.equal(page.data.glucoseInput, '5.8')
+  await timers.flush()
+  assert.equal(calls.predictions, 1)
+  assert.equal(calls.predictPayloads[0].currentGlucose, 5.8)
+})
+
+test('去拍照记录跳转餐前节点，锁定时弹窗不跳转', async () => {
+  const { page, calls } = createPage()
+  await page.onLoad({ nodeId: 'lunch' })
+  await flush()
+  page.onGoMeasure()
+  assert.equal(calls.navigations.length, 1)
+  assert.ok(calls.navigations[0][0].url.includes('nodeId=before_lunch'))
+  assert.ok(calls.navigations[0][0].url.includes('isMeal=0'))
+  assert.ok(calls.navigations[0][0].url.includes('nodeName='))
+
+  const locked = createPage({ windowLocked: true })
+  await locked.page.onLoad({ nodeId: 'lunch' })
+  await flush()
+  locked.page.onGoMeasure()
+  assert.equal(locked.calls.navigations.length, 0)
+  assert.equal(locked.calls.modals.length, 1)
+})
+
+test('食物列表默认折叠前两项，展开后重新识别重置', async () => {
+  const { page, calls, timers } = createPage({ analyze: async () => ({
+    items: [
+      { foodName: '米饭', foodId: 12, categoryCode: 1, weightG: 100, carbsPer100g: 25, caloriesPer100g: 116, nutritionSource: 'LIBRARY' },
+      { foodName: '清炒西兰花', foodId: 8, categoryCode: 3, weightG: 120, carbsPer100g: 4.3, caloriesPer100g: 34, nutritionSource: 'LIBRARY' },
+      { foodName: '煎鸡蛋', categoryCode: 2, weightG: 55, carbsPer100g: 1.3, caloriesPer100g: 143, nutritionSource: 'AI_ESTIMATE' }
+    ],
+    matchedCount: 2, newFoodsCount: 1, warnings: [], model: 'test-vision'
+  }) })
+  await page.onLoad({})
+  await flush()
+  await timers.flush()
+  assert.equal(page.data.items.length, 3)
+  assert.equal(page.data.foodListExpanded, false)
+  page.onToggleFoodList()
+  assert.equal(page.data.foodListExpanded, true)
+  page.onReAnalyze()
+  await flush()
+  await timers.flush()
+  assert.equal(calls.analysis, 2)
+  assert.equal(page.data.foodListExpanded, false)
+  assert.equal(page.data.items.length, 3)
+})
+
+test('预测成功后建议按 foodName 联动写入列表，使用局部路径更新', async () => {
   const { page, calls, timers } = createPage({ glucose: 5.6 })
   await page.onLoad({})
   await flush()
   await timers.flush()
-  assert.equal(calls.predictions, 1)
-  page.onHunger({ currentTarget: { dataset: { val: '微饿' } } })
+  assert.equal(page.data.suggestCount, 1)
+  assert.equal(page.data.items[0].suggestWeight, 112)
+  assert.equal(page.data.items[0].suggestMatched, true)
+  assert.equal(page.data.items[0].suggestHint, '')  // 100g→112g 无削减，不附份数提示
+  assert.equal(page.data.predictResult.suggestCarbs, 55)
+  assert.ok(calls.setDataKeys.includes('items[0].suggestWeight'))
+  // 建议写回必须用局部路径：最后一次建议写入之后不得再出现全量 items 覆盖（防失焦）
+  const lastSuggestWrite = calls.setDataKeys.lastIndexOf('items[0].suggestWeight')
+  assert.ok(!calls.setDataKeys.slice(lastSuggestWrite).includes('items'))
+  // 建议削减场景：改重量 200g 后重算，112/200≈0.56 接近减半
+  const deferred = { resolve: null }
+  const controlled = createPage({ glucose: 5.6, predict: () => new Promise((resolve) => { deferred.resolve = resolve }) })
+  await controlled.page.onLoad({})
+  await flush()
+  await controlled.timers.flush()
+  controlled.page.onWeightInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '200' } })
+  await controlled.timers.flush()
+  deferred.resolve({ predictNow: 11, predictSuggest: 7.8, suggestText: 'x', suggestCarbs: 30,
+    suggestItems: [{ foodName: '米饭', suggestWeight: 100 }] })
+  await flush()
+  await controlled.timers.flush()
+  assert.equal(controlled.page.data.items[0].suggestWeight, 100)
+  assert.equal(controlled.page.data.items[0].suggestHint, ' (减半)')
+  // 危险场景空建议：suggestCount 归零后列表不渲染建议
+  const danger = createPage({ glucose: 5.6, predict: async () => ({ predictNow: 20, predictSuggest: 16, suggestText: '暂缓', suggestCarbs: 0, suggestItems: [] }) })
+  await danger.page.onLoad({})
+  await flush()
+  await danger.timers.flush()
+  assert.equal(danger.page.data.suggestCount, 0)
+  assert.equal(danger.page.data.items[0].suggestMatched, false)  // 空建议名单：箭头与状态整体隐藏
+  assert.equal(danger.page.data.items[0].suggestWeight, null)  // 防御态按「正常」处理
+})
+
+test('保存请求与本地缓存不再携带饱腹感字段', async () => {
+  const { page, calls, timers } = createPage({ glucose: 5.6 })
+  await page.onLoad({})
+  await flush()
   await timers.flush()
-  assert.equal(calls.predictions, 1)
-  assert.equal(page.data.hunger, '微饿')
+  page.onSave()
+  await flush()
+  assert.equal(calls.payloads.length, 1)
+  assert.equal(Object.hasOwn(calls.payloads[0], 'hungerLevel'), false)
+  const cached = calls.records[0][1]
+  assert.equal(Object.hasOwn(cached, 'hunger'), false)
 })
 
 test('模板为两段对比预测卡片，模拟评分残留已清除', () => {
@@ -255,7 +425,28 @@ test('模板为两段对比预测卡片，模拟评分残留已清除', () => {
   assert.match(template, /predictResult\.predictNow/)
   assert.match(template, /predictResult\.predictSuggest/)
   assert.match(template, /bindtap="onRetryPredict"/)
-  for (const stale of ['scorePreview', 'onRefreshScore', '模拟预测评分', '演示数据']) {
+  assert.match(template, /bindtap="onConfirmGlucose"/)
+  assert.match(template, /bindtap="onGoMeasure"/)
+  assert.match(template, /bindtap="onToggleFoodList"/)
+  assert.match(template, /foodListExpanded \|\| index < 2/)
+  assert.match(template, /展开查看全部/)
+  assert.doesNotMatch(template, /onToggleGlucoseCard/)
+  assert.match(template, /placeholder="如 5.6"/)
+  assert.match(template, /去拍照记录/)
+  assert.match(template, /推荐碳水/)
+  assert.match(template, /建议吃 \{\{item.suggestWeight\}\}g/)
+  assert.match(template, /suggestCount > 0/)
+  assert.match(template, /food-suggest-arrow/)
+  assert.match(template, /suggestCount > 0 && item\.suggestMatched/)
+  assert.match(template, /class="food-suggest-group"/)
+  assert.match(template, /wx:else class="food-suggest-muted muted-neutral"/)
+  assert.match(template, /arrow-bad/)
+  assert.match(template, /muted-neutral/)
+  assert.doesNotMatch(template, /predict-suggest-text/)
+  assert.doesNotMatch(template, /predict-col-current|predict-col-suggest/)
+  assert.doesNotMatch(template, /per100Text/)
+  assert.match(template, /!beforeMealRecorded/)
+  for (const stale of ['scorePreview', 'onRefreshScore', '模拟预测评分', '演示数据', 'onCurrentGlucoseInput', '当前实测血糖（可选）', 'onHunger', '当前饱腹感']) {
     assert.doesNotMatch(template, new RegExp(stale))
   }
 })

@@ -123,7 +123,11 @@ Page({
         wx.showToast({ title: '保存成功', icon: 'success' })
         setTimeout(() => {
           this.setData({ busy: false })
-          wx.switchTab({ url: '/pages/ai/ai' })
+          // 智能返回：从 food-analysis「去拍照记录」进入时，返回该页继续餐食流程；正常打卡仍回记录页。
+          const pages = getCurrentPages()
+          const target = pages.findIndex((page) => page.route && page.route.indexOf('pages/food-analysis/food-analysis') >= 0)
+          if (target >= 0) wx.navigateBack({ delta: pages.length - 1 - target })
+          else wx.switchTab({ url: '/pages/ai/ai' })
         }, 800)
       })
       .catch((err) => {
