@@ -172,6 +172,7 @@ function createApi(responder) {
     del(url, data, options) { calls.push({ method: 'DELETE', url, data, options }); return responder({ method: 'DELETE', url, data }) }
   }
   const api = loadModule('services/api.js', (name) => {
+    if (name === './meal-analysis-mock') return { isEnabled: () => false, analyzeMealPhoto: () => Promise.resolve({}) }
     if (name === '../utils/request') return request
     if (name === '../utils/mappers') return {}
     if (name === '../utils/food-images') return { getFoodImage: () => '' }

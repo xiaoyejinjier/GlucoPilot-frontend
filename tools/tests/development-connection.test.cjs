@@ -83,6 +83,7 @@ test('登录/历史/资料使用有限等待，流式回复和照片分析保留
   const module = { exports: {} }
   vm.runInNewContext(fs.readFileSync(path.join(root, 'services/api.js'), 'utf8'), {
     module, wx: { setStorageSync() {} }, require: name => ({
+      './meal-analysis-mock': { isEnabled: () => false },
       '../utils/request': { get: record, post: record, setToken() {} },
       '../utils/mappers': { mapUserMe: value => value },
       '../utils/chat-sessions': require('../../utils/chat-sessions'),
