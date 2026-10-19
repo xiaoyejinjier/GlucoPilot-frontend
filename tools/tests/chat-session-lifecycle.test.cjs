@@ -173,6 +173,7 @@ function createApi(responder) {
   }
   const api = loadModule('services/api.js', (name) => {
     if (name === './meal-analysis-mock') return { isEnabled: () => false, analyzeMealPhoto: () => Promise.resolve({}) }
+    if (name === '../utils/config') return { baseUrl: 'http://127.0.0.1:8080/api/v1' }
     if (name === '../utils/request') return request
     if (name === '../utils/mappers') return {}
     if (name === '../utils/food-images') return { getFoodImage: () => '' }
