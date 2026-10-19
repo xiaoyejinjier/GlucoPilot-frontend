@@ -94,6 +94,18 @@ function phoneLogin(phone, smsCode) {
   })
 }
 
+function sendEmailCode(email, scene) {
+  return post('/auth/email/codes', { email, scene: scene || 'login' }, { auth: false })
+}
+
+function emailLogin(email, emailCode) {
+  return post('/auth/email/sessions', { email, emailCode }, { auth: false }).then((data) => {
+    setToken(data.accessToken)
+    wx.setStorageSync('isLoggedIn', true)
+    return data
+  })
+}
+
 function logoutRemote() {
   return del('/auth/sessions/current', null, { auth: true }).catch(() => null)
 }
@@ -274,7 +286,7 @@ function fetchDayMeals(recordDate) {
 function syncMockGlucose(readings) {
   return post('/device/glucose-sync', {
     provider: 'MOCK',
-    readings: readings || defaultMockReadings()
+    payload: { readings: readings || defaultMockReadings() }
   }, { auth: true })
 }
 
@@ -311,6 +323,10 @@ function agreeDisclaimer(disclaimerVersion) {
 
 function bindPhone(phone, verifyCode) {
   return patch('/users/me/phone', { phone, verifyCode }, { auth: true })
+}
+
+function bindEmail(email, verifyCode) {
+  return patch('/users/me/email', { email, verifyCode }, { auth: true })
 }
 
 function fetchAppConfig(groups) {
@@ -388,6 +404,8 @@ module.exports = {
   wechatLogin,
   sendSmsCode,
   phoneLogin,
+  sendEmailCode,
+  emailLogin,
   logoutRemote,
   fetchBanners,
   fetchNews,
@@ -420,6 +438,7 @@ module.exports = {
   updateSettings,
   agreeDisclaimer,
   bindPhone,
+  bindEmail,
   fetchAppConfig,
   submitFeedback,
   fetchFeedbacks,
