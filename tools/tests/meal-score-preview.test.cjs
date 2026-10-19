@@ -35,12 +35,16 @@ function createTimers() {
 function createPage(options = {}) {
   let definition
   const timers = createTimers()
-  const calls = { analysis: 0, upload: 0, predictions: 0, predictPayloads: [], payloads: [], records: [], updates: 0, toasts: [], navigations: [], modals: [], setDataKeys: [] }
+  const calls = { analysis: 0, upload: 0, predictions: 0, predictPayloads: [], payloads: [], upserts: [], records: [], updates: 0, toasts: [], navigations: [], modals: [], setDataKeys: [] }
   const modules = {
     '../../services/api': {
       analyzeMealPhoto: async () => {
         calls.analysis++
         return options.analyze ? options.analyze(calls.analysis) : identifiedMeal()
+      },
+      upsertGlucoseRecord: async (payload) => {
+        calls.upserts.push(payload)
+        if (options.upsertFail) throw options.upsertFail
       },
       predictMealGlucose: async (payload) => {
         calls.predictions++
@@ -134,11 +138,23 @@ test('草稿输入不触发预测，点击确定才更新并重算', async () =>
   assert.equal(page.data.glucoseInput, '6.2')
   assert.equal(page.data.currentGlucose, '')
   assert.equal(calls.predictions, 0)
-  page.onConfirmGlucose()
+  await page.onConfirmGlucose()
+  await flush()
+  // 手动确定与拍照打卡同链路：先落库到餐前节点，再写本地缓存并触发预测
+  assert.equal(calls.upserts.length, 1)
+  assert.equal(calls.upserts[0].nodeCode, 'before_breakfast')
+  assert.equal(calls.upserts[0].glucoseValue, 6.2)
+  assert.equal(calls.upserts[0].sourceType, 1)
+  assert.equal(calls.records.length, 1)
+  assert.equal(calls.records[0][0], 'before_breakfast')
+  assert.equal(calls.records[0][1].value, 6.2)
+  assert.equal(calls.records[0][1].type, 'glucose')
   await timers.flush()
   assert.equal(calls.predictions, 1)
   assert.equal(calls.predictPayloads[0].currentGlucose, 6.2)
   assert.equal(page.data.currentGlucose, '6.2')
+  assert.equal(page.data.beforeMealRecorded, true)
+  assert.equal(page.data.glucoseInput, '')
   assert.equal(page.data.predictResult.predictNow, 10.6)
 })
 
@@ -267,9 +283,10 @@ test('确定校验：空值/非数字/超范围拦截并提示，边界值通过
     await flush()
     await timers.flush()
     page.onGlucoseInput({ detail: { value: bad } })
-    page.onConfirmGlucose()
+    await page.onConfirmGlucose()
     await timers.flush()
     assert.equal(calls.predictions, 0, 'input=' + bad)
+    assert.equal(calls.upserts.length, 0, 'input=' + bad)
     assert.equal(page.data.currentGlucose, '', 'input=' + bad)
     assert.equal(calls.toasts.length, 1, 'input=' + bad)
     assert.ok(String(calls.toasts[0][0].title).includes('0.1-30'), 'input=' + bad)
@@ -279,10 +296,32 @@ test('确定校验：空值/非数字/超范围拦截并提示，边界值通过
   await flush()
   await edge.timers.flush()
   edge.page.onGlucoseInput({ detail: { value: '30' } })
-  edge.page.onConfirmGlucose()
+  await edge.page.onConfirmGlucose()
+  await flush()
   await edge.timers.flush()
   assert.equal(edge.page.data.currentGlucose, '30')
   assert.equal(edge.calls.predictions, 1)
+})
+
+test('手动确定落库失败：保留输入与卡片，提示错误可重试', async () => {
+  const { page, calls, timers } = createPage({ upsertFail: new Error('网络超时') })
+  await page.onLoad({})
+  await flush()
+  await timers.flush()
+  page.onGlucoseInput({ detail: { value: '5.9' } })
+  await page.onConfirmGlucose()
+  await flush()
+  await timers.flush()
+  // 失败不落库不写缓存，页面状态全部保留供重试
+  assert.equal(calls.upserts.length, 1)
+  assert.equal(calls.records.length, 0)
+  assert.equal(page.data.currentGlucose, '')
+  assert.equal(page.data.beforeMealRecorded, false)
+  assert.equal(page.data.glucoseInput, '5.9')
+  assert.equal(calls.predictions, 0)
+  assert.equal(page.data.busy, false)
+  assert.equal(calls.toasts.length, 1)
+  assert.ok(String(calls.toasts[0][0].title).includes('网络超时'))
 })
 
 test('餐前血糖或本餐已有记录时隐藏手动输入卡', async () => {

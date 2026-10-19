@@ -1,4 +1,4 @@
-const { analyzeMealPhoto, saveMealRecord, predictMealGlucose } = require('../../services/api')
+const { analyzeMealPhoto, saveMealRecord, predictMealGlucose, upsertGlucoseRecord } = require('../../services/api')
 const { getTodayKey, getRecords, saveRecord } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { readShotImage, clearShotImage } = require('../../utils/shot')
@@ -336,16 +336,33 @@ Page({
     // 仅更新草稿，点击「确定」才生效并触发预测重算。
     this.setData({ glucoseInput: e.detail.value })
   },
-  onConfirmGlucose() {
+  async onConfirmGlucose() {
     if (this.data.busy || this.data.predictLoading) return
     const value = numberOrNull(this.data.glucoseInput)
     if (value === null || value < 0.1 || value > 30) {
       wx.showToast({ title: '请输入 0.1-30 的血糖值', icon: 'none' })
       return
     }
-    const currentGlucose = String(value)
-    this.setData({ currentGlucose, 'metrics.glucose': currentGlucose })
-    this.schedulePredict()
+    if (!this.ensureLogin() || !this.ensureOpen()) return
+    this.setData({ busy: true })
+    try {
+      // 与拍照打卡同链路：先落库，成功后写本地缓存并隐藏输入卡
+      await upsertGlucoseRecord({
+        recordDate: this._recordDate,
+        nodeCode: BEFORE_MEAL[this.data.nodeId],
+        glucoseValue: value,
+        sourceType: 1
+      })
+      saveRecord(BEFORE_MEAL[this.data.nodeId], { value, type: 'glucose' }, this._recordDate)
+      const currentGlucose = String(value)
+      this.setData({ currentGlucose, 'metrics.glucose': currentGlucose, glucoseInput: '', beforeMealRecorded: true })
+      this.schedulePredict()
+    } catch (error) {
+      if (error.code === 40100) this.ensureLogin()
+      else wx.showToast({ title: error.message || '血糖保存失败，请重试', icon: 'none' })
+    } finally {
+      if (this._alive) this.setData({ busy: false })
+    }
   },
   onGoMeasure() {
     if (this.data.busy) return

@@ -37,7 +37,7 @@
       <input type="digit" value="{{glucoseInput}}" placeholder="如 5.6" bindinput="onGlucoseInput" disabled="{{busy}}" />
       <text>mmol/L</text>
     </view>
-    <button class="btn-primary btn-block btn-sm" bindtap="onConfirmGlucose" disabled="{{busy || predictLoading}}">确定</button>
+    <button class="btn-primary btn-block btn-sm" bindtap="onConfirmGlucose" loading="{{busy}}" disabled="{{busy || predictLoading}}">确定</button>
   </view>
 
   <view wx:if="{{hasAnalysis && !recognizing && !analysisError && !needsReanalysis}}" class="card predict-card">
