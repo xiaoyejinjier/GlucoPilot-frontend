@@ -1,4 +1,5 @@
 const api = require('../../services/api')
+const { mapField } = require('../../utils/remote-image')
 const social = require('../../utils/community')
 const { TAGS, reportUrl } = require('../../utils/publication')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
@@ -27,7 +28,8 @@ Page({
       const page = await api.fetchCommunityArticles({ pageNum, pageSize: 15, tag: this.data.activeTag,
         following: this.data.feedMode === 'following', keyword: this.data.keyword.trim() })
       if (!social.active(this, version) || run !== this._loadRun) return
-      const records = (page.records || []).map(post => ({ ...post, timeLabel: social.timeLabel(post.publishAt || post.createdAt) }))
+      const records = (await mapField(page.records || [], 'cover')).map(post => ({ ...post, timeLabel: social.timeLabel(post.publishAt || post.createdAt) }))
+      if (!social.active(this, version) || run !== this._loadRun) return
       const map = new Map((reset ? [] : this.data.posts).map(post => [post.id, post])); records.forEach(post => map.set(post.id, post))
       this.setData({ posts: Array.from(map.values()), pageNum, hasMore: pageNum < Number(page.pages), loading: false })
     } catch (error) {

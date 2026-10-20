@@ -1,5 +1,6 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const api = require('../../services/api')
+const { loadRemoteImage } = require('../../utils/remote-image')
 const social = require('../../utils/community')
 const { getToken } = require('../../utils/request')
 
@@ -34,8 +35,9 @@ Page({
     try {
       if (!this._newsId) throw new Error('文章不存在')
       const news = await api.fetchNewsDetail(this._newsId)
+      const cover = await loadRemoteImage(news.cover)
       if (!social.active(this, version)) return
-      this.setData({ news, liked: !!news.liked, collected: !!news.collected, loading: false })
+      this.setData({ news:{...news,cover}, liked: !!news.liked, collected: !!news.collected, loading: false })
       if (news.title) wx.setNavigationBarTitle({ title: news.title })
     } catch (error) {
       if (!social.active(this, version, error)) return

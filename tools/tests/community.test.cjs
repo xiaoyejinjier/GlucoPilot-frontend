@@ -38,7 +38,7 @@ function harness(name, options = {}) {
     setTimeout:(fn,ms)=>{if(!options.manualTimeouts){fn();return 0}const id=++timerId;state.timeouts.set(id,{fn:()=>{state.timeouts.delete(id);fn()},ms});return id},
     clearTimeout:id=>state.timeouts.delete(id),
     require: key => ({ '../../services/api': api, '../../utils/community': socialModule.exports,
-      '../../utils/request': request, '../../utils/message-notifications':{refresh:()=>state.calls.push({name:'refreshUnread'}),count:v=>Math.max(0,Number(v)||0),label:v=>Number(v)>99?'99+':Number(v)>0?String(v):''}, '../../utils/display': { applyDisplayToCurrentPage() {} } }[key])
+      '../../utils/request': request, '../../utils/message-notifications':{refresh:()=>state.calls.push({name:'refreshUnread'}),count:v=>Math.max(0,Number(v)||0),label:v=>Number(v)>99?'99+':Number(v)>0?String(v):''}, '../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>url}, '../../utils/display': { applyDisplayToCurrentPage() {} } }[key])
   })
   const page = { ...definition, selectComponent:()=>({beginHold:()=>state.speech.push('start'),endHold:cancel=>state.speech.push(cancel?'cancel':'stop')}), data: JSON.parse(JSON.stringify(definition.data)), setData(patch,callback) {
     for (const [key, value] of Object.entries(patch)) {
