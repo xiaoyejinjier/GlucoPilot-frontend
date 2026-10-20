@@ -17,17 +17,37 @@
 .nutrition-source { font-size: var(--fs-small); color: #26794d; flex-shrink: 0; }
 .nutrition-source.estimated { color: #a05b0b; }
 .meal-weight { display: flex; align-items: center; gap: 16rpx; margin: 16rpx 0; font-size: var(--fs-small); }
-.meal-weight input { flex: 1; min-width: 0; padding: 12rpx 16rpx; background: #fff; border: 1rpx solid #d8e0dc; border-radius: 10rpx; }
-.score-card { border: 1rpx solid #cce1d4; }
-.score-header { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
-.score-header .section-title { margin: 0; }
-.score-badge { flex-shrink: 0; padding: 6rpx 16rpx; border-radius: 20rpx; background: #fff3d7; color: #8b590c; font-size: var(--fs-small); }
-.score-result { margin: 24rpx 0 16rpx; padding: 24rpx; border-radius: 16rpx; background: var(--brand-soft); }
-.score-value-row { display: flex; align-items: baseline; gap: 12rpx; }
-.score-value { color: var(--brand-dark); font-size: 80rpx; line-height: 1.2; font-weight: 800; }
-.score-unit { color: #526358; font-size: var(--fs-body); }
-.score-label { display: block; margin-top: 12rpx; color: var(--brand-dark); font-size: var(--fs-body); font-weight: 600; }
-.score-note { display: block; margin: 16rpx 0 20rpx; color: #8b590c; font-size: var(--fs-small); line-height: 1.6; }
+.meal-weight input { flex: 1; height: 72rpx; line-height: 70rpx; padding: 0 16rpx; box-sizing: border-box; background: #fff; border: 1rpx solid #d8e0dc; border-radius: 10rpx; }
+.meal-food-item .meal-weight input { flex: none; width: 160rpx; }
+.meal-weight text { flex-shrink: 0; }
+.food-suggest-group { flex: 1; min-width: 0; display: flex; align-items: center; }
+.food-suggest-arrow { flex-shrink: 0; width: 56rpx; margin-left: 24rpx; text-align: center; font-size: var(--fs-body); line-height: 1; }
+.arrow-good { color: #2e7d5b; }
+.arrow-bad { color: var(--danger); }
+.arrow-neutral { color: #333; }
+.food-suggest-value { color: #2e7d5b; font-size: var(--fs-small); font-weight: 600; white-space: nowrap; }
+.food-suggest-muted { font-size: var(--fs-small); white-space: nowrap; }
+.muted-bad { color: var(--danger); }
+.muted-neutral { color: #333; }
+.predict-card { border: 1rpx solid #cce1d4; }
+.predict-compare { display: flex; align-items: stretch; margin: 24rpx 0 8rpx; }
+.predict-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.predict-divider { flex-shrink: 0; width: 1rpx; background: #d8e6dd; margin: 0 24rpx; }
+.predict-col-title { color: #526358; font-size: var(--fs-small); font-weight: 600; }
+.predict-value-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8rpx; margin-top: 16rpx; }
+.predict-value { color: var(--brand-dark); font-size: 64rpx; line-height: 1.2; font-weight: 800; }
+.predict-unit { color: #526358; font-size: var(--fs-small); }
+.predict-col-label { display: block; margin-top: 8rpx; color: var(--brand-dark); font-size: var(--fs-small); font-weight: 600; }
+.predict-carbs { display: block; margin-top: 12rpx; color: #6b7280; font-size: var(--fs-small); }
+.glucose-entry-card { border: 1rpx solid #cce1d4; background: #f7faf8; }
+.glucose-entry-head { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+.glucose-entry-head .section-title { margin: 0; }
+.glucose-entry-link { display: flex; align-items: center; gap: 4rpx; padding: 8rpx 0 8rpx 16rpx; color: var(--brand-dark); font-size: var(--fs-small); font-weight: 600; }
+.glucose-entry-arrow { color: var(--brand-dark); font-size: var(--fs-body); line-height: 1; }
+.glucose-entry-row { margin: 20rpx 0; }
+.glucose-entry-card .btn-block { margin-top: 4rpx; }
+.food-list-toggle { display: flex; align-items: center; justify-content: center; gap: 6rpx; margin-top: 16rpx; padding: 12rpx 0; color: #7b8a80; font-size: var(--fs-small); font-weight: 600; }
+.food-list-toggle-arrow { color: #7b8a80; font-size: var(--fs-body); line-height: 1; }
 
 .photo-meal-img {
   width: 100%;
@@ -75,34 +95,6 @@
   font-size: var(--fs-small);
   color: #6b7280;
   font-weight: 600;
-}
-
-.fullness-row {
-  display: flex;
-  flex-direction: row;
-}
-
-.fullness-item {
-  flex: 1;
-  height: 72rpx;
-  margin-right: 12rpx;
-  border-radius: 12rpx;
-  background: #eef0ef;
-  font-size: var(--fs-body);
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #555;
-}
-
-.fullness-item:last-child {
-  margin-right: 0;
-}
-
-.fullness-item.on {
-  background: var(--brand);
-  color: #fff;
 }
 
 .result-card {
