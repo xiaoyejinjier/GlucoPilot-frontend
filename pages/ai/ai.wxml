@@ -1,11 +1,11 @@
 <view class="page record-page" style="{{displayStyle}}">
-  <glucose-alert-reminder nodes="{{nodes}}" bind:visibilitychange="onReminderVisibilityChange"></glucose-alert-reminder>
+  <glucose-alert-reminder nodes="{{nodes}}" social-counts="{{informationCounts}}" bind:visibilitychange="onReminderVisibilityChange"></glucose-alert-reminder>
   <view class="card glucose-chart-card">
     <view class="section-title">
       <text>今日血糖曲线图</text>
       <text class="tag tag-ok">已记 {{recordCount}}/{{glucoseTotalNodes}}</text>
     </view>
-    <view wx:if="{{noticeVisible}}" class="chart-canvas"></view>
+    <view wx:if="{{noticeVisible || navigationGuideVisible}}" class="chart-canvas"></view>
     <canvas wx:else type="2d" id="glucoseChart" class="chart-canvas"
       bindtouchstart="onChartTouchStart" bindtouchmove="onChartTouchMove"
       bindtouchend="onChartTouchEnd" bindtouchcancel="onChartTouchCancel"></canvas>

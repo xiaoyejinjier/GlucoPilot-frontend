@@ -1,12 +1,11 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
-const { fetchGlucoseRecords } = require('../../services/api')
+const api = require('../../services/api')
+const social = require('../../utils/community')
+const { getToken } = require('../../utils/request')
+const { downloadExport } = require('../../utils/export-download')
 
 const ITEM_RPX = 72
 const VISIBLE = 5 // 上下各 2 + 中间 1
-
-/** 后端 PageQuery 的 pageSize 上限是 100，导出要翻页取全 */
-const PAGE_SIZE = 100
-const MAX_PAGES = 20
 
 function pad(n) {
   return n < 10 ? '0' + n : '' + n
@@ -14,41 +13,6 @@ function pad(n) {
 
 function daysInMonth(year, month) {
   return new Date(year, month, 0).getDate()
-}
-
-/** 接口记录 -> { 'YYYY-MM-DD': { nodeCode: { value, sourceType } } }，与导出模板一致 */
-function groupByDate(records) {
-  const out = {}
-  ;(records || []).forEach((r) => {
-    const day = r.recordDate
-    if (!day || r.value == null) return
-    if (!out[day]) out[day] = {}
-    out[day][r.nodeCode] = { value: r.value, sourceType: r.sourceType }
-  })
-  return out
-}
-
-/** 翻页拉取当前用户的全部血糖记录，缓存到 this._recordsByDate */
-function loadAllRecords(page) {
-  const all = []
-  const next = (pageNum) =>
-    fetchGlucoseRecords({ pageNum, pageSize: PAGE_SIZE }).then((res) => {
-      const records = res.records || []
-      all.push(...records)
-      const hasMore = records.length === PAGE_SIZE && pageNum < MAX_PAGES
-      return hasMore ? next(pageNum + 1) : all
-    })
-
-  return next(1)
-    .then((records) => {
-      page._recordsByDate = groupByDate(records)
-      return page._recordsByDate
-    })
-    .catch((err) => {
-      page._recordsByDate = {}
-      wx.showToast({ title: err.message || '记录加载失败', icon: 'none' })
-      return {}
-    })
 }
 
 function buildMonths() {
@@ -87,6 +51,7 @@ Page({
     exportText: '',
     filePath: '',
     exporting: false,
+    tasks:[],tasksLoading:false,tasksError:'',downloading:'',
 
     showDateSheet: false,
     dateStep: 'start',
@@ -111,8 +76,11 @@ Page({
   },
 
   onShow() {
-    applyDisplayToCurrentPage()
+    if(!getApp().checkLogin())return
+    if(this._communityToken && this._communityToken!==getToken()) { this._exportAttempt=null;this.setData({exportText:'',filePath:'',previewCount:null}) }
+    social.begin(this);applyDisplayToCurrentPage();this.setData({exporting:false,downloading:'',tasks:[]});this.loadTasks()
   },
+  onHide() {social.end(this);this._taskRun=(this._taskRun||0)+1}, onUnload(){this.onHide()},
 
   onBack() {
     wx.navigateBack()
@@ -297,110 +265,20 @@ Page({
     this.refreshPreview()
   },
 
-  refreshPreview() {
-    const { activeRange, customStart, customEnd } = this.data
-
-    return loadAllRecords(this).then((all) => {
-      let count = 0
-      Object.keys(all).forEach(day => {
-        const dayCount = Object.keys(all[day] || {}).length
-        if (activeRange === 'custom' && customStart && customEnd) {
-          if (day >= customStart && day <= customEnd) count += dayCount
-        } else {
-          count += dayCount
-        }
-      })
-
-      this.setData({ previewCount: count })
-    })
+  refreshPreview() { this.setData({previewCount:null,exportText:'',filePath:''}) },
+  async loadTasks() {if(!social.active(this))return;const version=this._communityVersion,run=this._taskRun=(this._taskRun||0)+1;this.setData({tasksLoading:true,tasksError:''});try{const page=await api.fetchExportTasks({pageNum:1,pageSize:20});if(social.active(this,version)&&run===this._taskRun)this.setData({tasks:page.records.map(task=>({...task,statusLabel:{pending:'待生成',processing:'生成中',done:'已完成',failed:'失败'}[task.status]||'待更新'}))})}catch(error){if(social.active(this,version,error)&&run===this._taskRun)this.setData({tasksError:error.message||'导出记录读取失败'})}finally{if(social.active(this,version)&&run===this._taskRun)this.setData({tasksLoading:false})}},
+  async onConfirm() {
+    if(!social.active(this)||this.data.exporting)return
+    const now=new Date(),end=this.data.activeRange==='custom'?this.data.customEnd:formatDate(now.getFullYear(),now.getMonth()+1,now.getDate())
+    const startDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()-(this.data.activeRange==='30'?29:6))
+    const start=this.data.activeRange==='custom'?this.data.customStart:formatDate(startDate.getFullYear(),startDate.getMonth()+1,startDate.getDate())
+    if(!start||!end||start>end)return wx.showToast({title:'请选择有效日期范围',icon:'none'})
+    const fingerprint=JSON.stringify([start,end]);if(!this._exportAttempt||this._exportAttempt.fingerprint!==fingerprint)this._exportAttempt={fingerprint,payload:{startDate:start,endDate:end,clientRequestId:social.requestId()}}
+    const version=this._communityVersion;this.setData({exporting:true})
+    try{const created=await api.createExportTask(this._exportAttempt.payload);if(!social.active(this,version))return;const task=await api.generateExportTask(created.id);if(!social.active(this,version))return;if(task.status!=='done')throw new Error(task.error||'文件生成失败，可稍后重试');this._exportAttempt=null;this.setData({exportText:`${task.startDate} 至 ${task.endDate}\n血糖记录 ${task.glucoseCount} 条\n饮食记录 ${task.mealCount} 条`,previewCount:task.glucoseCount+task.mealCount});wx.showToast({title:'XLSX 文件已生成',icon:'success'});this.loadTasks()}catch(error){social.failure(this,error,version);if(social.active(this,version))this.loadTasks()}finally{if(social.active(this,version))this.setData({exporting:false})}
   },
-
-  buildExportText() {
-    const all = this._recordsByDate || {}
-    const lines = [`【控糖助手导出】`, `范围：${this.data.rangeLabel}`, `导出时间：${this.formatNow()}`, '']
-    let days = Object.keys(all).sort()
-
-    if (this.data.activeRange === 'custom' && this.data.customStart && this.data.customEnd) {
-      days = days.filter(d => d >= this.data.customStart && d <= this.data.customEnd)
-    } else {
-      const take = this.data.activeRange === '30' ? 30 : 7
-      days = days.slice(-take)
-    }
-
-    days.forEach(day => {
-      lines.push(`# ${day}`)
-      Object.keys(all[day] || {}).forEach(nodeId => {
-        const rec = all[day][nodeId]
-        if (rec.value != null) lines.push(`- ${nodeId}: ${rec.value} mmol/L`)
-        else if (rec.type === 'meal') lines.push(`- ${nodeId}: 饮食 ${rec.foods || ''}`)
-      })
-      lines.push('')
-    })
-    if (lines.length <= 4) {
-      lines.push('（暂无本地记录，以下为示例）')
-      lines.push('- before_breakfast: 5.8')
-      lines.push('- after_breakfast: 7.6')
-    }
-    return lines.join('\n')
-  },
-
-  formatNow() {
-    const d = new Date()
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-  },
-
-  onConfirm() {
-    if (this.data.exporting) return
-    if (this.data.activeRange === 'custom' && (!this.data.customStart || !this.data.customEnd)) {
-      wx.showToast({ title: '请先选择自定义日期', icon: 'none' })
-      this.openCustomPicker()
-      return
-    }
-
-    this.setData({ exporting: true })
-    // 导出前重新拉一次，保证导的是库里的最新记录
-    loadAllRecords(this).then(() => this.doExport())
-  },
-
-  doExport() {
-    const text = this.buildExportText()
-    const stamp = this.formatNow().replace(/[:\s-]/g, '')
-    const filePath = `${wx.env.USER_DATA_PATH}/控糖导出_${stamp}.txt`
-
-    const finishOk = (savedPath) => {
-      this.setData({
-        exportText: text,
-        filePath: savedPath || '',
-        exporting: false
-      })
-      wx.setClipboardData({
-        data: text,
-        success: () => wx.showToast({ title: '已导出并复制', icon: 'none' }),
-        fail: () => wx.showToast({ title: '已生成摘要', icon: 'none' })
-      })
-    }
-
-    try {
-      const fs = wx.getFileSystemManager()
-      fs.writeFile({
-        filePath,
-        data: text,
-        encoding: 'utf8',
-        success: () => finishOk(filePath),
-        fail: () => finishOk('')
-      })
-    } catch (e) {
-      finishOk('')
-    }
-  },
-
-  onCopy() {
-    if (!this.data.exportText) return
-    wx.setClipboardData({
-      data: this.data.exportText,
-      success: () => wx.showToast({ title: '已复制', icon: 'none' })
-    })
-  },
-
+  async onDownload(e) {const id=String(e.currentTarget.dataset.id);if(!social.active(this)||this.data.downloading)return;const version=this._communityVersion,token=getToken();this.setData({downloading:id});try{const path=await downloadExport(id);if(!social.active(this,version)||token!==getToken())return;wx.openDocument({filePath:path,fileType:'xlsx',showMenu:true,fail:()=>{if(social.active(this,version))wx.showToast({title:'文件已下载，暂时无法打开',icon:'none'})}})}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({downloading:''})}},
+  async onRetryTask(e) {if(!social.active(this)||this.data.exporting)return;const version=this._communityVersion;this.setData({exporting:true});try{const task=await api.generateExportTask(e.currentTarget.dataset.id);if(social.active(this,version)){if(task.status!=='done')throw new Error(task.error||'生成失败');this.loadTasks()}}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({exporting:false})}},
+  onCopy(){if(this.data.exportText)wx.setClipboardData({data:this.data.exportText})},
   noop() {}
 })

@@ -20,7 +20,8 @@ const BIZ_TYPE = {
   MEAL: 3,
   CHAT_IMAGE: 4,
   CMS: 5,
-  CHAT_VOICE: 6
+  CHAT_VOICE: 6,
+  ARTICLE_IMAGE: 7, ARTICLE_VIDEO:8
 }
 
 /** 会话图片的客户端上限：5MB，与后端 `ai.vision.max-image-bytes` 对齐。
@@ -119,34 +120,38 @@ function uploadMediaFile(bizType, filePath, opts) {
   const label = (opts && opts.label) || '文件'
   let arrayBuffer
   let mimeType
+  const requireCurrent = () => { if (opts && opts.isCurrent && !opts.isCurrent()) throw new Error('账号或页面已变化，请重新选择文件') }
 
   return readFileAsArrayBuffer(filePath)
     .then((buf) => {
+      requireCurrent()
       arrayBuffer = buf
       const sizeBytes = buf.byteLength
       if (sizeBytes > maxBytes) {
         throw new Error(`${label}不能超过 ${Math.floor(maxBytes / 1024 / 1024)}MB，请压缩后重试`)
       }
-      mimeType = sniffImageMime(buf)
+      mimeType = bizType === BIZ_TYPE.ARTICLE_VIDEO ? sniffVideoMime(buf) : sniffImageMime(buf)
       if (!mimeType) {
-        throw new Error('仅支持 JPG / PNG / GIF / WebP 格式的图片')
+        throw new Error(bizType === BIZ_TYPE.ARTICLE_VIDEO ? '仅支持MP4视频，请转换格式后上传' : '仅支持 JPG / PNG / GIF / WebP 格式的图片')
       }
       return api.createMediaUploadCredential(bizType, mimeType, sizeBytes)
     })
-    .then((cred) =>
-      putToStorage(cred.uploadUrl, arrayBuffer).then(() => ({
+    .then((cred) => {
+      requireCurrent()
+      return putToStorage(cred.uploadUrl, arrayBuffer).then(() => ({
         storageKey: cred.storageKey,
         sizeBytes: arrayBuffer.byteLength
       }))
-    )
-    .then((uploaded) =>
-      api.registerMediaFile({
+    })
+    .then((uploaded) => {
+      requireCurrent()
+      return api.registerMediaFile({
         bizType,
         storageKey: uploaded.storageKey,
         mimeType,
         sizeBytes: uploaded.sizeBytes
       })
-    )
+    })
 }
 
 /**
@@ -170,7 +175,13 @@ function uploadMealImage(filePath) {
   return uploadMediaFile(BIZ_TYPE.MEAL, filePath, { maxBytes: MAX_IMAGE_BYTES, label: '餐食照片' })
 }
 
-module.exports = {
+function sniffVideoMime(buffer) {
+  const b=new Uint8Array(buffer.slice(0,64))
+  if(b.length<12 || String.fromCharCode(...b.slice(4,8))!=='ftyp')return ''
+  const brands=String.fromCharCode(...b.slice(8))
+  return /isom|iso[2-9]|mp4[12]|avc1|M4V /.test(brands) && !/heic|heix|avif|qt  /.test(brands) ? 'video/mp4' : ''
+}
+module.exports = { sniffVideoMime,
   BIZ_TYPE,
   MAX_IMAGE_BYTES,
   DEFAULT_MAX_BYTES,

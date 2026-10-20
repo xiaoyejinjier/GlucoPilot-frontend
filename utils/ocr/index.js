@@ -14,13 +14,15 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function pollTask(taskId, count) {
+function pollTask(taskId, count, isCurrent) {
+  if (!isCurrent()) return Promise.reject(new Error('识别已取消'))
   return api.fetchOcrTask(taskId).then((task) => {
+    if (!isCurrent()) throw new Error('识别已取消')
     if (task.taskStatus === 2 || task.taskStatus === 3) return task
     if (count >= MAX_POLL_COUNT) {
       throw new Error('识别等待超时，请手动输入')
     }
-    return delay(POLL_INTERVAL_MS).then(() => pollTask(taskId, count + 1))
+    return delay(POLL_INTERVAL_MS).then(() => pollTask(taskId, count + 1, isCurrent))
   })
 }
 
@@ -57,16 +59,20 @@ function clearPendingOcr() {
 }
 
 /** 上传血糖仪照片、创建任务并轮询；失败也返回可供确认页展示的状态。 */
-function recognizeGlucoseImage(filePath) {
+function recognizeGlucoseImage(filePath, options = {}) {
+  const isCurrent = typeof options.isCurrent === 'function' ? options.isCurrent : () => true
+  if (!isCurrent()) return Promise.resolve(null)
   let mediaId = ''
   clearPendingOcr()
   return uploadGlucoseImage(filePath)
     .then((media) => {
+      if (!isCurrent()) throw new Error('识别已取消')
       mediaId = media.id
       return api.createOcrTask(mediaId, OCR_BIZ_GLUCOSE, idempotencyKey())
     })
-    .then((task) => pollTask(task.id, 0))
+    .then((task) => pollTask(task.id, 0, isCurrent))
     .then((task) => {
+      if (!isCurrent()) return null
       const result = task.ocrResult || {}
       return savePendingOcr({
         status: task.taskStatus === 2 && result.suggestedValue != null ? 'success' : 'unreadable',
@@ -78,14 +84,14 @@ function recognizeGlucoseImage(filePath) {
         errorMessage: task.taskStatus === 3 ? (task.errorMsg || '识别失败，请手动输入') : ''
       })
     })
-    .catch((err) => savePendingOcr({
+    .catch((err) => isCurrent() ? savePendingOcr({
       status: 'failed',
       mediaId,
       suggestedValue: '',
       confidence: 0,
       rawText: '',
       errorMessage: (err && err.message) || '识别失败，请手动输入'
-    }))
+    }) : null)
 }
 
 module.exports = {

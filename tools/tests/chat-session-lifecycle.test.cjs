@@ -264,7 +264,11 @@ function createChatPage(options = {}) {
     relaunches: [],
     chooseMedia: 0
   }
-  const api = options.api || {}
+  const api = {
+    getOrCreateChatSession: () => Promise.resolve({ id: '48' }),
+    sendChatMessage: () => Promise.resolve({ id: '101' }),
+    ...options.api
+  }
   const apiStub = {
     getOrCreateChatSession: (type) => { state.calls.push({ name: 'getOrCreateChatSession', args: [type] }); return api.getOrCreateChatSession(type) },
     createChatSession: (type) => { state.calls.push({ name: 'createChatSession', args: [type] }); return api.createChatSession(type) },
@@ -313,33 +317,38 @@ function createChatPage(options = {}) {
   return { page, state, api }
 }
 
-test('切换会话后旧发送回调不能启动旧会话的模型回复', async () => {
+test('会话状态重置后旧发送回调不能启动旧模型回复', async () => {
   let complete
   const saved = new Promise(resolve => { complete = resolve })
   const { page, state } = createChatPage({ api: { sendChatMessage: () => saved } })
   page.onLoad({ sessionId: '48', sessionStatus: '1' }); page.onShow(); await flush()
   page.onInput({ detail: { value: '旧会话问题' } }); page.onSend(); await flush()
-  await page.openSession({ id: '77', sessionStatus: 1 })
+  assert.equal(state.calls.filter(call => call.name === 'sendChatMessage').length, 1)
+  page.resetToFresh()
+  page.setData({ sessionId: '77' })
+  await page.loadHistory()
   complete({ id: '101' }); await flush()
   assert.equal(page.data.sessionId, '77')
   assert.equal(page.data.sending, false)
   assert.equal(state.calls.filter(call => call.name === 'streamChatCompletion').length, 0)
 })
 
-test('切换会话后旧图片上传结果不能写入新会话', async () => {
+test('会话状态重置后旧图片上传结果不能写入当前对话', async () => {
   let complete
   const uploaded = new Promise(resolve => { complete = resolve })
   const { page, state } = createChatPage({ uploadChatImage: () => uploaded })
   page.onLoad({ sessionId: '48', sessionStatus: '1' }); page.onShow(); await flush()
   page.sendImage('/temporary-old-image.jpg')
-  await page.openSession({ id: '77', sessionStatus: 1 })
+  page.resetToFresh()
+  page.setData({ sessionId: '77' })
+  await page.loadHistory()
   complete({ id: '9', fileUrl: 'https://example.invalid/old.jpg' }); await flush()
   assert.equal(page.data.sessionId, '77')
   assert.equal(page.data.messages.length, 0)
   assert.equal(state.calls.filter(call => call.name === 'sendChatMessage').length, 0)
 })
 
-test('带 sessionId 打开已结束会话：走历史接口、正序渲染、输入区禁用且不发消息', async () => {
+test('服务端当前会话已结束时仍保护只读状态，不发送消息', async () => {
   const called = []
   const { page, state } = createChatPage({
     api: {
@@ -355,7 +364,7 @@ test('带 sessionId 打开已结束会话：走历史接口、正序渲染、输
           nextBeforeSeq: 1
         })
       },
-      getOrCreateChatSession: () => { throw new Error('已指定 sessionId 时不应再走 /current'); },
+      getOrCreateChatSession: () => Promise.resolve({ id: '48', sessionStatus: 2 }),
       sendChatMessage: () => { throw new Error('已结束会话不能发消息'); }
     }
   })
@@ -370,7 +379,7 @@ test('带 sessionId 打开已结束会话：走历史接口、正序渲染、输
   assert.equal(page.data.historyLoading, false)
   assert.equal(page.data.sessionReadOnly, true)
   assert.equal(page.data.sessionStatusText, '已结束')
-  assert.ok(page.data.sessionNotice.includes('已结束') && page.data.sessionNotice.includes('新对话'))
+  assert.ok(page.data.sessionNotice.includes('已结束') && page.data.sessionNotice.includes('重新进入'))
 
   // 先输入再点发送：必须一条消息都不发（后端也会拒绝，但没必要让用户先看到失败气泡）
   page.onInput({ detail: { value: '那餐后呢' } })
@@ -422,32 +431,23 @@ test('翻页：查看更早的对话用 nextBeforeSeq 当 beforeSeq，更早的�
   assert.equal(state.toasts[state.toasts.length - 1].title, '已经是全部记录了')
 })
 
-test('新对话：调用 forceNew 接口、采用返回的新会话并清空视图', async () => {
-  const created = []
-  const { page, state } = createChatPage({
-    api: {
-      getOrCreateChatSession: () => Promise.resolve({ id: '48', sessionStatus: 1, title: '旧会话' }),
-      createChatSession: (type) => { created.push(type); return Promise.resolve({ id: '77', sessionStatus: 1, title: '新对话' }) }
-    }
-  })
-
-  page.onLoad({})
+test('进入时自动恢复当前会话，忽略旧历史选择和新建意图', async () => {
+  const { page, state } = createChatPage({ api: {
+    getOrCreateChatSession: () => Promise.resolve({ id: '48', sessionStatus: 1 }),
+    createChatSession: () => { throw new Error('不能强制新建对话') }
+  } })
+  state.app.globalData.pendingChatSession = { id: '77', sessionStatus: 2 }
+  state.app.globalData.pendingNewChat = true
+  page.onLoad({ sessionId: '99', sessionStatus: '2' })
   page.onShow()
   await flush()
   assert.equal(page.data.sessionId, '48')
   assert.equal(page.data.sessionReadOnly, false)
-  // 不带参数进入时行为不变：仍然是"取或建当前会话"
-  assert.equal(json(state.calls.map((c) => c.name)), '["getOrCreateChatSession","fetchChatHistory"]')
-
-  await page.onNewChat()
-  assert.equal(json(created), '[3]')
-  assert.equal(page.data.sessionId, '77')
-  assert.equal(page.data.sessionTitle, '新对话')
-  assert.equal(page.data.sessionReadOnly, false)
-  assert.equal(page.data.sessionNotice, '')
-  assert.equal(page.data.messages.length, 0)
   assert.equal(page.data.historyReady, true)
-  assert.equal(state.toasts[state.toasts.length - 1].title, '已开启新对话')
+  assert.equal(json(state.calls.map(call => call.name)), '["getOrCreateChatSession","fetchChatHistory"]')
+  assert.equal(state.calls[1].args[0], '48')
+  assert.equal(page.onNewChat, undefined)
+  assert.equal(page.onOpenHistory, undefined)
 })
 
 test('状态未知时会先放行，被后端以 40001 拒绝后自动切成只读并给出提示', async () => {
@@ -479,7 +479,7 @@ test('状态未知时会先放行，被后端以 40001 拒绝后自动切成只�
   assert.equal(page.data.sessionReadOnly, true)
 })
 
-test('对话页保留了 SSE 链路与图片消息渲染，当前会话被删掉后回到初始状态', async () => {
+test('自动恢复后继续发送文本并保留SSE回复链路', async () => {
   const { page, state } = createChatPage({
     api: {
       getOrCreateChatSession: () => Promise.resolve({ id: '48', sessionStatus: 1, title: '旧会话' }),
@@ -489,15 +489,6 @@ test('对话页保留了 SSE 链路与图片消息渲染，当前会话被删掉
   })
   page.onLoad({})
   page.onShow()
-  await flush()
-  assert.equal(page.data.sessionId, '48')
-
-  // 历史列表页删掉的正是当前会话：回本页时应清空视图，而不是继续对着一条已删会话发消息
-  state.app.globalData.chatSessionEvent = { type: 'deleted', id: '48' }
-  page.onShow()
-  assert.equal(page.data.sessionId, '')
-  assert.equal(page.data.messages.length, 0)
-  // 随后按"取或建当前会话"重新拿一条（后端删掉进行中会话后 /current 会新建）
   await flush()
   assert.equal(page.data.sessionId, '48')
 
@@ -513,7 +504,7 @@ test('对话页保留了 SSE 链路与图片消息渲染，当前会话被删掉
   assert.ok(payload.clientMsgId)
 })
 
-test('打开一条已被删除的会话（404）时回到初始状态，不再停在空会话上', async () => {
+test('当前对话不可用（404）时清理旧状态并保留重试入口', async () => {
   const { page, state } = createChatPage({
     api: {
       fetchChatHistory: () => Promise.reject(Object.assign(
@@ -529,243 +520,20 @@ test('打开一条已被删除的会话（404）时回到初始状态，不再�
   assert.equal(page.data.historyLoading, false)
   assert.equal(page.data.sessionReadOnly, false)
   assert.equal(page.data.messages.length, 0)
-  assert.equal(state.toasts[state.toasts.length - 1].title, '该对话已被删除')
+  assert.match(page.data.historyError, /点击重试恢复/)
 })
 
-// ------------------------------------------------------------------ 5. 历史会话列表页
-
-function createHistoryPage(options = {}) {
-  let definition
-  const state = {
-    app: { globalData: { pendingChatSession: null, pendingNewChat: false, chatSessionEvent: null } },
-    calls: [],
-    toasts: [],
-    modals: [],
-    sheets: [],
-    navs: [],
-    confirmResult: true
-  }
-  const api = options.api
-  const apiStub = {
-    fetchChatSessions: (params) => { state.calls.push({ name: 'fetchChatSessions', args: [params] }); return api.fetchChatSessions(params) },
-    deleteChatSession: (id) => { state.calls.push({ name: 'deleteChatSession', args: [id] }); return api.deleteChatSession(id) },
-    setChatSessionPinned: (id, pinned) => { state.calls.push({ name: 'setChatSessionPinned', args: [id, pinned] }); return api.setChatSessionPinned(id, pinned) }
-  }
-  const wx = {
-    showToast: (item) => state.toasts.push(item),
-    // 二次确认的默认答案是"确认"，需要验证取消时把 state.confirmResult 置 false
-    showModal: (item) => {
-      state.modals.push(item)
-      if (item.success) item.success({ confirm: state.confirmResult })
-    },
-    showActionSheet: (item) => { state.sheets.push(item); if (options.tapIndex != null) item.success({ tapIndex: options.tapIndex }) },
-    navigateTo: (item) => state.navs.push(item),
-    switchTab: (item) => state.navs.push(item),
-    stopPullDownRefresh() {}
-  }
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/voice/history.js'), 'utf8'), {
-    Page(value) { definition = value },
-    wx,
-    getApp: () => state.app,
-    require: (name) => {
-      if (name === '../../utils/display') return { applyDisplayToCurrentPage() {} }
-      if (name === '../../utils/chat-sessions') return chatSessions
-      assert.equal(name, '../../services/api')
-      return apiStub
-    },
-    setTimeout,
-    clearTimeout,
-    console
-  })
-  const page = {
-    ...definition,
-    data: JSON.parse(JSON.stringify(definition.data)),
-    setData(value) { Object.assign(this.data, value) }
-  }
-  return { page, state }
-}
-
-function sessionRow(id, extra = {}) {
-  return {
-    id: String(id),
-    title: `会话 ${id}`,
-    sessionStatus: 1,
-    sessionType: 3,
-    msgCount: 2,
-    isPinned: false,
-    lastMsgAt: '2026-10-15T09:12:33',
-    createdAt: '2026-10-15T09:00:00',
-    lastMessagePreview: '预览内容',
-    ...extra
-  }
-}
-
-test('历史列表页：分页上拉、置顶排前、点击带 sessionId 回对话页、删除二次确认', async () => {
-  const pages = [
-    { records: Array.from({ length: 20 }, (unused, i) => sessionRow(100 - i, { isPinned: i === 0 })),
-      total: '23', archiveIdleDays: 30 },
-    { records: [sessionRow(80), sessionRow(79), sessionRow(78)], total: '23', archiveIdleDays: 30 }
-  ]
-  const requests = []
-  const { page, state } = createHistoryPage({
-    api: {
-      fetchChatSessions: (params) => { requests.push(params); return Promise.resolve(pages[requests.length - 1]) },
-      deleteChatSession: () => Promise.resolve(null),
-      setChatSessionPinned: () => Promise.resolve(null)
-    }
-  })
-
-  await page.onShow()
-  assert.equal(json(requests[0]), '{"pageNum":1,"pageSize":20}')
-  assert.equal(page.data.list.length, 20)
-  assert.equal(page.data.total, '23')
-  assert.equal(typeof page.data.total, 'string')
-  assert.equal(page.data.hasMore, true)
-  assert.equal(page.data.archiveIdleDays, 30)
-  // 置顶那条在最前（后端已置顶优先，端上再兜一次，防止本地重排后顺序错）
-  assert.equal(page.data.list[0].isPinned, true)
-
-  await page.onReachBottom()
-  assert.equal(json(requests[1]), '{"pageNum":2,"pageSize":20}')
-  assert.equal(page.data.list.length, 23)
-  // 这一页没取满 → 没有下一页了，不去算字符串 total
-  assert.equal(page.data.hasMore, false)
-
-  // 点一条已结束会话：带 sessionId + 状态回对话页
-  page.onTapSession({ currentTarget: { dataset: { id: '48', status: 2, title: '早餐前血糖 6.8 正常吗' } } })
-  assert.equal(json(state.app.globalData.pendingChatSession), '{"id":"48","sessionStatus":2,"title":"早餐前血糖 6.8 正常吗"}')
-  assert.equal(state.navs[state.navs.length - 1].url, '/pages/voice/voice')
-
-  // 置顶：本地重排 + 调接口
-  page.togglePinned('100', true)
-  await flush()
-  assert.equal(json(state.calls.filter((c) => c.name === 'setChatSessionPinned').map((c) => c.args)),
-    '[["100",true]]')
-  assert.equal(page.data.list[0].id, '100')
-  assert.equal(page.data.list[0].isPinned, true)
-
-  // 删除：必须二次确认，且文案写清"不可恢复"
-  page.onLongPress({ currentTarget: { dataset: { id: '79', pinned: false } } })
-  assert.equal(json(state.sheets[0].itemList), '["置顶","删除"]')
-  const before = page.data.list.length
-  page.confirmDelete('79')
-  await flush()
-  assert.ok(state.modals[0].content.includes('不可恢复'))
-  assert.equal(state.modals[0].confirmText, '删除')
-  assert.equal(json(state.calls.filter((c) => c.name === 'deleteChatSession').map((c) => c.args)), '[["79"]]')
-  assert.equal(page.data.list.filter((item) => item.id === '79').length, 0)
-  assert.equal(page.data.list.length, before - 1)
-  // 通知对话页：被删的正好是它打开的那条
-  assert.equal(json(state.app.globalData.chatSessionEvent), '{"type":"deleted","id":"79"}')
-
-  // 取消确认时不删
-  state.confirmResult = false
-  page.confirmDelete('78')
-  await flush()
-  assert.equal(state.calls.filter((c) => c.name === 'deleteChatSession').length, 1)
-})
-
-test('历史列表页：取消置顶、操作表第二项删除、下拉刷新重拉第一页、空态引导', async () => {
-  const requests = []
-  const { page, state } = createHistoryPage({
-    tapIndex: 1,
-    api: {
-      fetchChatSessions: (params) => {
-        requests.push(params)
-        return Promise.resolve({ records: params.pageNum === 1 ? [sessionRow(1, { isPinned: true }), sessionRow(2)] : [], total: '2', archiveIdleDays: 0 })
-      },
-      deleteChatSession: () => Promise.resolve(null),
-      setChatSessionPinned: () => Promise.resolve(null)
-    }
-  })
-
-  await page.reset()
-  assert.equal(page.data.list.length, 2)
-
-  // 操作表选"删除"（index=1）→ 走确认删除
-  page.openActions({ id: '2', pinned: false })
-  await flush()
-  assert.equal(state.modals.length, 1)
-  assert.equal(page.data.list.filter((item) => item.id === '2').length, 0)
-
-  // 取消置顶
-  page.togglePinned('1', false)
-  await flush()
-  assert.equal(json(state.calls.filter((c) => c.name === 'setChatSessionPinned').map((c) => c.args)),
-    '[["1",false]]')
-  assert.equal(page.data.list.find((item) => item.id === '1').isPinned, false)
-  assert.equal(state.toasts[state.toasts.length - 1].title, '已取消置顶')
-
-  // 下拉刷新：回到第一页重新拉
-  await page.onPullDownRefresh()
-  assert.equal(json(requests[requests.length - 1]), '{"pageNum":1,"pageSize":20}')
-
-  // 空态里的「开始新对话」：通知对话页走新建
-  page.onStartNewChat()
-  assert.equal(state.app.globalData.pendingNewChat, true)
-  assert.equal(state.navs[state.navs.length - 1].url, '/pages/voice/voice')
-})
-
-test('历史列表页首屏为空时不报错，且分页请求失败只提示不崩', async () => {
-  let fail = true
-  const { page, state } = createHistoryPage({
-    api: {
-      fetchChatSessions: () => (fail ? Promise.reject(new Error('网络异常')) : Promise.resolve({ records: [], total: '0', archiveIdleDays: 0 })),
-      deleteChatSession: () => Promise.resolve(null),
-      setChatSessionPinned: () => Promise.resolve(null)
-    }
-  })
-  await page.onShow()
-  assert.equal(page.data.loading, false)
-  assert.equal(json(page.data.list), '[]')
-  // 失败也算"加载过"：空态要显示出来，而不是一直空白
-  assert.equal(page.data.loaded, true)
-  assert.equal(state.toasts[state.toasts.length - 1].title, '网络异常')
-
-  fail = false
-  await page.reset()
-  assert.equal(json(page.data.list), '[]')
-  // 空的一页说明后面没有更多了
-  assert.equal(page.data.hasMore, false)
-})
-
-// ------------------------------------------------------------------ 6. 接线与模板
-
-test('接线：新页面已注册、独立小语与四项新导航兼容、入口与只读提示都在模板里', () => {
+test('小语只保留自动恢复，导航与输入功能正常，已移除自选会话入口和路由', () => {
   const appJson = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
-  assert.ok(appJson.pages.includes('pages/voice/history'))
-  // 采用本次用户指定的四项导航，小语是独立页面
-  assert.equal(json(appJson.tabBar.list.map((item) => item.text)), '["记录","设备管理","社区","我的"]')
-  assert.equal(json(appJson.tabBar.list.map((item) => item.pagePath)),
-    '["pages/ai/ai","pages/devices/devices","pages/index/index","pages/mine/mine"]')
-
+  assert.equal(appJson.pages.includes('pages/voice/history'), false)
+  assert.equal(json(appJson.tabBar.list.map(item => item.text)), '["记录","设备管理","社区","我的"]')
   const voiceWxml = fs.readFileSync(path.join(root, 'pages/voice/voice.wxml'), 'utf8')
-  for (const marker of ['bindtap="onOpenHistory"', 'bindtap="onNewChat"', '历史对话', '新对话',
-    'disabled="{{sessionReadOnly}}"', 'sessionNotice', 'bindtap="onLoadEarlier"',
-    // 原有 SSE / 重试 / 图片渲染不能丢
-    'bindtap="onRetry"', 'wx-typing', 'bindtap="onPreviewImage"']) {
-    assert.ok(voiceWxml.includes(marker), marker)
+  for (const marker of ['onOpenHistory', 'onNewChat', '历史对话', '新对话', 'wx-head-actions']) {
+    assert.equal(voiceWxml.includes(marker), false, marker)
   }
-
-  const historyWxml = fs.readFileSync(path.join(root, 'pages/voice/history.wxml'), 'utf8')
-  for (const marker of ['这里是你和助手的全部对话记录', 'bindtap="onTapSession"', 'bindlongpress="onLongPress"',
-    'catchtap="onMore"', '开始新对话', 'bindtap="onStartNewChat"', 'item.lastMessagePreview', 'item.timeText',
-    'loaded && list.length === 0', '{{total}}']) {
-    assert.ok(historyWxml.includes(marker), marker)
-  }
-  // 不能出现"模型只看最近 N 条"这类猜测性文案
-  assert.equal(/最近\s*\d+\s*条/.test(historyWxml + voiceWxml), false)
-
-  const historyJson = JSON.parse(fs.readFileSync(path.join(root, 'pages/voice/history.json'), 'utf8'))
-  assert.equal(historyJson.enablePullDownRefresh, true)
-  assert.equal(historyJson.navigationBarTitleText, 'AI 对话历史')
-
-  const historyJs = fs.readFileSync(path.join(root, 'pages/voice/history.js'), 'utf8')
-  assert.ok(historyJs.includes('删除后这段对话记录将不可恢复'))
-  assert.ok(historyJs.includes('/pages/voice/voice'))
-
-  // 「我的」页挂了一个二级入口；tabBar 本身不动
-  const mineWxml = fs.readFileSync(path.join(root, 'pages/mine/mine.wxml'), 'utf8')
-  assert.ok(mineWxml.includes('data-url="/pages/voice/history"'))
-  assert.ok(mineWxml.includes('AI 对话历史'))
+  for (const marker of ['bindtap="onLoadEarlier"', 'bindtap="onRetry"', 'wx-typing',
+    'bindtap="onPreviewImage"', 'speech-input', 'sessionNotice']) assert.ok(voiceWxml.includes(marker), marker)
+  const mine = fs.readFileSync(path.join(root, 'pages/mine/mine.wxml'), 'utf8')
+  assert.equal(mine.includes('/pages/voice/history'), false)
+  assert.equal(mine.includes('AI 对话历史'), false)
 })

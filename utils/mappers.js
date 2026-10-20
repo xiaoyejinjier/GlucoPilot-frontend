@@ -146,6 +146,7 @@ function mapUserMe(me) {
   const height = health.height == null ? '' : health.height
   const weight = health.weight == null ? '' : health.weight
   return {
+    communityKey: typeof me.communityKey === 'string' ? me.communityKey : '',
     accountStatus: me.accountStatus,
     phoneMasked: me.phoneMasked || '',
     nickname: profile.nickname || '',

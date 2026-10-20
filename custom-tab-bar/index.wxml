@@ -1,1 +1,2 @@
-<bottom-navigation selected="{{selected}}" brand-color="{{selectedColor}}" bind:tabchange="onTabChange"></bottom-navigation>
+<bottom-navigation selected="{{selected}}" unread-count="{{unreadCount}}" brand-color="{{selectedColor}}" guide-active="{{guideActive}}"
+  bind:guidecomplete="onGuideComplete" bind:tabchange="onTabChange"></bottom-navigation>

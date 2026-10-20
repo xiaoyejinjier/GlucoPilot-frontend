@@ -1,0 +1,1 @@
+<view class="article-video"><video wx:if="{{source}}" src="{{source}}" controls object-fit="contain" show-center-play-btn /><view wx:else class="video-state" bindtap="load">{{error ? '视频加载失败，点击重试' : '正在加载视频…'}}</view></view>

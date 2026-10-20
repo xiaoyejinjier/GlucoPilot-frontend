@@ -28,7 +28,7 @@ Page({
   checkConnectionSettings() {
     const issue = config.connectionIssue()
     if (!issue) return true
-    wx.showToast({ title: '服务连接未就绪，请稍后重试', icon: 'none' })
+    wx.showToast({ title: issue, icon: 'none', duration: 3500 })
     return false
   },
 

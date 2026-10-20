@@ -3,7 +3,7 @@
     wx:if="{{imagePath}}"
     class="full-photo"
     src="{{imagePath}}"
-    mode="aspectFill"
+    mode="{{isMeal ? 'aspectFill' : 'aspectFit'}}"
     show-menu-by-longpress="{{false}}"
     binderror="onImgError"
     bindload="onImgLoad"
@@ -11,10 +11,10 @@
   <view wx:else class="photo-missing">照片无法读取，请点击左下角重新拍摄</view>
 
   <view class="bottom-actions">
-    <view class="circle-btn retake" bindtap="onRetake">
+    <view class="circle-btn retake {{busy ? 'disabled' : ''}}" bindtap="onRetake" aria-role="button" aria-label="重新拍摄">
       <view class="icon-undo"></view>
     </view>
-    <view class="circle-btn ok" bindtap="onConfirm">
+    <view class="circle-btn ok {{busy ? 'disabled' : ''}}" bindtap="onConfirm" aria-role="button" aria-label="确认照片并识别">
       <view class="icon-check"></view>
     </view>
   </view>

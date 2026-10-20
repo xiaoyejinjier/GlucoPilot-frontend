@@ -1,57 +1,15 @@
-<view class="page home-page" style="{{displayStyle}}">
-  <swiper
-    class="banner"
-    autoplay
-    circular
-    indicator-dots
-    indicator-color="rgba(255,255,255,0.4)"
-    indicator-active-color="#fff"
-  >
-    <swiper-item wx:for="{{banners}}" wx:key="index">
-      <view class="banner-inner">
-        <text class="banner-badge">公司宣传 {{index + 1}}/{{banners.length}}</text>
-        <text class="banner-title">{{item.title}}</text>
-        <text class="banner-desc">{{item.desc}}</text>
-      </view>
-    </swiper-item>
-  </swiper>
-
-  <view class="card news-card">
-    <view class="section-title">
-      <text>关注动态，获取最新消息</text>
-    </view>
-
-    <view class="channel-row">
-      <view
-        wx:for="{{channels}}"
-        wx:key="*this"
-        class="channel-btn {{activeChannel === item ? 'on' : ''}}"
-        data-channel="{{item}}"
-        bindtap="onChannelTap"
-      >
-        <text class="channel-btn-text">{{item}}</text>
-      </view>
-    </view>
-
-    <view
-      wx:for="{{filteredNews}}"
-      wx:key="id"
-      class="news-item"
-      data-id="{{item.id}}"
-      bindtap="onNewsTap"
-    >
-      <view class="news-cover-wrap">
-        <image class="news-cover-img" src="{{item.cover}}" mode="aspectFill" />
-        <view wx:if="{{item.type === 'video'}}" class="play-mark">▶</view>
-      </view>
-      <view class="news-meta">
-        <text class="news-title">{{item.title}}</text>
-        <text class="news-sum">{{item.summary}}</text>
-        <view class="news-footer">
-          <text class="news-type">{{item.typeLabel}}</text>
-          <text class="news-info">{{item.channel}} · {{item.time}}</text>
-        </view>
-      </view>
-    </view>
+<view class="page community-home" style="{{displayStyle}}">
+  <view class="community-heading"><view><text class="community-eyebrow">一起，把控糖变成日常</text><text class="community-title">糖友社区<text class="title-dot">·</text></text></view><view class="my-articles" bindtap="onMyArticles" aria-role="button">我的文章 ›</view></view>
+  <view class="share-card" bindtap="onWrite" aria-role="button"><view class="share-symbol">✎</view><view class="share-copy"><text class="share-title">今天，有什么想分享？</text><text class="share-subtitle">记录一餐、分享心得，也可以聊聊困惑</text></view><view class="write-button">写文章</view></view>
+  <view class="community-shortcuts"><view bindtap="onCommunityEntry" data-mode="following"><text class="shortcut-symbol">♡</text><text>我的关注</text></view><view bindtap="onCommunityEntry" data-mode="collections"><text class="shortcut-symbol">☆</text><text>我的收藏</text></view><view bindtap="onCommunityEntry" data-mode="messages"><text class="shortcut-symbol">✉</text><text>信息</text><text wx:if="{{unreadCount > 0}}" class="message-unread-badge">{{unreadLabel}}</text></view><view bindtap="onCommunityEntry" data-mode="profiles"><text class="shortcut-symbol">⌕</text><text>找糖友</text></view></view>
+  <view class="feed-heading"><view class="feed-tabs"><text class="feed-tab {{feedMode === 'recommend' ? 'active' : ''}}" data-mode="recommend" bindtap="onMode">推荐</text><text class="feed-tab {{feedMode === 'following' ? 'active' : ''}}" data-mode="following" bindtap="onMode">关注</text></view><text class="feed-caption">分享经验 · 理性交流</text></view>
+  <view class="community-search"><text>⌕</text><input placeholder="搜索感兴趣的内容" maxlength="80" value="{{keyword}}" bindinput="onSearchInput" bindconfirm="onSearch" confirm-type="search" /><text class="search-action" bindtap="onSearch">搜索</text></view>
+  <scroll-view scroll-x class="topic-scroll"><view class="topic-list"><text class="topic {{!activeTag ? 'selected' : ''}}" data-code="" bindtap="onTag">全部话题</text><text wx:for="{{tags}}" wx:key="code" class="topic {{activeTag === item.code ? 'selected' : ''}}" data-code="{{item.code}}" bindtap="onTag">{{item.name}}</text></view></scroll-view>
+  <view wx:for="{{posts}}" wx:key="id" class="post-card">
+    <view class="post-top"><view class="post-author" data-key="{{item.author.key}}" bindtap="onProfile"><image wx:if="{{item.author.avatarUrl}}" src="{{item.author.avatarUrl}}" mode="aspectFill" class="post-avatar" /><view wx:else class="post-avatar avatar-letter">友</view><view><text class="post-author-name">{{item.author.nickname || '社区编辑部'}}</text><text class="post-time">{{item.timeLabel}}</text></view></view><text wx:if="{{item.author && !item.author.isSelf}}" class="follow-button {{item.author.followed ? 'followed' : ''}}" data-key="{{item.author.key}}" bindtap="onFollow">{{item.author.followed ? '已关注' : '+ 关注'}}</text><text class="post-more" data-id="{{item.id}}" bindtap="onReport" aria-label="举报文章">···</text></view>
+    <view data-id="{{item.id}}" bindtap="onOpen"><text class="post-title">{{item.title}}</text><text class="post-summary">{{item.summary}}</text><view wx:if="{{item.videos.length}}" class="post-video-entry">▷ 视频内容 · 点击播放</view><view wx:elif="{{item.images.length}}" class="post-photo-entry"><article-photo media-id="{{item.images[0].mediaId}}" mode="aspectFill" preview-enabled="{{false}}"></article-photo></view><image wx:elif="{{item.hasCover}}" src="{{item.cover}}" class="post-cover" mode="aspectFill" /><view class="post-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="code"># {{tag.name}}</text></view></view>
+    <view class="post-actions"><view class="{{item.liked ? 'action-active' : ''}}" data-id="{{item.id}}" data-field="liked" bindtap="onAction"><text class="action-icon">♡</text>{{item.liked ? '已赞' : '点赞'}} {{item.likeCount || 0}}</view><view data-id="{{item.id}}" bindtap="onOpen"><text class="action-icon">◯</text>评论 {{item.commentCount || 0}}</view><view class="{{item.collected ? 'action-active' : ''}}" data-id="{{item.id}}" data-field="collected" bindtap="onAction"><text class="action-icon">☆</text>{{item.collected ? '已收藏' : '收藏'}} {{item.collectCount || 0}}</view></view>
   </view>
+  <view wx:if="{{loading}}" class="feed-state">正在加载社区内容…</view><view wx:elif="{{error}}" class="feed-empty"><text class="empty-symbol">☁</text><text class="empty-title">暂时没能加载内容</text><text class="empty-copy">{{error}}</text><button bindtap="onRetry">重新加载</button></view><view wx:elif="{{!posts.length}}" class="feed-empty"><text class="empty-symbol">✎</text><text class="empty-title">{{feedMode === 'following' ? '这里会出现你关注的动态' : '这个话题，还等你来分享'}}</text><text class="empty-copy">{{feedMode === 'following' ? '先去关注感兴趣的糖友，慢慢找到同路人。' : '分享真实经历，文章审核通过后会展示在这里。'}}</text><button bindtap="onWrite">写下第一篇分享</button></view><view wx:elif="{{hasMore}}" class="feed-state" bindtap="onMore">点击加载更多</view><view wx:else class="feed-state">已经看到这里啦</view>
+  <text class="community-footnote">社区经验仅供交流，健康决策请与医生确认</text>
 </view>

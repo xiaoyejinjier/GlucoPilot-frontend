@@ -62,3 +62,58 @@ view, text { box-sizing:border-box; }
 .navigation-label { font-size:var(--fs-small, 22rpx); line-height:1.2; white-space:nowrap; }
 .navigation-active .navigation-label { font-weight:600; }
 .navigation-pressed { opacity:.65; }
+
+/* 透明聚光圈保留真实按钮；整屏拦截点击，逐步介绍时不切换页面。 */
+.navigation-guide { position:fixed; top:0; right:0; bottom:0; left:0; z-index:10010; }
+.guide-measuring { background:rgba(20,32,42,.62); }
+.guide-focus {
+  position:fixed;
+  border:3rpx solid #fff;
+  border-radius:56rpx;
+  box-shadow:0 0 0 2000px rgba(20,32,42,.62);
+}
+.guide-card {
+  position:absolute;
+  left:20rpx;
+  right:20rpx;
+  bottom:calc(164rpx + env(safe-area-inset-bottom));
+  padding:28rpx 30rpx 24rpx;
+  border-radius:28rpx;
+  background:#fff;
+  box-shadow:0 8rpx 36rpx rgba(0,0,0,.1);
+  color:#24352d;
+}
+.guide-heading { display:flex; align-items:center; justify-content:space-between; gap:16rpx; }
+.guide-title { font-size:var(--fs-title,36rpx); font-weight:600; line-height:1.4; }
+.guide-count { color:#8b9690; font-size:var(--fs-small,22rpx); white-space:nowrap; }
+.guide-description { display:block; margin-top:14rpx; color:#637269; font-size:var(--fs-body,28rpx); line-height:1.7; }
+.guide-footer { display:flex; align-items:center; justify-content:space-between; gap:20rpx; margin-top:24rpx; }
+.guide-dots { display:flex; align-items:center; gap:9rpx; }
+.guide-dot { width:10rpx; height:10rpx; border-radius:50%; background:#e0e9e4; }
+.guide-dot-active { width:26rpx; border-radius:10rpx; background:var(--brand,#07c160); }
+.guide-next {
+  margin:0;
+  min-width:172rpx;
+  padding:16rpx 28rpx;
+  border-radius:40rpx;
+  background:var(--brand,#07c160);
+  color:#fff;
+  font-size:var(--fs-body,28rpx);
+  font-weight:500;
+  line-height:1.3;
+}
+.guide-next::after { border:0; }
+.guide-next[disabled] { background:#e3eae6; color:#7c8d83; }
+.guide-arrow {
+  position:absolute;
+  bottom:-16rpx;
+  width:0;
+  height:0;
+  border-left:16rpx solid transparent;
+  border-right:16rpx solid transparent;
+  border-top:18rpx solid #fff;
+  transform:translateX(-50%);
+}
+
+.navigation-item { position:relative; }
+.navigation-unread { position:absolute; top:16rpx; right:24rpx; width:14rpx; height:14rpx; background:#ed565f; border:3rpx solid #fff; border-radius:50%; }

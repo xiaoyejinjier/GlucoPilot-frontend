@@ -1,0 +1,10 @@
+.profile-card { display:flex; flex-direction:column; align-items:center; gap:24rpx; padding-top:48rpx; padding-bottom:48rpx; }
+.profile-avatar { width:140rpx; height:140rpx; border-radius:50%; background:var(--brand-soft); color:var(--brand-dark); display:flex; align-items:center; justify-content:center; font-size:56rpx; }
+.profile-name { font-size:var(--fs-title); font-weight:700; overflow-wrap:anywhere; }
+.profile-bio,.state { color:var(--muted); font-size:var(--fs-small); line-height:1.7; text-align:center; }
+.state { padding:48rpx; }
+.profile-buttons { width:100%; display:flex; flex-wrap:wrap; gap:20rpx; }
+.profile-buttons button { flex:1; font-size:var(--fs-body); min-width:240rpx; background:var(--brand-soft); color:var(--brand-dark); border-radius:20rpx; }
+.profile-buttons .message-button { background:var(--brand); color:white; }
+
+.profile-articles{margin-top:32rpx}.profile-section-title{display:block;font-size:var(--fs-title);font-weight:700;margin:24rpx 8rpx}.profile-article{display:flex;flex-direction:column;gap:18rpx;margin-bottom:20rpx}.profile-article-title{font-size:var(--fs-body);font-weight:700;overflow-wrap:anywhere}.profile-article-summary{font-size:var(--fs-small);color:var(--muted);line-height:1.6;overflow-wrap:anywhere}.profile-article-meta{font-size:var(--fs-tiny);color:var(--muted)}.profile-article-tags{display:flex;flex-wrap:wrap;gap:16rpx;color:var(--brand-dark);font-size:var(--fs-tiny)}

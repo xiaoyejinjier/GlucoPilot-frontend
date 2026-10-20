@@ -18,17 +18,8 @@
 </template>
 
 <view class="page-no-tab voice-page {{keyboardHeight ? 'keyboard-open' : ''}}"
+  bindtouchend="onHoldEnd" bindtouchcancel="onHoldCancel"
   style="{{displayStyle}};{{viewportHeight ? 'height:' + viewportHeight + 'px;' : ''}}">
-  <view class="wx-head">
-    <view class="wx-head-main">
-      <text class="wx-head-title">{{sessionTitle || '小语'}}</text>
-      <text wx:if="{{sessionStatusText}}" class="wx-head-status {{sessionReadOnly ? 'locked' : ''}}">{{sessionStatusText}}</text>
-    </view>
-    <view class="wx-head-actions">
-      <view class="wx-head-btn" bindtap="onOpenHistory" aria-role="button">历史对话</view>
-      <view class="wx-head-btn primary" bindtap="onNewChat" aria-role="button">新对话</view>
-    </view>
-  </view>
   <scroll-view class="wx-body" scroll-y scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
     <template wx:if="{{!hasHistory && !sessionReadOnly}}" is="assistantWelcome" data="{{suggestions: suggestions}}" />
     <view class="history-status">
@@ -65,6 +56,7 @@
           </block>
           <block wx:else>
             <text wx:if="{{item.pending && !item.content}}" class="wx-typing">正在思考…</text>
+            <chat-markdown wx:elif="{{item.role !== 'user'}}" content="{{item.content}}" pending="{{item.pending}}"></chat-markdown>
             <text wx:else>{{item.content}}</text>
             <view wx:if="{{item.error && !item.history && !sessionReadOnly}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
           </block>
@@ -79,7 +71,6 @@
 
   <view wx:if="{{sessionReadOnly}}" class="wx-locked">
     <text class="wx-locked-text">{{sessionNotice}}</text>
-    <view class="wx-locked-btn" bindtap="onNewChat" aria-role="button">新对话</view>
   </view>
   <view class="wx-foot">
     <view class="composer-row">
@@ -93,10 +84,9 @@
           placeholder-class="composer-placeholder" value="{{inputValue}}" focus="{{inputFocus}}" bindinput="onInput"
           confirm-type="send" bindconfirm="onSend" bindfocus="onInputFocus" bindblur="onInputBlur"
           bindkeyboardheightchange="onKeyboardHeightChange" adjust-position="{{false}}" disabled="{{sessionReadOnly}}" />
-        <view wx:else class="wx-hold {{recording ? 'on' : ''}}"
-          bindtouchstart="onHoldStart" bindtouchend="onHoldEnd" bindtouchcancel="onHoldEnd"
-          aria-role="button" aria-label="{{recording ? '松开结束' : '按住说话'}}"
-        >{{recording ? '松开结束' : '按住说话'}}</view>
+        <view wx:else class="composer-hold {{holdingSpeech ? 'is-holding' : ''}}"
+          bindtouchstart="onHoldStart" bindtouchend="onHoldEnd" bindtouchcancel="onHoldCancel"
+          aria-role="button" aria-label="按住说话，松开后识别">{{holdingSpeech ? '松开结束' : '按住说话'}}</view>
         <view wx:if="{{!voiceMode}}" class="composer-send {{sending ? 'is-sending' : ''}}"
           bindtap="onSend" hover-class="composer-pressed" aria-role="button"
           aria-label="{{sending ? '正在回复' : '发送消息'}}" aria-disabled="{{sending}}">
@@ -111,4 +101,6 @@
     </view>
     <text class="composer-notice">内容由 AI 生成，仅供参考，不作为医疗诊断</text>
   </view>
+  <speech-input id="speechInput" visible="{{speechVisible}}" draft="{{inputValue}}" disabled="{{sending || sessionReadOnly}}"
+    viewport-height="{{viewportHeight}}" bind:close="onCloseSpeechInput" bind:confirm="onConfirmSpeechInput"></speech-input>
 </view>

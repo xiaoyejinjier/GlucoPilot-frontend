@@ -27,7 +27,7 @@ function formatTime(iso) {
 }
 
 function mapNewsItem(n) {
-  const type = n.contentType === 2 ? 'video' : 'article'
+  const type = n.contentType === 2 || (n.videos || []).length ? 'video' : 'article'
   return {
     id: n.id,
     title: n.title,
@@ -44,7 +44,11 @@ function mapNewsItem(n) {
     likeCount: n.likeCount || 0,
     collectCount: n.collectCount || 0,
     liked: !!n.liked,
-    collected: !!n.collected
+    collected: !!n.collected,
+    author: n.author || null,
+    commentCount: n.commentCount || 0,
+    tags: n.tags || [],
+    images: n.images || [], videos:n.videos || []
   }
 }
 
@@ -123,6 +127,58 @@ function fetchNewsDetail(id) {
 function updateNewsAction(id, payload) {
   return put(`/news/${id}/actions`, payload, { auth: true })
 }
+
+function fetchCommunityProfile(key) { return get(`/community/profiles/${encodeURIComponent(key)}`, null, { auth: true }) }
+function setCommunityFollowing(key, following) { return put(`/community/profiles/${encodeURIComponent(key)}/following`, { following }, { auth: true }) }
+function fetchCommunityList(mode, params) {
+  if (!['following', 'collections', 'messages', 'profiles'].includes(mode)) return Promise.reject(new Error('列表类型不正确'))
+  return get(`/community/${mode}`, params, { auth: true }).then(page => mode === 'collections'
+    ? { ...page, records: (page.records || []).map(mapNewsItem) } : page)
+}
+function fetchNewsComments(id, params) { return get(`/news/${id}/comments`, params, { auth: true }) }
+function fetchCommentReplies(id, rootId, params) { return get(`/news/${id}/comments/${rootId}/replies`, params, { auth: true }) }
+function addNewsComment(id, payload) { const path = payload.replyToCommentId ? `/news/${id}/comments/${encodeURIComponent(payload.replyToCommentId)}/replies` : `/news/${id}/comments`; return post(path, payload, { auth: true }) }
+function deleteNewsComment(id, commentId) { return del(`/news/${id}/comments/${commentId}`, null, { auth: true }) }
+function fetchDirectMessages(peer, params) { return get(`/community/messages/${encodeURIComponent(peer)}`, params, { auth: true }) }
+function fetchUnreadMessages() { return get('/community/messages/unread', null, { auth:true }) }
+function fetchInformationSummary() { return get('/community/information/summary', null, { auth:true }) }
+function fetchInteractionNotices(kind,params) { return get('/community/notifications',{ ...params,kind },{auth:true}) }
+function readInteractionNotices(kind,throughId) { return put('/community/notifications/read',{kind,throughId},{auth:true}) }
+function fetchDrafts(params) { return get('/community/drafts',params,{auth:true}) }
+function fetchDraft(id) { return get(`/community/drafts/${encodeURIComponent(id)}`,null,{auth:true}) }
+function createDraft(payload) { return post('/community/drafts',payload,{auth:true}) }
+function updateDraft(id,payload) { return put(`/community/drafts/${encodeURIComponent(id)}`,payload,{auth:true}) }
+function deleteDraft(id,revision) { return del(`/community/drafts/${encodeURIComponent(id)}?revision=${encodeURIComponent(revision)}`,null,{auth:true}) }
+function publishDraft(id,payload) { return post(`/community/drafts/${encodeURIComponent(id)}/publish`,payload,{auth:true}) }
+function createExportTask(payload) { return post('/data-export-tasks',payload,{auth:true}) }
+function fetchExportTasks(params) { return get('/data-export-tasks',params,{auth:true}) }
+function generateExportTask(id) { return post(`/data-export-tasks/${encodeURIComponent(id)}/generate`,null,{auth:true,timeout:60000}) }
+function sendDirectMessage(peer, payload) { return post(`/community/messages/${encodeURIComponent(peer)}`, payload, { auth: true, timeout: 15000 }) }
+function readDirectMessages(peer, throughId) { return put(`/community/messages/${encodeURIComponent(peer)}/read`, { throughId }, { auth: true }) }
+
+function fetchMyCommunityTags() { return get('/community/tags/mine',null,{auth:true}) }
+function fetchProfileArticles(key,params) { return get(`/community/profiles/${encodeURIComponent(key)}/articles`,params,{auth:true}).then(page=>({...page,records:(page.records || []).map(mapCommunityArticle)})) }
+function fetchCommunityTags() { return get('/community/tags', null, { auth: true }) }
+function mapCommunityArticle(item) {
+  return { ...item, ...mapNewsItem({ ...item, summaryText: item.summary || '', contentBody: item.body || '', channelCode: 4, contentType: (item.videos || []).length ? 2 : 1 }),
+    state: item.state, revision: item.revision, body: item.body || '', summary: item.summary || '', hasCover: !!item.coverUrl }
+}
+function fetchCommunityArticles(params = {}) {
+  return get('/community/articles', params, { auth: true })
+    .then(page => ({ ...page, records: (page.records || []).map(mapCommunityArticle) }))
+    .catch(error => {
+      // UI升级期间仍可浏览旧后端的真实资讯；筛选失败不伪装成其他话题结果。
+      if (error.statusCode !== 404 || params.tag || params.following || params.keyword) throw error
+      return fetchNews('', params.pageNum, params.pageSize).then(page => ({ ...page,
+        records: page.records.map(item => ({ ...item, state: 'PUBLISHED', hasCover: !!item.cover })) }))
+    })
+}
+function fetchMyArticles(params) { return get('/community/articles/mine', params, { auth: true }) }
+function fetchCommunityArticle(id) { return get(`/community/articles/${encodeURIComponent(id)}`, null, { auth: true }) }
+function submitCommunityArticle(payload) { return post('/community/articles', payload, { auth: true, timeout: 15000 }) }
+function editCommunityArticle(id, payload) { return put(`/community/articles/${encodeURIComponent(id)}`, payload, { auth: true, timeout: 15000 }) }
+function retryArticleAi(id) { return post(`/community/articles/${encodeURIComponent(id)}/retry-ai`, null, { auth: true }) }
+function reportCommunityContent(payload) { return post('/community/reports', payload, { auth: true }) }
 
 function fetchFoodCategories() {
   return get('/food-categories', null, { auth: false }).then((list) => list || [])
@@ -371,6 +427,11 @@ function fetchGlucoseAlertReplies(pageNum, pageSize) {
   return get('/glucose-alerts/replies', { pageNum: pageNum || 1, pageSize: pageSize || 3 }, { auth: true })
 }
 
+/** 只返回语音草稿，发送仍由用户确认后调用sendChatMessage。 */
+function transcribeSpeech(payload) {
+  return post('/speech-transcriptions', payload, { auth: true, timeout: 60000 })
+}
+
 /** ---------- statistics ---------- */
 function fetchGlucoseSummary(params) {
   const data = {}
@@ -383,6 +444,14 @@ function fetchGlucoseSummary(params) {
 }
 
 module.exports = {
+  fetchInformationSummary, fetchInteractionNotices, readInteractionNotices,
+  fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
+  createExportTask, fetchExportTasks, generateExportTask,
+  fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
+  submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
+  fetchCommunityProfile, setCommunityFollowing, fetchCommunityList,
+  fetchNewsComments, fetchCommentReplies, addNewsComment, deleteNewsComment,
+  fetchDirectMessages, sendDirectMessage, readDirectMessages, fetchUnreadMessages,
   channelName,
   channelCode,
   wechatLogin,
@@ -431,6 +500,7 @@ module.exports = {
   fetchGlucoseNodes,
   fetchGlucoseAlertReplies,
   fetchGlucoseSummary,
+  transcribeSpeech,
   mapNewsItem,
   mapBanner,
   mapFood

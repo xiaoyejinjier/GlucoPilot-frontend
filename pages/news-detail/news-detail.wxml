@@ -1,5 +1,14 @@
 <view class="page-no-tab" style="{{displayStyle}}">
+  <view wx:if="{{loading && !news}}" class="card social-empty">正在加载文章…</view>
+  <view wx:if="{{error}}" class="card social-empty" bindtap="loadDetail">{{error}} · 点击重试</view>
+  <block wx:if="{{news}}">
+  <view wx:if="{{news.author}}" class="card article-author" data-key="{{news.author.key}}" bindtap="onProfile" aria-role="button">
+    <image wx:if="{{news.author.avatarUrl}}" src="{{news.author.avatarUrl}}" class="social-avatar" mode="aspectFill" />
+    <view wx:else class="social-avatar avatar-placeholder">语</view>
+    <view class="author-name"><text>{{news.author.nickname}}</text><text class="author-hint">查看公开资料</text></view><button wx:if="{{!news.author.isSelf}}" class="author-follow" catchtap="onFollowAuthor" disabled="{{followBusy}}">{{news.author.followed ? '已关注' : '+ 关注'}}</button>
+  </view>
   <view class="card">
+    <article-video wx:for="{{news.videos}}" wx:key="mediaId" media-id="{{item.mediaId}}"></article-video>
     <video
       wx:if="{{news.type === 'video' && news.videoUrl}}"
       class="news-video"
@@ -10,7 +19,7 @@
       object-fit="cover"
     />
     <image
-      wx:else
+      wx:elif="{{!news.videos.length && !news.images.length}}"
       class="news-hero-img"
       src="{{news.cover}}"
       mode="aspectFill"
@@ -18,20 +27,36 @@
   </view>
 
   <view class="card">
+    <text class="article-heading">{{news.title}}</text>
+    <view class="article-tags"><text wx:for="{{news.tags}}" wx:key="code"># {{item.name}}</text></view>
     <text class="news-meta">{{news.channel}} · {{news.typeLabel}} · {{news.time}}</text>
     <text class="news-lead">{{news.summary}}</text>
     <view class="news-body">
       <text wx:if="{{news.contentBody}}" class="news-para" style="white-space: pre-wrap;">{{news.contentBody}}</text>
-      <block wx:else>
-        <text class="news-para">餐后血糖升高，往往不是"突然坏了"，而是进餐结构、进食速度和活动量共同作用的结果。</text>
-        <text class="news-para">第一步：看主食。米饭、面条等精制主食升糖更快，建议逐步替换为低 GI 主食如燕麦、糙米。</text>
-        <text class="news-para">第二步：控速度。细嚼慢咽，每口咀嚼 15-20 次，给大脑足够时间接收饱腹信号。</text>
-        <text class="news-para">第三步：餐后动。餐后 30 分钟轻度活动，如散步 10-15 分钟，有助于平稳血糖。</text>
-      </block>
     </view>
+    <view wx:if="{{news.images.length}}" class="article-photos"><article-photo wx:for="{{news.images}}" wx:key="mediaId" media-id="{{item.mediaId}}"></article-photo></view>
+    <view class="article-bottom"><text>社区分享仅供交流，不替代专业诊疗</text><text class="article-report" bindtap="onReport">举报</text></view>
     <view class="news-ops">
-      <view class="news-op {{liked ? 'on' : ''}}" bindtap="onLike">{{liked ? '已赞' : '点赞'}}</view>
-      <view class="news-op {{collected ? 'on' : ''}}" bindtap="onCollect">{{collected ? '已收藏' : '收藏'}}</view>
+      <view class="news-op {{liked ? 'on' : ''}}" bindtap="onLike" aria-disabled="{{actionBusy}}">{{liked ? '已赞' : '点赞'}} {{news.likeCount}}</view>
+      <view class="news-op {{collected ? 'on' : ''}}" bindtap="onCollect" aria-disabled="{{actionBusy}}">{{collected ? '已收藏' : '收藏'}} {{news.collectCount}}</view>
     </view>
   </view>
+  <view class="card">
+    <view class="section-title">评论 {{news.commentCount}}</view>
+    <view wx:for="{{comments}}" wx:key="id" class="comment-thread">
+      <view class="comment-row" data-id="{{item.id}}" bindtap="onReply">
+        <image wx:if="{{item.author.avatarUrl && !item.avatarFailed}}" class="comment-avatar" src="{{item.author.avatarUrl}}" mode="aspectFill" data-id="{{item.id}}" data-key="{{item.author.key}}" binderror="onCommentAvatarError" catchtap="onProfile" />
+        <view wx:else class="comment-avatar avatar-placeholder" data-key="{{item.author.key}}" catchtap="onProfile">{{item.avatarText}}</view>
+        <view class="comment-main"><text data-key="{{item.author.key}}" catchtap="onProfile" class="comment-name">{{item.author.nickname}}</text><text class="comment-content">{{item.content}}</text><view class="comment-meta"><text class="comment-time">{{item.timeLabel}}</text><text wx:if="{{item.mine}}" class="comment-secondary" data-id="{{item.id}}" catchtap="onDeleteComment">删除</text><text wx:else class="comment-secondary" data-id="{{item.id}}" catchtap="onReportComment">举报</text><text class="comment-reply" data-id="{{item.id}}" catchtap="onReply">回复</text></view></view>
+      </view>
+      <view wx:if="{{item.replies.length}}" class="comment-replies"><view wx:for="{{item.replies}}" wx:for-item="reply" wx:key="id" class="reply-row" data-id="{{reply.id}}" catchtap="onReply"><image wx:if="{{reply.author.avatarUrl && !reply.avatarFailed}}" class="reply-avatar" src="{{reply.author.avatarUrl}}" mode="aspectFill" data-id="{{reply.id}}" data-key="{{reply.author.key}}" binderror="onCommentAvatarError" catchtap="onProfile" /><view wx:else class="reply-avatar avatar-placeholder" data-key="{{reply.author.key}}" catchtap="onProfile">{{reply.avatarText}}</view><view class="comment-main"><text class="comment-name" data-key="{{reply.author.key}}" catchtap="onProfile">{{reply.author.nickname}}</text><view class="comment-content"><text wx:if="{{reply.replyToAuthor && reply.replyToCommentId !== item.id}}" class="reply-to">回复 {{reply.replyToAuthor.nickname}}：</text><text wx:elif="{{!reply.replyToAuthor}}" class="reply-to">原评论已删除 · </text><text>{{reply.content}}</text></view><view class="comment-meta"><text class="comment-time">{{reply.timeLabel}}</text><text wx:if="{{reply.mine}}" class="comment-secondary" data-id="{{reply.id}}" catchtap="onDeleteComment">删除</text><text wx:else class="comment-secondary" data-id="{{reply.id}}" catchtap="onReportComment">举报</text><text class="comment-reply" data-id="{{reply.id}}" catchtap="onReply">回复</text></view></view></view></view>
+      <text wx:if="{{item.replyHasMore}}" class="more-replies" data-id="{{item.id}}" bindtap="onMoreReplies">{{item.repliesLoading ? '正在加载…' : item.repliesError || '展开更多回复'}}</text>
+    </view>
+    <text wx:if="{{!comments.length && !commentsLoading && !commentsError}}" class="social-empty">还没有评论，来说两句吧</text>
+    <text wx:if="{{commentsLoading}}" class="social-empty">正在加载评论…</text>
+    <text wx:elif="{{commentsError}}" class="social-link" bindtap="onRetryComments">{{commentsError}}</text>
+    <text wx:elif="{{commentHasMore}}" class="social-link" bindtap="onMoreComments">查看更多评论</text>
+    <view id="comment-composer" class="comment-composer"><view wx:if="{{replyTarget}}" class="reply-context"><text>回复 {{replyTarget.nickname}}</text><text class="cancel-reply" bindtap="onCancelReply">取消回复</text></view><textarea class="comment-input" placeholder="{{replyTarget ? '回复 ' + replyTarget.nickname + '…' : '写下你的评论…'}}" maxlength="500" value="{{commentDraft}}" bindinput="onCommentInput" bindblur="onCommentBlur" disabled="{{posting}}" focus="{{commentFocus}}" cursor-spacing="24" auto-height /><button class="social-primary" bindtap="onCommentSend" loading="{{posting}}" disabled="{{posting || !commentDraft}}">{{replyTarget ? '发送回复' : '发表评论'}}</button></view>
+  </view>
+  </block>
 </view>

@@ -24,8 +24,8 @@ const HISTORY_PAGE_SIZE = 20
 /** 后端 BIZ_REJECTED：已结束/已归档会话被拒绝发送时返回的业务码 */
 const BIZ_REJECTED = 40001
 
-const ENDED_NOTICE = '该会话已结束，发送消息请点右上角「新对话」'
-const ARCHIVED_NOTICE = '该会话已归档，发送消息请点右上角「新对话」'
+const ENDED_NOTICE = '该对话已结束，请退出小语后重新进入'
+const ARCHIVED_NOTICE = '该对话已归档，请退出小语后重新进入'
 
 /** 后端默认标题；历史会话拿不到标题时用它兜底展示 */
 const DEFAULT_TITLE = '新对话'
