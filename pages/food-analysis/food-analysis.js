@@ -250,6 +250,12 @@ Page({
     }
   },
 
+  /** 预测/保存共用同一指纹算法：nodeCode + 血糖 + 有效明细碳水，二者必须完全一致。 */
+  predictFingerprint(input) {
+    return [this.data.nodeId, input.glucose, input.carbsG,
+      input.validItems.map((item) => [item.foodName, item.categoryCode, item.weightG, item.carbsG].join(':')).join('|')].join('#')
+  },
+
   async predict() {
     if (!this._alive) return
     const version = (this._predictVersion || 0) + 1
@@ -260,8 +266,7 @@ Page({
       this.setData({ predictResult: null, predictLoading: false, predictError: '', predictNotice: '' })
       return
     }
-    const fingerprint = [this.data.nodeId, input.glucose, input.carbsG,
-      input.validItems.map((item) => [item.foodName, item.categoryCode, item.weightG, item.carbsG].join(':')).join('|')].join('#')
+    const fingerprint = this.predictFingerprint(input)
     this._predictFingerprint = fingerprint
     this.setData({
       predictLoading: true, predictError: '',
@@ -289,7 +294,8 @@ Page({
         suggestCount: suggestItems.length,
         predictResult: { predictNow: result.predictNow, predictSuggest: result.predictSuggest,
           suggestText: result.suggestText || '', predictCarbs: input.carbsG,
-          suggestCarbs: result.suggestCarbs == null ? null : result.suggestCarbs }
+          suggestCarbs: result.suggestCarbs == null ? null : result.suggestCarbs,
+          fingerprint }
       }
       this.data.items.forEach((item, index) => {
         const matched = Object.prototype.hasOwnProperty.call(suggestMap, item.foodName)
@@ -304,6 +310,7 @@ Page({
       // P4：失败即清空，保存时不再携带上一次的预测值。
       if (this._alive && version === this._predictVersion && fingerprint === this._predictFingerprint) {
         this.setData({ predictResult: null, predictError: error.message || '预测失败，可重试；不影响饮食保存' })
+        if (error.code === 40100) this.ensureLogin()
       }
     } finally {
       if (this._alive && version === this._predictVersion && fingerprint === this._predictFingerprint) {
@@ -393,21 +400,24 @@ Page({
     this.setData({ busy: true })
     wx.showLoading({ title: '保存中...', mask: true })
     try {
+      // 预测值与当前输入必须同源：防抖/在途窗口内改了重量或血糖就丢弃旧预测，避免「新碳水 + 旧预测」落库
       const prediction = this.data.predictResult
+      const currentFingerprint = this.predictFingerprint(this.buildPredictInput())
+      const validPrediction = prediction && prediction.fingerprint === currentFingerprint ? prediction : null
       await saveMealRecord({
         recordDate: this._recordDate, nodeCode: this.data.nodeId, mediaId: this.data.mediaId,
         foodsText: this.data.foodsText, carbsG: this.data.carbsG,
         supplementText: this.data.supplement || undefined,
-        ...(prediction ? { predictNow: prediction.predictNow, predictSuggest: prediction.predictSuggest,
-          suggestText: prediction.suggestText || undefined } : {}),
+        ...(validPrediction ? { predictNow: validPrediction.predictNow, predictSuggest: validPrediction.predictSuggest,
+          suggestText: validPrediction.suggestText || undefined } : {}),
         items: this.data.items.map((item) => ({ foodId: item.foodId || undefined, foodName: item.foodName,
           weightG: item.weightG, carbsG: item.carbsG, caloriesKcal: item.caloriesKcal }))
       })
       if (!this._alive) return
       saveRecord(this.data.nodeId, { type: 'meal', foods: this.data.foodsText, carbs: this.data.carbsG,
         supplement: this.data.supplement,
-        predictedGlucose: prediction ? prediction.predictNow : null,
-        suggestedGlucose: prediction ? prediction.predictSuggest : null }, this._recordDate)
+        predictedGlucose: validPrediction ? validPrediction.predictNow : null,
+        suggestedGlucose: validPrediction ? validPrediction.predictSuggest : null }, this._recordDate)
       clearShotImage()
       wx.showToast({ title: '饮食记录已保存', icon: 'success' })
       wx.switchTab({ url: '/pages/ai/ai' })

@@ -123,9 +123,10 @@ Page({
               recordedAt: record.recordedAt || '', sourceType: record.sourceType,
               remark: record.remark || '' }
           })
-        } else if (boardResult.value) {
+        } else if (boardResult.value && Array.isArray(boardResult.value.nodes) && boardResult.value.nodes.length) {
+          // 旧后端可能返回缺少 nodes 的看板体；nodes 为空时不得清空本地血糖缓存。
           GLUCOSE_NODES.filter((node) => !node.isMeal).forEach((node) => delete records[node.id])
-          ;(boardResult.value.nodes || []).forEach((node) => {
+          ;(boardResult.value.nodes).forEach((node) => {
             if (!node.hasRecord || node.isMeal) return
             const id = node.nodeCode || node.id
             const previous = cached[id]

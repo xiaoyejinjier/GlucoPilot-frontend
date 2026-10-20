@@ -294,6 +294,11 @@ function fetchDayMeals(recordDate) {
   return get('/meal-records', { recordDate }, { auth: true })
 }
 
+/** 删除餐食记录（后端逻辑删除主记录并级联明细）；当前无删除 UI，先提供封装。 */
+function deleteMealRecord(id) {
+  return del(`/meal-records/${id}`, null, { auth: true })
+}
+
 /** ---------- device ---------- */
 function syncMockGlucose(readings) {
   return post('/device/glucose-sync', {
@@ -442,6 +447,7 @@ module.exports = {
   analyzeMealPhoto,
   predictMealGlucose,
   fetchDayMeals,
+  deleteMealRecord,
   syncMockGlucose,
   defaultMockReadings,
   fetchMe,
