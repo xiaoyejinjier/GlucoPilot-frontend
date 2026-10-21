@@ -27,19 +27,31 @@ function formatTime(iso) {
   return s.length >= 16 ? s.slice(0, 16) : s
 }
 
-/** 把管理端保存的 /api/v1/cms/images/{id} 解析成小程序可请求的完整地址。 */
-function resolveCmsImage(url) {
+/** 把管理端保存的 /api/v1/cms/images|videos/{id} 解析成小程序可请求的完整地址。 */
+function resolveCmsMedia(url) {
   const source = String(url || '').trim()
   if (!source) return ''
   if (/^https?:\/\//i.test(source)) return source
-  if (/^\/api\/v1\/cms\/images\/\d+$/.test(source)) {
+  if (/^\/api\/v1\/cms\/(images|videos)\/\d+$/.test(source)) {
     return `${String(baseUrl).replace(/\/+$/, '')}${source.slice('/api/v1'.length)}`
   }
   return source
 }
 
+/** 正文 HTML：相对 CMS 图地址补全，供 rich-text 使用。 */
+function rewriteContentHtml(html) {
+  const raw = String(html || '')
+  if (!raw) return ''
+  const prefix = String(baseUrl).replace(/\/+$/, '')
+  return raw.replace(
+    /(src|href)=(["'])(\/api\/v1\/cms\/images\/\d+)\2/gi,
+    (_m, attr, quote, path) => `${attr}=${quote}${prefix}${path.slice('/api/v1'.length)}${quote}`
+  )
+}
+
 function mapNewsItem(n) {
   const type = n.contentType === 2 || (n.videos || []).length ? 'video' : 'article'
+  const contentBody = n.contentBody || ''
   return {
     id: n.id,
     title: n.title,
@@ -49,10 +61,11 @@ function mapNewsItem(n) {
     type,
     typeLabel: type === 'video' ? '视频' : '图文',
     time: formatTime(n.publishAt),
-    cover: resolveCmsImage(n.coverUrl) || '/assets/news/n1.jpg',
-    coverText: type === 'video' ? '▶' : '资讯',
-    videoUrl: n.videoUrl || '',
-    contentBody: n.contentBody || '',
+    cover: resolveCmsMedia(n.coverUrl) || '/assets/news/n1.jpg',
+    coverText: '',
+    videoUrl: resolveCmsMedia(n.videoUrl) || '',
+    contentBody,
+    contentHtml: rewriteContentHtml(contentBody),
     likeCount: n.likeCount || 0,
     collectCount: n.collectCount || 0,
     liked: !!n.liked,
@@ -69,7 +82,7 @@ function mapBanner(b) {
     id: b.id,
     title: b.title,
     desc: b.subtitle || '',
-    imageUrl: resolveCmsImage(b.imageUrl),
+    imageUrl: resolveCmsMedia(b.imageUrl),
     linkUrl: b.linkUrl || ''
   }
 }
@@ -351,11 +364,49 @@ function fetchDayMeals(recordDate) {
 }
 
 /** ---------- device ---------- */
-function syncMockGlucose(readings) {
-  return post('/device/glucose-sync', {
+/** 当前用户已绑定设备列表。 */
+function fetchMyDevices() {
+  return get('/devices', null, { auth: true }).then((list) => (list || []).map(mapDeviceItem))
+}
+
+function mapDeviceItem(d) {
+  return {
+    id: String(d.id),
+    deviceSn: d.deviceSn || '',
+    deviceName: d.deviceName || '我的血糖仪',
+    provider: String(d.provider || 'MOCK').toUpperCase(),
+    deviceStatus: d.deviceStatus == null ? 1 : Number(d.deviceStatus),
+    lastSyncAt: d.lastSyncAt || '',
+    bound: d.bound !== false
+  }
+}
+
+/** 自助绑定：deviceSn + provider，名称可选。 */
+function bindDevice(payload) {
+  return post('/devices/bind', {
+    deviceSn: payload.deviceSn,
+    provider: payload.provider,
+    deviceName: payload.deviceName || undefined
+  }, { auth: true }).then(mapDeviceItem)
+}
+
+/** 解绑本人设备（清空归属，保留档案）。 */
+function unbindDevice(id) {
+  return post(`/devices/${id}/unbind`, {}, { auth: true })
+}
+
+/**
+ * MOCK 同步演示读数。可附带 deviceSn 以刷新 last_sync_at。
+ * @param {Array|undefined} readings
+ * @param {string|undefined} deviceSn
+ */
+function syncMockGlucose(readings, deviceSn) {
+  const body = {
     provider: 'MOCK',
     payload: { readings: readings || defaultMockReadings() }
-  }, { auth: true })
+  }
+  if (deviceSn) body.deviceSn = deviceSn
+  return post('/device/glucose-sync', body, { auth: true })
 }
 
 function defaultMockReadings() {
@@ -511,6 +562,9 @@ module.exports = {
   analyzeMealPhoto,
   predictMealGlucose,
   fetchDayMeals,
+  fetchMyDevices,
+  bindDevice,
+  unbindDevice,
   syncMockGlucose,
   defaultMockReadings,
   fetchMe,

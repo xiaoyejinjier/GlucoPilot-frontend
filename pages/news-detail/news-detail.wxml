@@ -32,7 +32,8 @@
     <text class="news-meta">{{news.channel}} · {{news.typeLabel}} · {{news.time}}</text>
     <text class="news-lead">{{news.summary}}</text>
     <view class="news-body">
-      <text wx:if="{{news.contentBody}}" class="news-para" style="white-space: pre-wrap;">{{news.contentBody}}</text>
+      <rich-text wx:if="{{news.contentHtml}}" class="news-rich" nodes="{{news.contentHtml}}"></rich-text>
+      <text wx:elif="{{news.contentBody}}" class="news-para" style="white-space: pre-wrap;">{{news.contentBody}}</text>
     </view>
     <view wx:if="{{news.images.length}}" class="article-photos"><article-photo wx:for="{{news.images}}" wx:key="mediaId" media-id="{{item.mediaId}}"></article-photo></view>
     <view class="article-bottom"><text>社区分享仅供交流，不替代专业诊疗</text><text class="article-report" bindtap="onReport">举报</text></view>
