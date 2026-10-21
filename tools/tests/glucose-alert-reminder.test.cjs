@@ -62,6 +62,14 @@ test('实测提醒随节点更正/删除自然清除，节点观察不额外请�
   assert.equal(state.calls.length, 0)
 })
 
+test('记录页全局提醒只保留非零私信及互动类别，没有信息时清空',()=>{
+  const {component,instance}=createComponent()
+  component.properties.socialCounts.observer.call(instance,{messages:1,likes:2,collections:0,comments:3,follows:0,total:6})
+  assert.equal(instance.data.socialTotal,6);assert.equal(instance.data.socialItems.map(item=>item.title).join(','),'私信,点赞,评论')
+  component.properties.socialCounts.observer.call(instance,{messages:0,likes:0,collections:0,comments:0,follows:0,total:0})
+  assert.equal(instance.data.socialItems.length,0);assert.equal(instance.data.socialTotal,0)
+})
+
 const reply = (id, text) => ({ id, recordId: '123', recordDate: '2026-10-15', nodeName: '早餐前', glucoseValue: 3.8,
   recordedAt: '2026-10-15T08:00:00.123', userReply: text, repliedAt: '2026-10-15T09:00:00.456', note: '不应进入用户展示数据' })
 

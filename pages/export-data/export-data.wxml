@@ -1,6 +1,6 @@
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="page-intro">
-    <text class="page-intro-text">选择时间范围后生成导出摘要</text>
+    <text class="page-intro-text">按所选日期生成真实血糖与饮食记录文件</text>
   </view>
 
   <view class="card">
@@ -37,31 +37,32 @@
       </view>
       <view class="kv-item">
         <text class="kv-item-label">记录条数</text>
-        <text class="kv-item-value">{{previewCount}} 条</text>
+        <text class="kv-item-value">{{previewCount == null ? '生成时统计' : previewCount + ' 条'}}</text>
       </view>
       <view class="kv-item">
         <text class="kv-item-label">格式</text>
-        <text class="kv-item-value">文本摘要</text>
+        <text class="kv-item-value">Excel（XLSX）</text>
       </view>
     </view>
     <view class="actions-row">
       <button class="btn-ghost btn-sm" bindtap="onBack" disabled="{{exporting}}">取消</button>
-      <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{exporting}}">确定导出</button>
+      <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{exporting}}">生成 XLSX</button>
     </view>
   </view>
 
   <view wx:if="{{exportText}}" class="card">
     <view class="section-title">导出结果</view>
-    <text wx:if="{{filePath}}" class="file-path">已保存：{{filePath}}</text>
+    <text class="file-path">XLSX 文件已就绪，可在下方下载</text>
     <view class="export-box">
       <text class="export-text">{{exportText}}</text>
     </view>
     <button class="btn-ghost btn-block btn-sm copy-btn" bindtap="onCopy">复制摘要</button>
   </view>
 
+  <view class="card"><view class="section-title">我的导出任务</view><view wx:if="{{tasksLoading}}" class="export-task-state">正在加载…</view><view wx:if="{{tasksError}}" class="export-task-state" bindtap="loadTasks">{{tasksError}} · 点击重试</view><view wx:for="{{tasks}}" wx:key="id" class="export-task-row"><view><text class="export-task-dates">{{item.startDate}} 至 {{item.endDate}}</text><text class="export-task-state">{{item.statusLabel}}{{item.status === 'done' ? ' · 血糖 ' + item.glucoseCount + ' 条 / 饮食 ' + item.mealCount + ' 条' : ''}}</text><text wx:if="{{item.error}}" class="export-task-state">{{item.error}}</text></view><button wx:if="{{item.status === 'done'}}" data-id="{{item.id}}" bindtap="onDownload" disabled="{{!!downloading}}" loading="{{downloading === item.id}}">下载</button><button wx:else data-id="{{item.id}}" bindtap="onRetryTask" disabled="{{exporting}}">{{item.status === 'failed' ? '重试' : '生成'}}</button></view><text wx:if="{{!tasks.length && !tasksLoading && !tasksError}}" class="export-task-state">暂无导出任务</text></view>
   <view class="card tip-card">
-    <text class="tip-line">导出内容包含所选范围内的血糖与饮食记录摘要。</text>
-    <text class="tip-line">原型阶段写入本机文件并复制到剪贴板，不上传服务器。</text>
+    <text class="tip-line">文件包含所选日期内的真实血糖与饮食记录，没有记录时保留空表头。</text>
+    <text class="tip-line">生成后可下载 Excel 文件，并在历史任务中再次查看。</text>
   </view>
 
   <!-- 自定义日期弹窗：‹ 年 › + 左月右日滚动 -->

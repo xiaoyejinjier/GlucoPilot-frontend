@@ -1,0 +1,2 @@
+:host { display:block; min-width:0; }
+.chat-markdown { display:block; font-size:inherit; color:inherit; overflow-wrap:break-word; }

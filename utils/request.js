@@ -25,8 +25,9 @@ function request(options) {
     'Content-Type': 'application/json',
     ...header
   }
+  const requestToken = auth ? getToken() : ''
   if (auth) {
-    const token = getToken()
+    const token = requestToken
     if (token) {
       headers.Authorization = `Bearer ${token}`
     }
@@ -42,7 +43,7 @@ function request(options) {
       success(res) {
         const body = res.data || {}
         if (res.statusCode === 401 || body.code === 40100) {
-          if (auth) {
+          if (auth && getToken() === requestToken) {
             setToken('')
             wx.setStorageSync('isLoggedIn', false)
           }

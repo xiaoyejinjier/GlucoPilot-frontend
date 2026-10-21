@@ -1,7 +1,8 @@
 const { GLUCOSE_NODES } = require('../../utils/constants')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { persistShotImage } = require('../../utils/shot')
-const { recognizeGlucoseImage } = require('../../utils/ocr/index')
+const { clearPendingOcr } = require('../../utils/ocr/index')
+const { getToken } = require('../../utils/request')
 const { getNodeRecordWindow } = require('../../utils/record-window')
 
 Page({
@@ -22,8 +23,8 @@ Page({
   cameraCtx: null,
 
   onLoad(options) {
+    this._photoToken = getToken()
     const nodeId = options.nodeId || 'after_breakfast'
-    const isMeal = options.isMeal === '1' || options.isMeal === true
     const node = GLUCOSE_NODES.find(n => n.id === nodeId) || GLUCOSE_NODES[2]
     const recordWindow = getNodeRecordWindow(node.id, new Date())
     const sys = wx.getSystemInfoSync() || {}
@@ -32,7 +33,7 @@ Page({
     this.setData({
       nodeId: node.id,
       nodeName: decodeURIComponent(options.nodeName || node.name),
-      isMeal: !!isMeal,
+      isMeal: !!node.isMeal,
       isDevtools,
       useLiveCamera: false,
       blocked: recordWindow.locked,
@@ -53,6 +54,11 @@ Page({
 
   onShow() {
     applyDisplayToCurrentPage()
+  },
+
+  onUnload() {
+    this._disposed = true
+    if (this._loading) { wx.hideLoading(); this._loading = false }
   },
 
   ensureCameraAuth() {
@@ -202,44 +208,41 @@ Page({
   },
 
   afterShot(imagePath) {
-    if (!this.ensureNodeOpen()) return
-    if (this.data.isMeal) {
-      this.goNext(imagePath)
+    if (this._disposed || !this.ensureNodeOpen()) return
+    if (this._photoToken !== getToken()) {
+      this.setData({ busy: false })
+      wx.switchTab({ url: '/pages/ai/ai' })
       return
     }
-
-    this.setData({ busy: true })
-    wx.showLoading({ title: '上传并识别中...', mask: true })
-    persistShotImage(imagePath)
-      .then((savedPath) => recognizeGlucoseImage(savedPath || imagePath))
-      .then(() => {
-        wx.hideLoading()
-        this.goNext(imagePath, true)
-      })
+    return this.goNext(imagePath)
   },
 
-  goNext(imagePath, alreadyPersisted) {
+  goNext(imagePath) {
+    if (this._preparingShot) return
+    this._preparingShot = true
+    this.setData({ busy: true })
     const { nodeId, nodeName, isMeal } = this.data
     const name = encodeURIComponent(nodeName || '')
-    const done = () => this.setData({ busy: false })
+    const token = getToken()
+    const done = () => {
+      this._preparingShot = false
+      if (this._loading) { wx.hideLoading(); this._loading = false }
+      if (!this._disposed) this.setData({ busy: false })
+    }
 
-    wx.showLoading({ title: '处理中...', mask: true })
-    const persist = alreadyPersisted ? Promise.resolve(imagePath) : persistShotImage(imagePath)
-    persist.then(() => {
-      wx.hideLoading()
-      if (isMeal) {
-        wx.navigateTo({
-          url: `/pages/food-confirm/food-confirm?nodeId=${nodeId}&nodeName=${name}`,
-          complete: done,
-          fail: done
-        })
-      } else {
-        wx.navigateTo({
-          url: `/pages/confirm/confirm?nodeId=${nodeId}&nodeName=${name}`,
-          complete: done,
-          fail: done
-        })
-      }
+    clearPendingOcr()
+    this._loading = true
+    wx.showLoading({ title: '准备照片...', mask: true })
+    return persistShotImage(imagePath).then(() => {
+      if (this._disposed || getToken() !== token || !this.ensureNodeOpen()) { done(); return }
+      // 正餐和血糖仪照片先进入同一张定格确认页，此处不上传、不识别。
+      wx.navigateTo({
+        url: `/pages/food-confirm/food-confirm?nodeId=${nodeId}&isMeal=${isMeal ? 1 : 0}&nodeName=${name}`,
+        complete: done
+      })
+    }).catch((error) => {
+      done()
+      if (!this._disposed) wx.showToast({ title: error.message || '照片保存失败，请重新拍照', icon: 'none' })
     })
   }
 })

@@ -29,13 +29,18 @@ Page({
     timeRuleHint: '',
     selectedChartNodeId: '',
     chartSelection: null,
-    noticeVisible: false
+    noticeVisible: false,
+    navigationGuideVisible: false
   },
 
   onShow() {
     this._visible = true
+    const app = getApp()
+    if (typeof app.checkLogin === 'function' && !app.checkLogin()) { this._visible = false; return }
+    this.setData({ navigationGuideVisible: !!(app.getNavigationGuideToken && app.getNavigationGuideToken()) })
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
+      if (this.getTabBar().refreshGuide) this.getTabBar().refreshGuide()
     }
     applyDisplayToCurrentPage()
     // 先用本地缓存立即渲染，再用数据库中的当天记录校准页面。
@@ -45,7 +50,12 @@ Page({
   },
 
   onReady() {
+    if (this.getTabBar && this.getTabBar() && this.getTabBar().refreshGuide) this.getTabBar().refreshGuide()
     this.scheduleChartDraw(this.data.nodes)
+  },
+
+  onNavigationGuideComplete() {
+    this.setData({ navigationGuideVisible: false }, () => this.scheduleChartDraw(this.data.nodes))
   },
 
   onHide() {
@@ -212,7 +222,7 @@ Page({
   },
 
   scheduleChartDraw(nodes) {
-    if (this._visible === false || this.data.noticeVisible) return
+    if (this._visible === false || this.data.noticeVisible || this.data.navigationGuideVisible) return
     this._chartGeometry = null
     this._pendingChartNodes = nodes || []
     this.cancelChartDraw()
@@ -265,10 +275,10 @@ Page({
   },
 
   drawChart(nodes, drawVersion = this._chartDrawVersion) {
-    if (drawVersion !== this._chartDrawVersion || this._visible === false || this.data.noticeVisible) return
+    if (drawVersion !== this._chartDrawVersion || this._visible === false || this.data.noticeVisible || this.data.navigationGuideVisible) return
     const query = wx.createSelectorQuery().in(this)
     query.select('#glucoseChart').fields({ node: true, size: true }).exec(res => {
-      if (drawVersion !== this._chartDrawVersion || this._visible === false || this.data.noticeVisible) return
+      if (drawVersion !== this._chartDrawVersion || this._visible === false || this.data.noticeVisible || this.data.navigationGuideVisible) return
       if (!res[0] || !res[0].node) return
       const canvas = res[0].node
       const ctx = canvas.getContext('2d')

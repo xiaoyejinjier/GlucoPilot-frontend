@@ -1,0 +1,1 @@
+<rich-text class="chat-markdown" nodes="{{nodes}}" user-select="{{true}}"></rich-text>

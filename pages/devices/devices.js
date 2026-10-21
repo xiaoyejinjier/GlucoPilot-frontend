@@ -4,8 +4,10 @@ Page({
   data: { displayStyle: '' },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 })
+    const tabBar = typeof this.getTabBar === 'function' && this.getTabBar()
+    if (tabBar) {
+      tabBar.setData({ selected: 1 })
+      if (typeof tabBar.refreshGuide === 'function') tabBar.refreshGuide()
     }
     applyDisplayToCurrentPage()
   }

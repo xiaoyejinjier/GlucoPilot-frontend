@@ -27,19 +27,31 @@ function formatTime(iso) {
   return s.length >= 16 ? s.slice(0, 16) : s
 }
 
-/** 把管理端保存的 /api/v1/cms/images/{id} 解析成小程序可请求的完整地址。 */
-function resolveCmsImage(url) {
+/** 把管理端保存的 /api/v1/cms/images|videos/{id} 解析成小程序可请求的完整地址。 */
+function resolveCmsMedia(url) {
   const source = String(url || '').trim()
   if (!source) return ''
   if (/^https?:\/\//i.test(source)) return source
-  if (/^\/api\/v1\/cms\/images\/\d+$/.test(source)) {
+  if (/^\/api\/v1\/cms\/(images|videos)\/\d+$/.test(source)) {
     return `${String(baseUrl).replace(/\/+$/, '')}${source.slice('/api/v1'.length)}`
   }
   return source
 }
 
+/** 正文 HTML：相对 CMS 图地址补全，供 rich-text 使用。 */
+function rewriteContentHtml(html) {
+  const raw = String(html || '')
+  if (!raw) return ''
+  const prefix = String(baseUrl).replace(/\/+$/, '')
+  return raw.replace(
+    /(src|href)=(["'])(\/api\/v1\/cms\/images\/\d+)\2/gi,
+    (_m, attr, quote, path) => `${attr}=${quote}${prefix}${path.slice('/api/v1'.length)}${quote}`
+  )
+}
+
 function mapNewsItem(n) {
-  const type = n.contentType === 2 ? 'video' : 'article'
+  const type = n.contentType === 2 || (n.videos || []).length ? 'video' : 'article'
+  const contentBody = n.contentBody || ''
   return {
     id: n.id,
     title: n.title,
@@ -49,14 +61,19 @@ function mapNewsItem(n) {
     type,
     typeLabel: type === 'video' ? '视频' : '图文',
     time: formatTime(n.publishAt),
-    cover: resolveCmsImage(n.coverUrl) || '/assets/news/n1.jpg',
-    coverText: type === 'video' ? '▶' : '资讯',
-    videoUrl: n.videoUrl || '',
-    contentBody: n.contentBody || '',
+    cover: resolveCmsMedia(n.coverUrl) || '/assets/news/n1.jpg',
+    coverText: '',
+    videoUrl: resolveCmsMedia(n.videoUrl) || '',
+    contentBody,
+    contentHtml: rewriteContentHtml(contentBody),
     likeCount: n.likeCount || 0,
     collectCount: n.collectCount || 0,
     liked: !!n.liked,
-    collected: !!n.collected
+    collected: !!n.collected,
+    author: n.author || null,
+    commentCount: n.commentCount || 0,
+    tags: n.tags || [],
+    images: n.images || [], videos:n.videos || []
   }
 }
 
@@ -65,7 +82,7 @@ function mapBanner(b) {
     id: b.id,
     title: b.title,
     desc: b.subtitle || '',
-    imageUrl: resolveCmsImage(b.imageUrl),
+    imageUrl: resolveCmsMedia(b.imageUrl),
     linkUrl: b.linkUrl || ''
   }
 }
@@ -147,6 +164,58 @@ function fetchNewsDetail(id) {
 function updateNewsAction(id, payload) {
   return put(`/news/${id}/actions`, payload, { auth: true })
 }
+
+function fetchCommunityProfile(key) { return get(`/community/profiles/${encodeURIComponent(key)}`, null, { auth: true }) }
+function setCommunityFollowing(key, following) { return put(`/community/profiles/${encodeURIComponent(key)}/following`, { following }, { auth: true }) }
+function fetchCommunityList(mode, params) {
+  if (!['following', 'collections', 'messages', 'profiles'].includes(mode)) return Promise.reject(new Error('列表类型不正确'))
+  return get(`/community/${mode}`, params, { auth: true }).then(page => mode === 'collections'
+    ? { ...page, records: (page.records || []).map(mapNewsItem) } : page)
+}
+function fetchNewsComments(id, params) { return get(`/news/${id}/comments`, params, { auth: true }) }
+function fetchCommentReplies(id, rootId, params) { return get(`/news/${id}/comments/${rootId}/replies`, params, { auth: true }) }
+function addNewsComment(id, payload) { const path = payload.replyToCommentId ? `/news/${id}/comments/${encodeURIComponent(payload.replyToCommentId)}/replies` : `/news/${id}/comments`; return post(path, payload, { auth: true }) }
+function deleteNewsComment(id, commentId) { return del(`/news/${id}/comments/${commentId}`, null, { auth: true }) }
+function fetchDirectMessages(peer, params) { return get(`/community/messages/${encodeURIComponent(peer)}`, params, { auth: true }) }
+function fetchUnreadMessages() { return get('/community/messages/unread', null, { auth:true }) }
+function fetchInformationSummary() { return get('/community/information/summary', null, { auth:true }) }
+function fetchInteractionNotices(kind,params) { return get('/community/notifications',{ ...params,kind },{auth:true}) }
+function readInteractionNotices(kind,throughId) { return put('/community/notifications/read',{kind,throughId},{auth:true}) }
+function fetchDrafts(params) { return get('/community/drafts',params,{auth:true}) }
+function fetchDraft(id) { return get(`/community/drafts/${encodeURIComponent(id)}`,null,{auth:true}) }
+function createDraft(payload) { return post('/community/drafts',payload,{auth:true}) }
+function updateDraft(id,payload) { return put(`/community/drafts/${encodeURIComponent(id)}`,payload,{auth:true}) }
+function deleteDraft(id,revision) { return del(`/community/drafts/${encodeURIComponent(id)}?revision=${encodeURIComponent(revision)}`,null,{auth:true}) }
+function publishDraft(id,payload) { return post(`/community/drafts/${encodeURIComponent(id)}/publish`,payload,{auth:true}) }
+function createExportTask(payload) { return post('/data-export-tasks',payload,{auth:true}) }
+function fetchExportTasks(params) { return get('/data-export-tasks',params,{auth:true}) }
+function generateExportTask(id) { return post(`/data-export-tasks/${encodeURIComponent(id)}/generate`,null,{auth:true,timeout:60000}) }
+function sendDirectMessage(peer, payload) { return post(`/community/messages/${encodeURIComponent(peer)}`, payload, { auth: true, timeout: 15000 }) }
+function readDirectMessages(peer, throughId) { return put(`/community/messages/${encodeURIComponent(peer)}/read`, { throughId }, { auth: true }) }
+
+function fetchMyCommunityTags() { return get('/community/tags/mine',null,{auth:true}) }
+function fetchProfileArticles(key,params) { return get(`/community/profiles/${encodeURIComponent(key)}/articles`,params,{auth:true}).then(page=>({...page,records:(page.records || []).map(mapCommunityArticle)})) }
+function fetchCommunityTags() { return get('/community/tags', null, { auth: true }) }
+function mapCommunityArticle(item) {
+  return { ...item, ...mapNewsItem({ ...item, summaryText: item.summary || '', contentBody: item.body || '', channelCode: 4, contentType: (item.videos || []).length ? 2 : 1 }),
+    state: item.state, revision: item.revision, body: item.body || '', summary: item.summary || '', hasCover: !!item.coverUrl }
+}
+function fetchCommunityArticles(params = {}) {
+  return get('/community/articles', params, { auth: true })
+    .then(page => ({ ...page, records: (page.records || []).map(mapCommunityArticle) }))
+    .catch(error => {
+      // UI升级期间仍可浏览旧后端的真实资讯；筛选失败不伪装成其他话题结果。
+      if (error.statusCode !== 404 || params.tag || params.following || params.keyword) throw error
+      return fetchNews('', params.pageNum, params.pageSize).then(page => ({ ...page,
+        records: page.records.map(item => ({ ...item, state: 'PUBLISHED', hasCover: !!item.cover })) }))
+    })
+}
+function fetchMyArticles(params) { return get('/community/articles/mine', params, { auth: true }) }
+function fetchCommunityArticle(id) { return get(`/community/articles/${encodeURIComponent(id)}`, null, { auth: true }) }
+function submitCommunityArticle(payload) { return post('/community/articles', payload, { auth: true, timeout: 15000 }) }
+function editCommunityArticle(id, payload) { return put(`/community/articles/${encodeURIComponent(id)}`, payload, { auth: true, timeout: 15000 }) }
+function retryArticleAi(id) { return post(`/community/articles/${encodeURIComponent(id)}/retry-ai`, null, { auth: true }) }
+function reportCommunityContent(payload) { return post('/community/reports', payload, { auth: true }) }
 
 function fetchFoodCategories() {
   return get('/food-categories', null, { auth: false }).then((list) => list || [])
@@ -300,11 +369,49 @@ function deleteMealRecord(id) {
 }
 
 /** ---------- device ---------- */
-function syncMockGlucose(readings) {
-  return post('/device/glucose-sync', {
+/** 当前用户已绑定设备列表。 */
+function fetchMyDevices() {
+  return get('/devices', null, { auth: true }).then((list) => (list || []).map(mapDeviceItem))
+}
+
+function mapDeviceItem(d) {
+  return {
+    id: String(d.id),
+    deviceSn: d.deviceSn || '',
+    deviceName: d.deviceName || '我的血糖仪',
+    provider: String(d.provider || 'MOCK').toUpperCase(),
+    deviceStatus: d.deviceStatus == null ? 1 : Number(d.deviceStatus),
+    lastSyncAt: d.lastSyncAt || '',
+    bound: d.bound !== false
+  }
+}
+
+/** 自助绑定：deviceSn + provider，名称可选。 */
+function bindDevice(payload) {
+  return post('/devices/bind', {
+    deviceSn: payload.deviceSn,
+    provider: payload.provider,
+    deviceName: payload.deviceName || undefined
+  }, { auth: true }).then(mapDeviceItem)
+}
+
+/** 解绑本人设备（清空归属，保留档案）。 */
+function unbindDevice(id) {
+  return post(`/devices/${id}/unbind`, {}, { auth: true })
+}
+
+/**
+ * MOCK 同步演示读数。可附带 deviceSn 以刷新 last_sync_at。
+ * @param {Array|undefined} readings
+ * @param {string|undefined} deviceSn
+ */
+function syncMockGlucose(readings, deviceSn) {
+  const body = {
     provider: 'MOCK',
     payload: { readings: readings || defaultMockReadings() }
-  }, { auth: true })
+  }
+  if (deviceSn) body.deviceSn = deviceSn
+  return post('/device/glucose-sync', body, { auth: true })
 }
 
 function defaultMockReadings() {
@@ -404,6 +511,11 @@ function fetchGlucoseAlertReplies(pageNum, pageSize) {
   return get('/glucose-alerts/replies', { pageNum: pageNum || 1, pageSize: pageSize || 3 }, { auth: true })
 }
 
+/** 只返回语音草稿，发送仍由用户确认后调用sendChatMessage。 */
+function transcribeSpeech(payload) {
+  return post('/speech-transcriptions', payload, { auth: true, timeout: 60000 })
+}
+
 /** ---------- statistics ---------- */
 function fetchGlucoseSummary(params) {
   const data = {}
@@ -416,6 +528,14 @@ function fetchGlucoseSummary(params) {
 }
 
 module.exports = {
+  fetchInformationSummary, fetchInteractionNotices, readInteractionNotices,
+  fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
+  createExportTask, fetchExportTasks, generateExportTask,
+  fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
+  submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
+  fetchCommunityProfile, setCommunityFollowing, fetchCommunityList,
+  fetchNewsComments, fetchCommentReplies, addNewsComment, deleteNewsComment,
+  fetchDirectMessages, sendDirectMessage, readDirectMessages, fetchUnreadMessages,
   channelName,
   channelCode,
   wechatLogin,
@@ -448,6 +568,9 @@ module.exports = {
   predictMealGlucose,
   fetchDayMeals,
   deleteMealRecord,
+  fetchMyDevices,
+  bindDevice,
+  unbindDevice,
   syncMockGlucose,
   defaultMockReadings,
   fetchMe,
@@ -468,6 +591,7 @@ module.exports = {
   fetchGlucoseNodes,
   fetchGlucoseAlertReplies,
   fetchGlucoseSummary,
+  transcribeSpeech,
   mapNewsItem,
   mapBanner,
   mapFood

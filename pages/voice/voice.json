@@ -3,6 +3,8 @@
   "navigationStyle": "default",
   "disableScroll": true,
   "usingComponents": {
-    "assistant-mascot": "/components/assistant-mascot/assistant-mascot"
+    "assistant-mascot": "/components/assistant-mascot/assistant-mascot",
+    "chat-markdown": "/components/chat-markdown/chat-markdown",
+    "speech-input": "/components/speech-input/speech-input"
   }
 }

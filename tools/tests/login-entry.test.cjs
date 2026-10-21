@@ -44,6 +44,7 @@ function createFlow(options = {}) {
     navigateBack() { state.routes.push('back') }
   }
   const dependencies = {
+    './utils/message-notifications': { start(){},stop(){},reset(){} },
     './utils/display': display, './utils/storage': storage, './utils/request': request,
     './services/api': services, './utils/config': { baseUrl: '' },
     './utils/mappers': { fontNameOf: () => '标准', themeIdOf: () => 'green' }
@@ -76,11 +77,11 @@ function createFlow(options = {}) {
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
 
-test('服务地址不可用时不发起登录请求，提示重试', () => {
+test('服务地址不可用时不发起登录请求，展示具体配置原因', () => {
   const { page, state } = createFlow({ connectionIssue: '未配置地址' })
   const login = page('login'); login.onLoad(); login.onWechatLogin()
   assert.equal(state.logins.length, 0)
-  assert.match(state.toasts[0].title, /服务连接.*重试/)
+  assert.equal(state.toasts[0].title, '未配置地址')
 })
 
 test('真机冷启动忽略旧登录缓存，先展示两个登录按钮且不请求资料或声明', () => {
@@ -130,6 +131,7 @@ test('点击微信登录后才检查声明，读到底并成功提交后进入�
   assert.equal(state.logins[0][0], 'wechat')
   assert.equal(state.profiles, 1)
   assert.equal(state.routes.at(-1), '/pages/disclaimer/disclaimer?forced=1')
+  assert.equal(app.getNavigationGuideToken(), '')
   const disclaimer = page('disclaimer')
   await disclaimer.onLoad({ forced: '1' })
   disclaimer.onAgree()
@@ -138,8 +140,15 @@ test('点击微信登录后才检查声明，读到底并成功提交后进入�
   await disclaimer.onAgree()
   assert.equal(state.agreements, 1)
   assert.equal(app.globalData.disclaimerRequired, false)
+  assert.equal(app.getNavigationGuideToken(), 'new-token')
   state.timers.at(-1)()
   assert.equal(state.routes.at(-1), '/pages/ai/ai')
+  assert.equal(app.completeNavigationGuide('other-token'), false)
+  assert.equal(app.getNavigationGuideToken(), 'new-token')
+  assert.equal(app.completeNavigationGuide('new-token'), true)
+  assert.equal(app.getNavigationGuideToken(), '')
+  await app.syncProfile()
+  assert.equal(app.getNavigationGuideToken(), '')
 })
 
 test('手机号登录且已同意当前版本时直接进入记录页，不重复展示声明', async () => {
@@ -154,6 +163,7 @@ test('手机号登录且已同意当前版本时直接进入记录页，不重�
   assert.equal(state.logins[0][0], 'phone')
   assert.equal(state.routes.at(-1), '/pages/ai/ai')
   assert.equal(state.routes.some((url) => url.includes('disclaimer')), false)
+  assert.equal(app.getNavigationGuideToken(), '')
 })
 
 test('登录后资料获取失败或401留在登录流程，不再强跳免责声明', async () => {
@@ -194,4 +204,49 @@ test('声明提交401返回登录，不标记已同意或继续进入首页', as
   assert.equal(app.globalData.isLoggedIn, false)
   assert.equal(state.storage.get('disclaimerAgreed'), undefined)
   assert.equal(state.timers.length, 0)
+  assert.equal(app.getNavigationGuideToken(), '')
+})
+
+test('老用户确认新版声明不会触发新手引导，重复阅读也不会重新触发', async () => {
+  const { app, page, state } = createFlow({ profile: { disclaimerAgreed: true, disclaimerVersion: 'v0' } })
+  app.onLaunch()
+  page('login').onWechatLogin()
+  await flush()
+  const disclaimer = page('disclaimer')
+  await disclaimer.onLoad({ forced: '1' })
+  disclaimer.onScrollToBottom()
+  await disclaimer.onAgree()
+  state.timers.at(-1)()
+  assert.equal(app.getNavigationGuideToken(), '')
+  app.markDisclaimerAgreed('v1')
+  assert.equal(app.getNavigationGuideToken(), '')
+})
+
+test('同意失败不启动引导，退出或切换账号后旧引导与跳转作废', async () => {
+  const failed = createFlow({ agreementError: new Error('network') })
+  failed.page('login').onWechatLogin()
+  await flush()
+  const failedDisclaimer = failed.page('disclaimer')
+  await failedDisclaimer.onLoad({ forced: '1' })
+  failedDisclaimer.onScrollToBottom()
+  await failedDisclaimer.onAgree()
+  assert.equal(failed.app.getNavigationGuideToken(), '')
+  assert.equal(failed.state.timers.length, 0)
+
+  const { app, page, state, request } = createFlow()
+  page('login').onWechatLogin()
+  await flush()
+  const disclaimer = page('disclaimer')
+  await disclaimer.onLoad({ forced: '1' })
+  disclaimer.onScrollToBottom()
+  await disclaimer.onAgree()
+  assert.equal(app.getNavigationGuideToken(), 'new-token')
+  request.setToken('other-account-token')
+  assert.equal(app.getNavigationGuideToken(), '')
+  assert.equal(app.completeNavigationGuide('new-token'), false)
+  const routes = state.routes.length
+  state.timers.at(-1)()
+  assert.equal(state.routes.length, routes)
+  app.resetLoginState()
+  assert.equal(app.globalData.navigationGuideToken, '')
 })

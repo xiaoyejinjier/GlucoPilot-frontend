@@ -1,0 +1,30 @@
+<view wx:if="{{visible}}" class="speech-mask" style="{{viewportHeight ? 'height:' + viewportHeight + 'px;bottom:auto;' : ''}}" catchtouchmove="preventTouch">
+  <view class="speech-sheet" aria-role="dialog" aria-label="语音输入">
+    <view class="speech-header">
+      <view><text class="speech-title">语音输入</text><text class="speech-subtitle">转成文字，确认后再发送</text></view>
+      <view class="speech-close" bindtap="close" aria-role="button" aria-label="关闭语音输入">×</view>
+    </view>
+    <block wx:if="{{phase === 'review'}}">
+      <text class="speech-review-label">识别结果 · 可以修改</text>
+      <textarea class="speech-result" value="{{text}}" bindinput="edit" maxlength="{{maxLength}}"
+        placeholder="请检查识别文字" adjust-position="{{false}}" cursor-spacing="16"></textarea>
+      <view class="speech-actions">
+        <button class="speech-button secondary" bindtap="retry" disabled="{{disabled}}">重新录音</button>
+        <button class="speech-button primary" bindtap="confirm" disabled="{{disabled || !text}}">确认发送</button>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="speech-orb {{phase === 'recording' ? 'listening' : ''}}"><view class="speech-mic"></view></view>
+      <text wx:if="{{phase === 'recording'}}" class="speech-status">正在录音… {{seconds}}s / 60s</text>
+      <text wx:elif="{{phase === 'authorizing'}}" class="speech-status">正在准备麦克风…</text>
+      <text wx:elif="{{phase === 'stopping' || phase === 'transcribing'}}" class="speech-status">正在转成文字，请稍候…</text>
+      <text wx:elif="{{phase === 'error'}}" class="speech-error">{{error}}</text>
+      <text wx:else class="speech-status">请按住下方“按住说话”开始录音</text>
+      <text class="speech-tip">{{phase === 'recording' || phase === 'authorizing' ? '松开结束，识别后确认发送' : '每次最多60秒，不会自动发送'}}</text>
+      <button wx:if="{{phase === 'stopping' || phase === 'transcribing'}}" class="speech-button primary full" disabled>请稍候</button>
+      <button wx:elif="{{permissionDenied}}" class="speech-button primary full" bindtap="openSettings">开启麦克风权限</button>
+      <button wx:elif="{{phase === 'error' || phase === 'ready'}}" class="speech-button primary full" bindtap="retry" disabled="{{disabled}}">重新录音</button>
+    </block>
+    <text wx:if="{{phase !== 'recording' && phase !== 'authorizing'}}" class="speech-cancel" bindtap="close">取消</text>
+  </view>
+</view>

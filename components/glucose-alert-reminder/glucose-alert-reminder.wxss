@@ -77,3 +77,5 @@ view, text { box-sizing:border-box; }
 
 @keyframes notice-mask-in { from { opacity:0; } to { opacity:1; } }
 @keyframes notice-sheet-in { from { transform:translateY(32rpx); opacity:.6; } to { transform:translateY(0); opacity:1; } }
+
+.social-notice-row{display:flex;justify-content:space-between;align-items:center;gap:24rpx;padding:24rpx 0;border-top:1rpx solid #edf1f5;color:#516b88;font-size:var(--fs-body,28rpx)}.social-notice-count{display:inline-block;padding:2rpx 14rpx;border-radius:20rpx;background:#eaf2ff;color:#4285d9;font-size:24rpx}

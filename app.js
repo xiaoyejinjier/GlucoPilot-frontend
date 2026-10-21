@@ -4,6 +4,7 @@ const { getToken, setToken } = require('./utils/request')
 const { fetchMe, fetchAppConfig } = require('./services/api')
 const { fontNameOf, themeIdOf } = require('./utils/mappers')
 const config = require('./utils/config')
+const messageNotifications = require('./utils/message-notifications')
 
 App({
   globalData: {
@@ -11,22 +12,14 @@ App({
     isLoggedIn: false,
     disclaimerRequired: false,
     disclaimerCurrentVersion: '',
+    navigationGuideToken: '',
+    unreadCount: 0,
     /** 只读调试信息：真机当前实际请求的 API 地址。 */
     apiBaseUrl: config.baseUrl,
     /** 拍照页传给确认页的临时图，避免 URL 传路径导致黑屏 */
     pendingShotImage: '',
     /** 本次血糖仪拍照的 OCR 结果，只在确认入库流程中短暂使用。 */
-    pendingGlucoseOcr: null,
-    /**
-     * 历史会话列表 → 对话页的一次性意图。
-     * 历史页与独立小语页面之间通过 globalData 传
-     * { id, sessionStatus, title }，对话页 onShow 取走即清。
-     */
-    pendingChatSession: null,
-    /** 列表页空态点「开始新对话」时置 true，由对话页消费后走新建 */
-    pendingNewChat: false,
-    /** 对话页要消费的会话事件：{ type: 'deleted', id }——当前会话被删掉时清空视图 */
-    chatSessionEvent: null
+    pendingGlucoseOcr: null
   },
 
   onLaunch() {
@@ -65,15 +58,20 @@ App({
     }
     // 登录方式选择页不受后台恢复时的声明检查抢占。
     if (current !== 'pages/login/login') this.enforceDisclaimer()
+    if (!this.globalData.disclaimerRequired) messageNotifications.start()
   },
 
+  onHide() { messageNotifications.stop() },
+
   resetLoginState() {
+    messageNotifications.reset()
     setToken('')
     wx.setStorageSync('isLoggedIn', false)
     this.globalData.isLoggedIn = false
     this.globalData.userInfo = null
     this.globalData.disclaimerRequired = false
     this.globalData.disclaimerCurrentVersion = ''
+    this.globalData.navigationGuideToken = ''
   },
 
   openLogin() {
@@ -185,6 +183,10 @@ App({
 
   markDisclaimerAgreed(version) {
     const userInfo = { ...(this.globalData.userInfo || getUserInfo() || {}) }
+    // 只在首次同意成功后引导；声明更新后的重新确认不属于新手流程。
+    if (userInfo.disclaimerAgreed === false && this.globalData.isLoggedIn && getToken()) {
+      this.globalData.navigationGuideToken = getToken()
+    }
     userInfo.disclaimerAgreed = true
     userInfo.disclaimerVersion = version
     saveUserInfo(userInfo)
@@ -193,6 +195,18 @@ App({
     this.globalData.userInfo = userInfo
     this.globalData.disclaimerRequired = false
     this.globalData.disclaimerCurrentVersion = version
+  },
+
+  getNavigationGuideToken() {
+    const token = getToken()
+    return this.globalData.isLoggedIn && !this.globalData.disclaimerRequired &&
+      token && this.globalData.navigationGuideToken === token ? token : ''
+  },
+
+  completeNavigationGuide(token) {
+    if (!token || token !== this.getNavigationGuideToken()) return false
+    this.globalData.navigationGuideToken = ''
+    return true
   },
 
   checkLogin() {
@@ -204,6 +218,7 @@ App({
       this.openRequiredDisclaimer()
       return false
     }
+    messageNotifications.start()
     return true
   }
 })

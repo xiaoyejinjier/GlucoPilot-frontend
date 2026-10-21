@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "社区",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "article-photo": "/components/article-photo/article-photo"
+  }
 }

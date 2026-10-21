@@ -35,6 +35,7 @@ function createPage(options = {}) {
     '../../utils/record-window': { getNodeRecordWindow: () => ({ locked: true }), getRecordWindowHint: () => '' }
   }
   vm.runInNewContext(source, {
+    getApp: () => ({ getNavigationGuideToken: () => options.guideToken || '' }),
     Page: (value) => { definition = value }, require: (name) => {
       if (!dependencies[name]) throw new Error(name)
       return dependencies[name]
@@ -100,8 +101,36 @@ test('提醒弹窗移除原生Canvas且取消旧绘图和触摸，关闭后按�
   assert.ok(page._chartGeometry)
   const template = fs.readFileSync(path.join(directory, 'ai.wxml'), 'utf8')
   assert.ok(template.includes('bind:visibilitychange="onReminderVisibilityChange"'))
-  assert.ok(template.includes('<view wx:if="{{noticeVisible}}" class="chart-canvas"></view>'))
+  assert.ok(template.includes('<view wx:if="{{noticeVisible || navigationGuideVisible}}" class="chart-canvas"></view>'))
   assert.ok(template.includes('<canvas wx:else'))
+})
+
+test('首次进入引导期间Canvas不穿透，完成后恢复绘图且提醒弹窗仍可独立阻止绘制', () => {
+  const { page, calls, render } = createPage({ guideToken: 'test-token', records: { before_breakfast: measured() }, deferDraw: true })
+  render()
+  const oldDraw = calls.drawCallbacks[0]
+  let guideRefreshes = 0
+  page.getTabBar = () => ({ setData() {}, refreshGuide() { guideRefreshes++ } })
+  page.syncTodayFromServer = page.startRecordWindowTimer = () => {}
+  page.onShow()
+  assert.equal(guideRefreshes, 1)
+  assert.equal(page.data.navigationGuideVisible, true)
+  oldDraw()
+  page.scheduleChartDraw(page.data.nodes)
+  render()
+  assert.equal(calls.canvas.length, 0)
+  assert.equal(calls.drawCallbacks.length, 1)
+  page.onNavigationGuideComplete()
+  assert.equal(page.data.navigationGuideVisible, false)
+  assert.equal(page._pendingChartNodes, page.data.nodes)
+  render()
+  calls.drawCallbacks.at(-1)()
+  assert.ok(page._chartGeometry)
+  page.onReminderVisibilityChange({ detail: { visible: true } })
+  const queries = calls.drawCallbacks.length
+  page.onNavigationGuideComplete()
+  render()
+  assert.equal(calls.drawCallbacks.length, queries)
 })
 
 test('隐藏页面后关闭提醒弹窗不会重启绘图，原选中数据不因弹窗丢失', () => {

@@ -70,6 +70,7 @@ Page({
         }
         wx.showToast({ title: '已同意', icon: 'success' })
         setTimeout(() => {
+          if (getToken() !== token || !app.globalData.isLoggedIn) return
           if (this.data.forced) {
             wx.switchTab({ url: '/pages/ai/ai' })
           } else {

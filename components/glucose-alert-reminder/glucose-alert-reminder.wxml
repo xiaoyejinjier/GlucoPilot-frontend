@@ -1,9 +1,10 @@
-<view class="notice-entry {{alerts.length ? 'has-alerts' : ''}}" bindtap="openNotice" hover-class="notice-entry-pressed" aria-role="button" aria-label="提醒与回复，血糖提醒{{alerts.length}}条，管理端回复{{replyTotal}}条，点击查看">
+<view wx:if="{{alerts.length || replyTotal > 0 || socialTotal > 0 || repliesError}}" class="notice-entry {{alerts.length ? 'has-alerts' : ''}}" bindtap="openNotice" hover-class="notice-entry-pressed" aria-role="button" aria-label="提醒与回复，血糖提醒{{alerts.length}}条，管理端回复{{replyTotal}}条，点击查看">
   <view class="notice-entry-label">
     <view class="notice-entry-icon" aria-hidden="true"><view class="message-icon"></view></view>
     <text class="notice-entry-title">提醒与回复</text>
   </view>
   <view class="notice-entry-summary">
+    <text wx:if="{{socialTotal > 0}}" class="notice-reply-badge">新信息 {{socialTotal}}</text>
     <text wx:if="{{alerts.length}}" class="notice-alert-badge">血糖提醒 {{alerts.length}}</text>
     <text wx:if="{{replyTotal}}" class="notice-reply-badge">回复 {{replyTotal}}</text>
     <text wx:elif="{{repliesError}}" class="notice-entry-status">待重试</text>
@@ -18,13 +19,14 @@
     <view class="notice-dialog-heading">
       <view class="notice-dialog-intro">
         <text class="notice-dialog-title">提醒与回复</text>
-        <text class="notice-dialog-subtitle">查看血糖提醒，了解跟进回复</text>
+        <text class="notice-dialog-subtitle">查看新信息、血糖提醒与跟进回复</text>
       </view>
       <view class="notice-close" bindtap="closeNotice" hover-class="notice-close-pressed" aria-role="button" aria-label="关闭提醒与回复"><view class="close-icon" aria-hidden="true"></view></view>
     </view>
     <scroll-view class="notice-scroll" scroll-y="{{true}}" catchtouchmove="onNoticeContentTap">
       <view class="notice-content">
-        <view class="alert-card">
+        <view wx:if="{{socialItems.length}}" class="reply-card"><view class="reply-heading"><view class="notice-section-label"><text>新信息</text></view></view><view wx:for="{{socialItems}}" wx:key="key" class="social-notice-row" data-key="{{item.key}}" bindtap="onInformation"><text>{{item.title}}</text><view><text class="social-notice-count">{{item.count > 99 ? '99+' : item.count}}</text><text> ›</text></view></view></view>
+        <view wx:if="{{alerts.length}}" class="alert-card">
           <view class="alert-heading">
             <view class="notice-section-label"><view class="section-mark alert-mark" aria-hidden="true">!</view><text class="alert-title">血糖提醒</text></view>
             <text class="section-count">今日 {{alerts.length}} 条</text>
@@ -36,7 +38,7 @@
           <view wx:if="{{!alerts.length}}" class="notice-empty"><text class="empty-title">暂无异常提醒</text><text>今日暂无已记录的异常实测血糖提醒。</text></view>
           <text wx:else class="alert-tip">以上为当日已记录的实测值，请核对测量结果并留意身体状况。如有明显不适或数值持续异常，请及时寻求专业帮助。</text>
         </view>
-        <view class="reply-card">
+        <view wx:if="{{replyTotal > 0 || repliesError}}" class="reply-card">
           <view class="reply-heading">
             <view class="notice-section-label"><view class="section-mark reply-mark" aria-hidden="true"><view class="message-icon"></view></view><text>管理端回复</text></view>
             <view class="reply-action reply-refresh" catchtap="refreshReplies" hover-class="reply-action-pressed" aria-role="button" aria-label="刷新管理端回复"><text class="refresh-icon" aria-hidden="true">↻</text><text>{{repliesLoading ? '刷新中…' : '刷新回复'}}</text></view>

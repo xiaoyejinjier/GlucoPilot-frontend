@@ -6,6 +6,7 @@
 开发者工具控制台执行 `wx.setStorageSync('apiBaseUrl', 'https://api.example.com/api/v1')`，
 将占位域名替换为运维提供的 HTTPS Nginx 入口，然后重新编译。
 此值只对当前设备生效，正式发布前须由 utils/config.js 设置正式默认域名。
+本机真机联调时使用电脑WLAN地址，且手机与电脑连接同一Wi-Fi；地址须在该手机的真机调试Console设置，模拟器的Storage不会同步给手机。更换AppID或换手机后需重新配置，不能使用手机自己的127.0.0.1。配置后请求模块立即读取新值，无需清缓存。
 真机与生产环境应在微信公众平台登记 request、uploadFile、downloadFile 等实际使用的合法域名。
 用户端 API 路径统一为 /api/v1/**。
 

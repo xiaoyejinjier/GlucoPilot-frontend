@@ -1,0 +1,15 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view wx:if="{{loading}}" class="state">正在加载资料…</view>
+  <view wx:elif="{{error}}" class="card state" bindtap="load">{{error}} · 点击重试</view>
+  <view wx:elif="{{profile}}" class="card profile-card">
+    <image wx:if="{{profile.avatarUrl}}" class="profile-avatar" src="{{profile.avatarUrl}}" mode="aspectFill" /><view wx:else class="profile-avatar">友</view>
+    <text class="profile-name">{{profile.nickname}}</text><text wx:if="{{profile.bio}}" class="profile-bio">{{profile.bio}}</text>
+    <text wx:if="{{profile.userId}}" class="profile-bio" bindtap="onCopyKey" aria-role="button">社区号 u{{profile.userId}} · 复制</text>
+    <view wx:if="{{!profile.isSelf}}" class="profile-buttons"><button bindtap="onFollow" disabled="{{busy}}" loading="{{busy}}" aria-label="{{profile.followed ? '取消关注' : '关注'}}">{{profile.followed ? '已关注' : '+ 关注'}}</button><button wx:if="{{profile.userId}}" class="message-button" bindtap="onMessage">发私信</button></view>
+    <text wx:if="{{profile.followed && !profile.isSelf}}" class="profile-bio">再次点击“已关注”可取消关注</text>
+    <text wx:if="{{profile.isSelf}}" class="profile-bio">这是你自己的公开资料</text>
+    <text wx:if="{{profile.userId && !profile.isSelf}}" class="profile-bio" bindtap="onReport">举报该用户</text>
+    <text wx:if="{{!profile.userId}}" class="profile-bio">该发布者暂未开通私信</text>
+  </view>
+  <view wx:if="{{profile}}" class="profile-articles"><text class="profile-section-title">已发布内容</text><view wx:for="{{articles}}" wx:key="id" class="card profile-article" data-id="{{item.id}}" bindtap="onArticle"><text class="profile-article-title">{{item.title}}</text><text wx:if="{{item.summary}}" class="profile-article-summary">{{item.summary}}</text><view class="profile-article-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="code"># {{tag.name}}</text></view><text class="profile-article-meta">{{item.timeLabel}} · {{item.likeCount || 0}} 赞 · {{item.commentCount || 0}} 评论</text></view><view wx:if="{{articlesError}}" class="state" bindtap="onRetryArticles">{{articlesError}} · 重试</view><view wx:elif="{{articlesLoading}}" class="state">正在加载…</view><view wx:elif="{{!articles.length}}" class="card state">还没有公开发布的内容</view><view wx:elif="{{articleHasMore}}" class="state" bindtap="onMoreArticles">查看更多内容</view></view>
+</view>

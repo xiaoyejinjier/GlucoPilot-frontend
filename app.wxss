@@ -275,3 +275,6 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.message-unread-badge { display:inline-flex; flex:none; align-items:center; justify-content:center; min-width:32rpx; height:32rpx; padding:0 8rpx; border-radius:20rpx; background:#ed565f; color:#fff; font-size:20rpx; line-height:32rpx; box-sizing:border-box; }
+.message-menu-end { display:flex; align-items:center; gap:18rpx; }

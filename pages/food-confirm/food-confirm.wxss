@@ -49,6 +49,7 @@
 .circle-btn.ok {
   background: #fff;
 }
+.circle-btn.disabled { opacity:.45; }
 
 .icon-undo {
   width: 36rpx;

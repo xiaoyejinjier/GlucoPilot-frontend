@@ -6,15 +6,15 @@
   <view class="card">
     <view class="avatar-block" bindtap="onChooseAvatar">
       <image
-        wx:if="{{form.avatarUrl}}"
+        wx:if="{{avatarPreview || form.avatarUrl}}"
         class="avatar-img"
-        src="{{form.avatarUrl}}"
+        src="{{avatarPreview || form.avatarUrl}}"
         mode="aspectFill"
       />
       <view wx:else class="avatar">{{form.avatarText}}</view>
-      <text class="avatar-tip">点击更换头像</text>
+      <text class="avatar-tip">{{uploadingAvatar ? '正在上传头像…' : '点击更换头像'}}</text>
     </view>
-    <view wx:if="{{form.avatarUrl}}" class="avatar-actions">
+    <view wx:if="{{avatarPreview || form.avatarUrl}}" class="avatar-actions">
       <text class="avatar-clear" catchtap="onClearAvatar">恢复默认头像</text>
     </view>
 
@@ -61,6 +61,6 @@
   </view>
 
   <view class="card">
-    <button class="btn-primary btn-block btn-sm" bindtap="onSave">保存资料</button>
+    <button class="btn-primary btn-block btn-sm" bindtap="onSave" disabled="{{saving || uploadingAvatar || loading}}" loading="{{saving}}">保存资料</button>
   </view>
 </view>

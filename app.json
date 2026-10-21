@@ -3,13 +3,19 @@
     "pages/login/login",
     "pages/index/index",
     "pages/voice/voice",
-    "pages/voice/history",
     "pages/ai/ai",
     "pages/devices/devices",
     "pages/device-add/device-add",
     "pages/stats/stats",
     "pages/mine/mine",
     "pages/news-detail/news-detail",
+    "pages/community/community",
+    "pages/community-profile/community-profile",
+    "pages/information/information",
+    "pages/messages/messages",
+    "pages/community-compose/community-compose",
+    "pages/community-articles/community-articles",
+    "pages/community-report/community-report",
     "pages/camera/camera",
     "pages/confirm/confirm",
     "pages/food-confirm/food-confirm",
@@ -62,6 +68,11 @@
     ]
   },
   "style": "v2",
+  "permission": {
+    "scope.record": {
+      "desc": "将您主动录制的语音转成可确认的文字，用于向小语提问"
+    }
+  },
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"
 }

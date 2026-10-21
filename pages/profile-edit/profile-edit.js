@@ -1,7 +1,8 @@
 const { fetchMe, updateProfile, saveHealthProfile } = require('../../services/api')
 const { getUserInfo, saveUserInfo } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
-const { persistShotImage } = require('../../utils/shot')
+const { uploadMediaFile, BIZ_TYPE, MAX_IMAGE_BYTES } = require('../../utils/media')
+const { getToken } = require('../../utils/request')
 const { DIABETES_TYPE_TEXT, diabetesCode } = require('../../utils/mappers')
 
 // 将 2022.06 / 2022/06 / 2022年6月 / 202206 / 2022-6 统一归一化为 YYYY-MM
@@ -37,39 +38,45 @@ Page({
     form: {},
     diabetesOptions: DIABETES_TYPE_TEXT,
     diabetesIndex: 0,
-    saving: false
+    saving: false, uploadingAvatar:false, avatarPreview:'', loading:true
   },
 
+  current(token = this._profileToken) { return !this._disposed && !!token && token === getToken() && token === this._profileToken },
   onLoad() {
-    const info = getUserInfo()
-    if (info) {
-      this.fill(info)
-    }
-    fetchMe()
-      .then((me) => {
-        saveUserInfo(me)
-        this.fill(me)
-      })
-      .catch((err) => {
-        wx.showToast({ title: err.message || '资料加载失败', icon: 'none' })
-      })
+    this._disposed = false; this._profileToken = getToken(); this._dirty = new Set(); this._avatarChanged = false; this._diabetesChanged = false
+    const token = this._profileToken
+    this.setData({loading:true})
+    const info = !this._skipCache && getUserInfo(); this._skipCache = false
+    if (info) this.fill(info)
+    fetchMe().then(me => {
+      if (!this.current(token)) return
+      saveUserInfo(me); this.fill(me)
+    }).catch(err => { if(this.current(token)) wx.showToast({title:err.message || '资料加载失败',icon:'none'}) })
+      .finally(()=>{if(this.current(token))this.setData({loading:false})})
   },
-
   onShow() {
+    this._visible = true
+    if (this._profileToken && this._profileToken !== getToken()) {
+      this._uploadRun = (this._uploadRun || 0) + 1; this._skipCache = true
+      this.setData({form:{},avatarPreview:'',uploadingAvatar:false,saving:false}); this.onLoad()
+    }
     applyDisplayToCurrentPage()
   },
-
+  onHide(){this._visible=false},
+  onUnload(){this._disposed=true;this._visible=false;this._uploadRun=(this._uploadRun||0)+1;if(this._returnTimer)clearTimeout(this._returnTimer)},
   fill(info) {
     this._me = info
-    this.setData({
-      form: { ...this.data.form, ...info },
-      diabetesIndex: Math.max(0, diabetesCode(info.diabetesType))
-    })
+    const form={...info}
+    for(const key of this._dirty || []) form[key]=this.data.form[key]
+    if(this._avatarChanged)form.avatarUrl=this.data.form.avatarUrl
+    this.setData({form,diabetesIndex:this._diabetesChanged?this.data.diabetesIndex:Math.max(0,diabetesCode(info.diabetesType))})
   },
 
   onField(e) {
+    if(this.data.saving || !this.current())return
     const key = e.currentTarget.dataset.key
     const value = e.detail.value
+    this._dirty.add(key)
     const form = { ...this.data.form, [key]: value }
     if (key === 'nickname' && value && !form.avatarUrl) {
       form.avatarText = value.trim().charAt(0)
@@ -78,32 +85,34 @@ Page({
   },
 
   onDiabetesChange(e) {
+    if(this.data.saving || !this.current())return
+    this._diabetesChanged = true
     const index = Number(e.detail.value)
     this.setData({ diabetesIndex: index })
   },
 
-  onChooseAvatar() {
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      success: (res) => {
-        const path = res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath
-        if (!path) return
-        persistShotImage(path).then((savedPath) => {
-          const avatarUrl = savedPath || path
-          this.setData({
-            form: {
-              ...this.data.form,
-              avatarUrl
-            }
-          })
-        })
-      }
-    })
+  async onChooseAvatar() {
+    if(!this.current() || this.data.saving || this.data.uploadingAvatar)return
+    const token=this._profileToken,run=this._uploadRun=(this._uploadRun||0)+1
+    const current=()=>this.current(token)&&run===this._uploadRun
+    this.setData({uploadingAvatar:true})
+    try {
+      const selected=await new Promise((resolve,reject)=>wx.chooseMedia({count:1,mediaType:['image'],sourceType:['album','camera'],sizeType:['compressed'],success:resolve,fail:reject}))
+      const file=(selected.tempFiles||[])[0];if(!file || !current())return
+      if(file.size>MAX_IMAGE_BYTES)throw new Error('头像不能超过5MB，请压缩后重试')
+      this.setData({avatarPreview:file.tempFilePath})
+      const media=await uploadMediaFile(BIZ_TYPE.AVATAR,file.tempFilePath,{maxBytes:MAX_IMAGE_BYTES,label:'头像',isCurrent:current})
+      if(!current())return
+      if(!media || !/^https?:\/\//.test(media.fileUrl || ''))throw new Error('头像上传未完成，请重新选择')
+      this._avatarChanged=true
+      this.setData({form:{...this.data.form,avatarUrl:media.fileUrl},avatarPreview:''})
+    }catch(error){if(current()&&!/cancel/i.test(error.errMsg||''))wx.showToast({title:error.message||'头像上传失败，请重试',icon:'none'})}
+    finally{if(current())this.setData({uploadingAvatar:false,avatarPreview:''})}
   },
 
   onClearAvatar() {
+    if(!this.current() || this.data.saving || this.data.uploadingAvatar)return
+    this._avatarChanged = true
     // 空串表示清空后端 avatar_url；省略字段则保持不变
     const form = { ...this.data.form, avatarUrl: '' }
     form.avatarText = (form.nickname || '用').trim().charAt(0)
@@ -111,7 +120,8 @@ Page({
   },
 
   onSave() {
-    if (this.data.saving) return
+    if (!this.current() || this.data.saving || this.data.uploadingAvatar || this.data.loading) return
+    const token=this._profileToken
     const form = this.data.form
     if (!(form.nickname || '').trim()) {
       wx.showToast({ title: '请填写昵称', icon: 'none' })
@@ -144,10 +154,10 @@ Page({
       this.setData({ form: { ...form, confirmDate: confirmDate || '' } })
     }
 
-    Promise.all([
+    return Promise.all([
       updateProfile({
         nickname: form.nickname.trim(),
-        avatarUrl: form.avatarUrl == null ? undefined : form.avatarUrl,
+        ...(this._avatarChanged ? {avatarUrl:form.avatarUrl} : {}),
         avatarText
       }),
       saveHealthProfile({
@@ -163,14 +173,16 @@ Page({
         targetPostprandial: form.targetPostprandial == null ? null : form.targetPostprandial
       })
     ])
-      .then(() => fetchMe())
+      .then(() => this.current(token) ? fetchMe() : null)
       .then((me) => {
+        if(!me || !this.current(token))return
         saveUserInfo(me)
         this.setData({ saving: false })
         wx.showToast({ title: '已保存', icon: 'none' })
-        setTimeout(() => wx.navigateBack(), 600)
+        this._returnTimer=setTimeout(() => {if(this.current(token)&&this._visible)wx.navigateBack()}, 600)
       })
       .catch((err) => {
+        if(!this.current(token))return
         this.setData({ saving: false })
         wx.showToast({ title: err.message || '保存失败', icon: 'none' })
       })

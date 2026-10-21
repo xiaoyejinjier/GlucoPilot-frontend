@@ -46,9 +46,10 @@ function mapNewsItem(item) {
     typeLabel: isVideo ? '视频' : '图文',
     time: formatNewsTime(item.publishAt),
     cover: item.coverUrl || '/assets/news/n1.jpg',
-    coverText: isVideo ? '▶' : '资讯',
+    coverText: '',
     videoUrl: item.videoUrl || '',
     contentBody: item.contentBody || '',
+    contentHtml: item.contentBody || '',
     likeCount: item.likeCount || 0,
     collectCount: item.collectCount || 0,
     liked: !!item.liked,
@@ -146,6 +147,7 @@ function mapUserMe(me) {
   const height = health.height == null ? '' : health.height
   const weight = health.weight == null ? '' : health.weight
   return {
+    communityKey: typeof me.communityKey === 'string' ? me.communityKey : '',
     accountStatus: me.accountStatus,
     phoneMasked: me.phoneMasked || '',
     nickname: profile.nickname || '',

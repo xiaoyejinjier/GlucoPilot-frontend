@@ -27,7 +27,8 @@ Page({
     viewportHeight: 0,
     keyboardHeight: 0,
     voiceMode: false,
-    recording: false,
+    speechVisible: false,
+    holdingSpeech: false,
     /** 正在等待/接收 AI 回复 */
     sending: false,
     messages: [],
@@ -52,7 +53,7 @@ Page({
     ]
   },
 
-  onLoad(options) {
+  onLoad() {
     this.refreshChatViewport()
     this._localSeq = 0
     this._sessionPromise = null
@@ -63,8 +64,6 @@ Page({
     this._historyVersion = 0
     this._historyToken = getToken()
     this._sessionVersion = 0
-    this._pendingOpen = options && options.sessionId
-      ? { id: options.sessionId, sessionStatus: options.sessionStatus, title: options.sessionTitle || '' } : null
     this.setData({
       messages: []
     })
@@ -87,19 +86,15 @@ Page({
       this._historyVersion += 1
       this._historyToken = getToken()
       this.resetToFresh()
-      this._pendingOpen = null
-      app.globalData.pendingChatSession = null
-      app.globalData.pendingNewChat = false
     }
-    const event = this.consumeSessionEvent()
-    if (event && event.type === 'deleted' && toIdString(event.id) === this.data.sessionId) this.resetToFresh()
-    const pending = this.consumePendingSession()
-    if (pending) { this.openSession(pending); return }
-    if (this.consumePendingNewChat()) { this.onNewChat(); return }
+    // 直接续聊当前会话，不再接受历史选择或强制新建的跳转意图。
     if (!this.data.historyReady) this.loadHistory()
   },
 
   onHide() {
+    this._speechHeld = false
+    this._speechStarted = false
+    this.setData({ voiceMode: false, speechVisible: false, holdingSpeech: false })
     this._visible = false
     this._historyVersion += 1
     this.setData({ historyLoading: false })
@@ -205,31 +200,14 @@ Page({
 
   /** ---------- 会话 ---------- */
 
-  consumePendingSession() {
-    const pending = this._pendingOpen || app.globalData.pendingChatSession
-    this._pendingOpen = null
-    app.globalData.pendingChatSession = null
-    return pending && pending.id ? pending : null
-  },
-
-  consumeSessionEvent() {
-    const event = app.globalData.chatSessionEvent
-    app.globalData.chatSessionEvent = null
-    return event
-  },
-
-  consumePendingNewChat() {
-    const pending = !!app.globalData.pendingNewChat
-    app.globalData.pendingNewChat = false
-    return pending
-  },
-
   gateData(gate) {
     return { sessionStatus: gate.sessionStatus, sessionStatusText: gate.sessionStatusText,
       sessionReadOnly: gate.readOnly, sessionNotice: gate.notice }
   },
 
   resetToFresh() {
+    this._speechHeld = false
+    this._speechStarted = false
     this._sessionVersion += 1
     this._historyVersion += 1
     this.abortStream()
@@ -239,48 +217,10 @@ Page({
     this._sessionPromise = null
     this._currentRound = this._lastRound = null
     this.setData({ sessionId: '', sessionTitle: '', messages: [], hasHistory: false, sending: false,
-      inputValue: '', scrollIntoView: '', historyReady: false, historyLoading: false,
+      inputValue: '', voiceMode: false, speechVisible: false, holdingSpeech: false, scrollIntoView: '', historyReady: false, historyLoading: false,
       historyHasMore: false, historyCursor: null, historyError: '',
       ...this.gateData(sessionGate(SESSION_STATUS.ACTIVE)) })
   },
-
-  openSession(info) {
-    const id = toIdString(info && info.id)
-    if (!id) return Promise.resolve(null)
-    this.resetToFresh()
-    this.setData({ sessionId: id, sessionTitle: info.title || DEFAULT_TITLE,
-      ...this.gateData(sessionGate(info.sessionStatus)) })
-    return this.loadHistory()
-  },
-
-  async onNewChat() {
-    if (this.data.sending) {
-      wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
-      return null
-    }
-    if (this._creatingSession) return null
-    this._creatingSession = true
-    const token = getToken()
-    const version = this._sessionVersion
-    try {
-      const session = await api.createChatSession(3)
-      if (token !== getToken() || token !== this._historyToken || version !== this._sessionVersion) return null
-      this.resetToFresh()
-      this.setData({ sessionId: toIdString(session.id), sessionTitle: session.title || DEFAULT_TITLE,
-        historyReady: true, ...this.gateData(sessionGate(session.sessionStatus == null ? SESSION_STATUS.ACTIVE : session.sessionStatus)) })
-      wx.showToast({ title: '已开启新对话', icon: 'none' })
-      return session
-    } catch (error) {
-      if (token === getToken() && version === this._sessionVersion) {
-        wx.showToast({ title: error.message || '新建对话失败，请稍后重试', icon: 'none' })
-      }
-      return null
-    } finally {
-      this._creatingSession = false
-    }
-  },
-
-  onOpenHistory() { wx.navigateTo({ url: '/pages/voice/history' }) },
 
   onLoadEarlier() {
     if (!this.data.historyHasMore || !this.data.historyCursor) {
@@ -292,7 +232,7 @@ Page({
 
   blockIfReadOnly() {
     if (!this.data.sessionReadOnly) return false
-    wx.showToast({ title: this.data.sessionNotice || '该会话已结束，请新建对话', icon: 'none' })
+    wx.showToast({ title: this.data.sessionNotice || '对话状态已变化，请退出小语后重新进入', icon: 'none' })
     return true
   },
 
@@ -345,7 +285,7 @@ Page({
         wx.reLaunch({ url: '/pages/login/login' })
       } else if (err && err.code === 40400 && !older) {
         this.resetToFresh()
-        wx.showToast({ title: '该对话已被删除', icon: 'none' })
+        this.setData({ historyError: '对话暂不可用，点击重试恢复' })
       } else if (token === getToken()) {
         const hint = err && err.statusCode === 404 ? '历史接口未就绪，请重启后端后重试'
           : err && (err.network || err.configuration) ? `${err.message}，点击重试`
@@ -398,7 +338,7 @@ Page({
     if (this.data.sessionReadOnly) return
     const index = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(index) || index < 0 || index >= this.data.suggestions.length || this.data.sending) return
-    this.setData({ inputValue: this.data.suggestions[index], voiceMode: false, inputFocus: true })
+    this.setData({ inputValue: this.data.suggestions[index], voiceMode: false, speechVisible: false, holdingSpeech: false, inputFocus: true })
   },
 
   onInput(e) {
@@ -744,18 +684,66 @@ Page({
   },
 
   onToggleVoiceMode() {
-    this.setData({ voiceMode: !this.data.voiceMode, recording: false, inputFocus: false })
+    if (this.data.voiceMode) {
+      this.onCloseSpeechInput()
+      this.setData({ voiceMode: false, inputFocus: true })
+      return
+    }
+    if (!this.canSend()) return
+    if (this.data.sending) {
+      wx.showToast({ title: '正在回复中，请稍候', icon: 'none' })
+      return
+    }
+    this.setData({ voiceMode: true, speechVisible: false, holdingSpeech: false, inputFocus: false })
+    if (wx.hideKeyboard) wx.hideKeyboard()
   },
 
-  onHoldStart() {
-    if (!this.data.voiceMode || this.data.recording) return
-    this.setData({ recording: true })
+  onHoldStart(event) {
+    if (!this.data.voiceMode || this.data.speechVisible || this.data.sending || !this.canSend()) return
+    if (event && event.touches && event.touches.length !== 1) return
+    this._speechHeld = true
+    this._speechStarted = false
+    this.setData({ speechVisible: true, holdingSpeech: true, inputFocus: false }, () => {
+      // 短按可能在渲染完成前已经松开，此时不再启动麦克风。
+      if (!this._speechHeld || !this.data.speechVisible) return
+      const speech = this.selectComponent('#speechInput')
+      if (!speech) { this.onCloseSpeechInput(); return }
+      this._speechStarted = true
+      speech.beginHold()
+    })
   },
 
   onHoldEnd() {
-    if (!this.data.voiceMode || !this.data.recording) return
-    this.setData({ recording: false })
-    wx.showToast({ title: '语音对话暂未开放，请用文字提问', icon: 'none' })
+    if (!this._speechHeld) return
+    this._speechHeld = false
+    this.setData({ holdingSpeech: false })
+    if (!this._speechStarted) { this.onCloseSpeechInput(); return }
+    const speech = this.selectComponent('#speechInput')
+    if (speech) speech.endHold()
+  },
+
+  onHoldCancel() {
+    if (!this._speechHeld) return
+    this._speechHeld = false
+    this._speechStarted = false
+    const speech = this.selectComponent('#speechInput')
+    if (speech) speech.endHold(true)
+    this.onCloseSpeechInput()
+  },
+
+  onCloseSpeechInput() {
+    this._speechHeld = false
+    this._speechStarted = false
+    this.setData({ speechVisible: false, holdingSpeech: false })
+  },
+
+  onConfirmSpeechInput(event) {
+    const text = (event.detail.text || '').trim()
+    if (!this.data.speechVisible || !this.data.voiceMode || !text || this.data.sending || !this.canSend()) return
+    if (!getToken() || getToken() !== this._historyToken) return
+    this.onCloseSpeechInput()
+    this.setData({ inputValue: text })
+    this.onSend()
   },
 
   onPreviewImage(e) {

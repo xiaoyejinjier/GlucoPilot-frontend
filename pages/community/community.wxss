@@ -1,0 +1,13 @@
+.social-list-row { display:flex; align-items:center; gap:20rpx; }
+.avatar { width:88rpx; height:88rpx; border-radius:50%; display:flex; justify-content:center; align-items:center; flex-shrink:0; background:var(--brand-soft); color:var(--brand-dark); font-size:var(--fs-title); }
+.row-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:12rpx; }
+.row-title { font-size:var(--fs-body); font-weight:600; overflow-wrap:anywhere; }
+.row-muted { color:var(--muted); font-size:var(--fs-small); }
+.row-preview { font-size:var(--fs-small); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted); }
+.collection-cover { width:120rpx; height:120rpx; border-radius:16rpx; flex-shrink:0; }
+.state { text-align:center; padding:32rpx; color:var(--muted); line-height:1.7; font-size:var(--fs-body); }
+.action { color:var(--brand-dark); }
+.unread { background:#e95656; color:white; border-radius:30rpx; padding:4rpx 14rpx; font-size:var(--fs-small); }
+.search-row { display:flex; align-items:center; gap:16rpx; }
+.search-row input { flex:1; min-width:0; font-size:var(--fs-body); }
+.search-row button { margin:0; font-size:var(--fs-small); color:white; background:var(--brand); }

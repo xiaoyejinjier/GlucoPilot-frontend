@@ -277,3 +277,5 @@
   color: var(--ink);
   font-weight: 800;
 }
+
+.export-task-row{display:flex;justify-content:space-between;gap:20rpx;align-items:center;padding:24rpx 0;border-top:1rpx solid var(--line)}.export-task-row>view{flex:1;min-width:0}.export-task-row button{flex:none;margin:0;background:#eaf2ff;color:#4285d9;font-size:24rpx;border-radius:18rpx}.export-task-dates{font-size:var(--fs-small);display:block}.export-task-state{display:block;font-size:22rpx;color:var(--muted);line-height:1.8;margin-top:8rpx}
