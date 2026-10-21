@@ -1,8 +1,148 @@
-<view class="page devices-page" style="{{displayStyle}}">
-  <view class="device-placeholder">
-    <view class="device-placeholder-illustration"><app-icon name="devices" size="lg" color="#5794c5"></app-icon></view>
-    <text class="device-placeholder-title">设备管理即将上线</text>
-    <text class="device-placeholder-description">您的健康设备，将在这里统一管理</text>
-    <text class="device-placeholder-tag">敬请期待</text>
+<view class="device-page" style="{{displayStyle}}">
+  <view class="device-intro">
+    <text class="device-intro-kicker">设备管理</text>
+    <text class="device-intro-title">管理你的血糖设备</text>
+    <text class="device-intro-note">查看同步状态，必要时可解绑或重新添加</text>
+  </view>
+
+  <view class="summary-card">
+    <view class="summary-item">
+      <text class="summary-value">{{boundCount}}</text>
+      <text class="summary-label">已绑定</text>
+    </view>
+    <view class="summary-item">
+      <text class="summary-value">{{drafts.length}}</text>
+      <text class="summary-label">待适配</text>
+    </view>
+    <view class="summary-item">
+      <text class="summary-value">{{lastSyncLabel}}</text>
+      <text class="summary-label">距上次同步</text>
+    </view>
+  </view>
+
+  <view class="device-section-heading">
+    <text>已绑定设备</text>
+    <text class="section-side-note">{{boundDevices.length}} 台</text>
+  </view>
+  <view wx:if="{{!boundDevices.length && !loading}}" class="section-empty">
+    <text>暂无已绑定设备，可通过下方按钮添加</text>
+  </view>
+  <view wx:for="{{boundDevices}}" wx:key="id" class="manage-item">
+    <view class="manage-top">
+      <view class="nearby-device-icon"><view class="mini-device-screen"></view></view>
+      <view class="manage-main">
+        <view class="manage-name-row">
+          <text class="manage-name">{{item.deviceName}}</text>
+          <text class="status-badge {{item.online ? 'badge-ok' : 'badge-offline'}}">{{item.statusText}}</text>
+        </view>
+        <text class="manage-meta">厂商：{{item.provider}} · SN：{{item.deviceSn}}</text>
+        <text class="manage-sync">{{item.syncText}}</text>
+      </view>
+    </view>
+    <view class="manage-actions">
+      <button class="action-btn" data-id="{{item.id}}" bindtap="onSync" hover-class="method-pressed">{{item.syncActionText}}</button>
+      <button class="action-btn ghost" data-id="{{item.id}}" bindtap="onDetail" hover-class="method-pressed">详情</button>
+      <button class="action-btn danger" data-id="{{item.id}}" bindtap="onUnbind" hover-class="method-pressed">解绑</button>
+    </view>
+  </view>
+
+  <view class="device-section-heading">
+    <text>待适配设备</text>
+    <text class="section-side-note">会话内临时 · {{drafts.length}} 台</text>
+  </view>
+  <view wx:if="{{!drafts.length}}" class="section-empty">
+    <text>暂无待适配设备；扫码 / SN / 蓝牙登记后会出现在此</text>
+  </view>
+  <view wx:for="{{drafts}}" wx:key="id" class="manage-item">
+    <view class="manage-top">
+      <view class="nearby-device-icon"><view class="mini-device-screen"></view></view>
+      <view class="manage-main">
+        <view class="manage-name-row">
+          <text class="manage-name">{{item.name}}</text>
+          <text class="status-badge badge-pending">待适配 · 未绑定</text>
+        </view>
+        <text class="manage-meta">SN：{{item.sn || '未填写'}} · 来源：{{item.sourceText}}</text>
+        <text class="manage-sync">仅本地会话登记，暂无设备读数</text>
+      </view>
+    </view>
+    <view class="manage-actions">
+      <button
+        wx:if="{{item.sn}}"
+        class="action-btn"
+        data-id="{{item.id}}"
+        bindtap="onConfirmBind"
+        hover-class="method-pressed"
+      >确认绑定</button>
+      <button
+        wx:else
+        class="action-btn ghost"
+        data-id="{{item.id}}"
+        bindtap="onSupplementSn"
+        hover-class="method-pressed"
+      >补充 SN</button>
+      <button class="action-btn danger" data-id="{{item.id}}" bindtap="onRemoveDraft" hover-class="method-pressed">移除</button>
+    </view>
+  </view>
+
+  <button class="search-button secondary add-another" bindtap="onAddDevice" hover-class="search-button-pressed">添加另一台设备</button>
+
+  <view class="device-preparation-note">
+    <text class="preparation-title">状态说明</text>
+    <text>「已绑定」表示服务端已登记归属；「待适配」仅临时登记。选适配器靠请求里的 provider，唯一认设备靠 deviceSn（序列号）。</text>
+  </view>
+
+  <view wx:if="{{detailVisible}}" class="serial-overlay">
+    <view class="serial-mask" bindtap="onCloseDetail"></view>
+    <view class="serial-panel" catchtap="noop">
+      <view class="serial-heading">
+        <text>设备详情</text>
+        <text class="serial-close" bindtap="onCloseDetail" aria-role="button">关闭</text>
+      </view>
+      <text class="serial-note">{{detail.deviceName}}</text>
+      <text class="detail-line">序列号：{{detail.deviceSn}}</text>
+      <text class="detail-line">厂商：{{detail.provider}}</text>
+      <text class="detail-line">状态：{{detail.statusText}}</text>
+      <text class="detail-line">最近同步：{{detail.lastSyncDisplay}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{snVisible}}" class="serial-overlay">
+    <view class="serial-mask" bindtap="onCloseSn"></view>
+    <view class="serial-panel" catchtap="noop">
+      <view class="serial-heading">
+        <text>补充 SN</text>
+        <text class="serial-close" bindtap="onCloseSn" aria-role="button">取消</text>
+      </view>
+      <text class="serial-note">填写机身或包装上的序列号，写入本条待适配记录后即可确认绑定。</text>
+      <text class="input-label">设备 SN <text class="required-mark">*</text></text>
+      <input class="serial-input" value="{{snInput}}" maxlength="64" placeholder="请输入设备 SN 码" bindinput="onSnInput" />
+      <text wx:if="{{snError}}" class="serial-error">{{snError}}</text>
+      <button class="search-button serial-save" bindtap="onSaveSn">保存序列号</button>
+    </view>
+  </view>
+
+  <view wx:if="{{bindVisible}}" class="serial-overlay">
+    <view class="serial-mask" bindtap="onCloseBind"></view>
+    <view class="serial-panel" catchtap="noop">
+      <view class="serial-heading">
+        <text>确认绑定</text>
+        <text class="serial-close" bindtap="onCloseBind" aria-role="button">取消</text>
+      </view>
+      <text class="serial-note">选择厂商适配器后写入服务端。唯一认设备靠 SN：{{bindDraft.sn}}</text>
+      <text class="input-label">设备名称 <text class="optional-label">（选填）</text></text>
+      <input class="serial-input" value="{{bindName}}" maxlength="40" placeholder="例如：我的血糖仪" bindinput="onBindNameInput" />
+      <text class="input-label">厂商适配器 <text class="required-mark">*</text></text>
+      <view class="provider-grid">
+        <view
+          wx:for="{{providers}}"
+          wx:key="*this"
+          class="provider-chip {{bindProvider === item ? 'on' : ''}}"
+          data-provider="{{item}}"
+          bindtap="onPickProvider"
+        >{{item}}</view>
+      </view>
+      <button class="search-button serial-save" loading="{{binding}}" bindtap="onSubmitBind">确认绑定到账号</button>
+      <text class="serial-footnote">绑定成功后可在「已绑定设备」中同步或解绑</text>
+    </view>
   </view>
 </view>

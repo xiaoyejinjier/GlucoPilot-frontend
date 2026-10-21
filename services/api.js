@@ -49,6 +49,11 @@ function rewriteContentHtml(html) {
   )
 }
 
+/** 官方资讯正文为 HTML；社区投稿为纯文本。仅 HTML 才走 rich-text。 */
+function looksLikeHtml(text) {
+  return /<\/?[a-z][\s\S]*>/i.test(String(text || ''))
+}
+
 function mapNewsItem(n) {
   const type = n.contentType === 2 || (n.videos || []).length ? 'video' : 'article'
   const contentBody = n.contentBody || ''
@@ -65,7 +70,7 @@ function mapNewsItem(n) {
     coverText: '',
     videoUrl: resolveCmsMedia(n.videoUrl) || '',
     contentBody,
-    contentHtml: rewriteContentHtml(contentBody),
+    contentHtml: looksLikeHtml(contentBody) ? rewriteContentHtml(contentBody) : '',
     likeCount: n.likeCount || 0,
     collectCount: n.collectCount || 0,
     liked: !!n.liked,
@@ -201,14 +206,9 @@ function mapCommunityArticle(item) {
     state: item.state, revision: item.revision, body: item.body || '', summary: item.summary || '', hasCover: !!item.coverUrl }
 }
 function fetchCommunityArticles(params = {}) {
+  // 联调以社区接口为准；404 直接抛出，避免回退旧 /news 掩盖未部署社区 API。
   return get('/community/articles', params, { auth: true })
     .then(page => ({ ...page, records: (page.records || []).map(mapCommunityArticle) }))
-    .catch(error => {
-      // UI升级期间仍可浏览旧后端的真实资讯；筛选失败不伪装成其他话题结果。
-      if (error.statusCode !== 404 || params.tag || params.following || params.keyword) throw error
-      return fetchNews('', params.pageNum, params.pageSize).then(page => ({ ...page,
-        records: page.records.map(item => ({ ...item, state: 'PUBLISHED', hasCover: !!item.cover })) }))
-    })
 }
 function fetchMyArticles(params) { return get('/community/articles/mine', params, { auth: true }) }
 function fetchCommunityArticle(id) { return get(`/community/articles/${encodeURIComponent(id)}`, null, { auth: true }) }
