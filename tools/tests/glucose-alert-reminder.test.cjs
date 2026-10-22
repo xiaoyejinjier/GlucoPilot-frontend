@@ -34,9 +34,9 @@ test('提醒只派生显示数据，不修改原节点、数值或缓存', () =>
 
 function createComponent(fetchReplies = async () => ({ records: [], total: 0 })) {
   let component
-  const state = { token: 'test-user-a', calls: [], events: [] }
+  const state = { token: 'test-user-a', calls: [], events: [],navs:[] }
   vm.runInNewContext(fs.readFileSync(path.join(directory, 'glucose-alert-reminder.js'), 'utf8'), {
-    Component(value) { component = value }, require(name) {
+    Component(value) { component = value }, wx:{navigateTo:value=>state.navs.push(value)},require(name) {
       if (name === '../../utils/glucose-alerts') return { buildGlucoseAlerts }
       if (name === '../../utils/request') return { getToken: () => state.token }
       assert.equal(name, '../../services/api')
@@ -68,6 +68,14 @@ test('记录页全局提醒只保留非零私信及互动类别，没有信息�
   assert.equal(instance.data.socialTotal,6);assert.equal(instance.data.socialItems.map(item=>item.title).join(','),'私信,点赞,评论')
   component.properties.socialCounts.observer.call(instance,{messages:0,likes:0,collections:0,comments:0,follows:0,total:0})
   assert.equal(instance.data.socialItems.length,0);assert.equal(instance.data.socialTotal,0)
+})
+
+test('记录全局提醒包含管理员举报反馈，点击进入本人举报，不走互动分类',()=>{
+  const {component,instance,state}=createComponent()
+  component.properties.socialCounts.observer.call(instance,{reports:2,total:2})
+  assert.equal(instance.data.socialItems[0].title,'举报反馈');assert.equal(instance.data.socialItems.length,1)
+  instance.onInformation({currentTarget:{dataset:{key:'reports'}}});assert.equal(state.navs[0].url,'/pages/community-reports/community-reports')
+  component.properties.socialCounts.observer.call(instance,{reports:0,total:0});assert.equal(instance.data.socialItems.length,0)
 })
 
 const reply = (id, text) => ({ id, recordId: '123', recordDate: '2026-10-15', nodeName: '早餐前', glucoseValue: 3.8,

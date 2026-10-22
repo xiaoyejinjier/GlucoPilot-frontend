@@ -1,1 +1,8 @@
-{ "navigationBarTitleText": "公开资料", "usingComponents": {} }
+{
+  "navigationBarTitleText": "公开资料",
+  "usingComponents": {
+    "article-photo": "/components/article-photo/article-photo",
+    "social-feedback": "/components/social-feedback/social-feedback",
+    "avatar-image": "/components/avatar-image/avatar-image"
+  }
+}

@@ -1,15 +1,29 @@
-<view class="page-no-tab" style="{{displayStyle}}">
-  <view wx:if="{{loading}}" class="state">正在加载资料…</view>
-  <view wx:elif="{{error}}" class="card state" bindtap="load">{{error}} · 点击重试</view>
-  <view wx:elif="{{profile}}" class="card profile-card">
-    <image wx:if="{{profile.avatarUrl}}" class="profile-avatar" src="{{profile.avatarUrl}}" mode="aspectFill" /><view wx:else class="profile-avatar">友</view>
-    <text class="profile-name">{{profile.nickname}}</text><text wx:if="{{profile.bio}}" class="profile-bio">{{profile.bio}}</text>
-    <text wx:if="{{profile.userId}}" class="profile-bio" bindtap="onCopyKey" aria-role="button">社区号 u{{profile.userId}} · 复制</text>
-    <view wx:if="{{!profile.isSelf}}" class="profile-buttons"><button bindtap="onFollow" disabled="{{busy}}" loading="{{busy}}" aria-label="{{profile.followed ? '取消关注' : '关注'}}">{{profile.followed ? '已关注' : '+ 关注'}}</button><button wx:if="{{profile.userId}}" class="message-button" bindtap="onMessage">发私信</button></view>
-    <text wx:if="{{profile.followed && !profile.isSelf}}" class="profile-bio">再次点击“已关注”可取消关注</text>
-    <text wx:if="{{profile.isSelf}}" class="profile-bio">这是你自己的公开资料</text>
-    <text wx:if="{{profile.userId && !profile.isSelf}}" class="profile-bio" bindtap="onReport">举报该用户</text>
-    <text wx:if="{{!profile.userId}}" class="profile-bio">该发布者暂未开通私信</text>
+<view class="page-no-tab profile-page" style="{{displayStyle}}">
+  <view class="profile-cover">
+    <view class="cover-orbit orbit-one"></view><view class="cover-orbit orbit-two"></view><view class="cover-leaf leaf-one"></view><view class="cover-leaf leaf-two"></view>
+    <view class="cover-heading"><text class="cover-label">{{profile.isSelf ? '我的社区主页' : '糖友的社区主页'}}</text><text wx:if="{{profile.userId && !profile.isSelf}}" class="profile-report" bindtap="onReport" aria-role="button">举报</text></view>
+    <text class="cover-copy">分享日常，让每一份认真都有回响。</text>
   </view>
-  <view wx:if="{{profile}}" class="profile-articles"><text class="profile-section-title">已发布内容</text><view wx:for="{{articles}}" wx:key="id" class="card profile-article" data-id="{{item.id}}" bindtap="onArticle"><text class="profile-article-title">{{item.title}}</text><text wx:if="{{item.summary}}" class="profile-article-summary">{{item.summary}}</text><view class="profile-article-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="code"># {{tag.name}}</text></view><text class="profile-article-meta">{{item.timeLabel}} · {{item.likeCount || 0}} 赞 · {{item.commentCount || 0}} 评论</text></view><view wx:if="{{articlesError}}" class="state" bindtap="onRetryArticles">{{articlesError}} · 重试</view><view wx:elif="{{articlesLoading}}" class="state">正在加载…</view><view wx:elif="{{!articles.length}}" class="card state">还没有公开发布的内容</view><view wx:elif="{{articleHasMore}}" class="state" bindtap="onMoreArticles">查看更多内容</view></view>
+  <view wx:if="{{loading && !profile}}" class="profile-panel profile-skeleton"><view class="skeleton-circle"></view><view class="skeleton-line skeleton-name"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-short"></view></view>
+  <view wx:elif="{{error}}" class="profile-panel profile-empty"><view class="profile-empty-symbol">!</view><text class="empty-title">暂时没能加载资料</text><text class="empty-description">{{error}}</text><button class="profile-retry" bindtap="load">重新加载</button></view>
+  <view wx:elif="{{profile}}" class="profile-panel profile-card">
+    <view class="profile-top"><view class="profile-avatar"><avatar-image src="{{profile.avatarUrl}}" text="{{avatarText}}"></avatar-image></view><view class="profile-identity"><view class="identity-dot"></view><text>{{profile.isSelf ? '我的公开名片' : profile.userId ? '社区糖友' : '社区发布者'}}</text></view></view>
+    <text class="profile-name">{{profile.nickname || '糖友'}}</text><text class="profile-bio">{{profile.bio || '在这里，记录生活，也和糖友们分享点滴。'}}</text>
+    <view wx:if="{{!profile.isSelf}}" class="profile-buttons"><button class="profile-primary {{profile.followed ? 'is-followed' : ''}}" bindtap="onFollow" disabled="{{busy}}" loading="{{busy}}" aria-label="{{profile.followed ? '取消关注' : '关注'}}"><text class="button-symbol">{{profile.followed ? '✓' : '+'}}</text>{{profile.followed ? '已关注' : '关注'}}</button><button wx:if="{{profile.userId}}" class="profile-secondary" bindtap="onMessage"><view class="message-symbol"></view>发私信</button></view>
+    <view wx:else class="profile-buttons"><button class="profile-primary" bindtap="onMyArticles"><text class="button-symbol">✎</text>我的文章</button><button class="profile-secondary" bindtap="onEditProfile">编辑资料</button></view>
+    <view class="profile-footer"><view class="footer-dot"></view><text>{{profile.isSelf ? '其他糖友也会看到这张公开名片' : !profile.userId ? '该发布者暂未开通私信' : profile.followed ? '已关注，再次点击可取消关注' : '从一次分享开始，认识同行的糖友'}}</text></view>
+  </view>
+  <view wx:if="{{profile}}" class="profile-articles">
+    <view class="profile-section-heading"><view><text class="profile-section-kicker">生活里的点滴，值得被看见</text><view class="profile-section-title"><text>{{profile.isSelf ? '我的公开分享' : '发布的内容'}}</text><text wx:if="{{articleTotal !== ''}}" class="profile-work-count">{{articleTotal}}</text></view></view><view class="section-line"></view></view>
+    <view wx:for="{{articles}}" wx:key="id" class="profile-article" data-id="{{item.id}}" bindtap="onArticle" aria-role="button" aria-label="查看文章：{{item.title}}">
+      <view class="profile-article-body"><view class="profile-article-copy"><view class="work-category"><view class="work-category-dot"></view><text>{{item.videos.length ? '视频分享' : item.images.length ? '图文分享' : '日常分享'}}</text></view><text class="profile-article-title">{{item.title}}</text><text wx:if="{{item.summary}}" class="profile-article-summary">{{item.summary}}</text></view><view wx:if="{{item.images.length}}" class="profile-article-cover"><article-photo media-id="{{item.images[0].mediaId}}" mode="aspectFill" preview-enabled="{{false}}"></article-photo></view><view wx:elif="{{item.videos.length}}" class="profile-article-cover video-cover"><view class="video-play"></view><text>视频分享</text></view></view>
+      <view wx:if="{{item.tags.length}}" class="profile-article-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="code"># {{tag.name}}</text></view>
+      <view class="profile-article-bottom"><text>{{item.timeLabel}} · {{item.viewCount || 0}}次浏览</text><view class="profile-article-metrics"><view><image src="/assets/icons/social-like.svg" />{{item.likeCount || 0}}</view><view><image src="/assets/icons/social-comment.svg" />{{item.commentCount || 0}}</view><text class="article-arrow">↗</text></view></view>
+    </view>
+    <view wx:if="{{articlesLoading && !articles.length}}" class="profile-article article-skeleton"><view class="skeleton-line"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-short"></view></view>
+    <view wx:elif="{{articlesError}}" class="profile-list-state" bindtap="onRetryArticles"><text>{{articlesError}}</text><text class="state-link">点击重试 ↻</text></view>
+    <view wx:elif="{{!articles.length && !articlesLoading}}" class="profile-empty profile-article"><view class="empty-paper"><view></view><view></view><view></view></view><text class="empty-title">{{profile.isSelf ? '给你的第一篇分享留个位置' : '分享还在酝酿中'}}</text><text class="empty-description">{{profile.isSelf ? '写下生活里的发现，让更多糖友看到。' : '这里会展示对方公开发布的文章与视频。'}}</text><button wx:if="{{profile.isSelf}}" class="profile-retry" bindtap="onMyArticles">去创作</button></view>
+    <view wx:elif="{{articlesLoading}}" class="profile-list-state">正在加载更多…</view><view wx:elif="{{articleHasMore}}" class="profile-list-state state-link" bindtap="onMoreArticles">查看更多分享 ↓</view><view wx:elif="{{articles.length}}" class="profile-list-end"><view></view><text>每一份分享，都有它的意义</text><view></view></view>
+  </view>
+  <social-feedback id="social-feedback"></social-feedback>
 </view>

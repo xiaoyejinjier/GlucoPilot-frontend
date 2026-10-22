@@ -1,0 +1,2 @@
+<image wx:if="{{source && !error}}" class="avatar-image" src="{{source}}" mode="{{mode}}" binderror="onImageError" />
+<view wx:else class="avatar-placeholder"><text>{{text || '友'}}</text></view>

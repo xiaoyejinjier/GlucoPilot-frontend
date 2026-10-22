@@ -73,6 +73,7 @@ function mapNewsItem(n) {
     contentHtml: looksLikeHtml(contentBody) ? rewriteContentHtml(contentBody) : '',
     likeCount: n.likeCount || 0,
     collectCount: n.collectCount || 0,
+    viewCount: n.viewCount || 0,
     liked: !!n.liked,
     collected: !!n.collected,
     author: n.author || null,
@@ -155,7 +156,7 @@ function fetchNews(channelNameOrCode, pageNum, pageSize) {
     ? channelNameOrCode
     : channelCode(channelNameOrCode)
   if (code) data.channelCode = code
-  return get('/news', data, { auth: false }).then((page) => ({
+  return get('/news', data, { auth: !!wx.getStorageSync('accessToken') }).then((page) => ({
     ...page,
     records: (page && page.records ? page.records : []).map(mapNewsItem)
   }))
@@ -171,6 +172,9 @@ function updateNewsAction(id, payload) {
 }
 
 function fetchCommunityProfile(key) { return get(`/community/profiles/${encodeURIComponent(key)}`, null, { auth: true }) }
+function fetchMyReports(params) { return get('/community/reports/mine',params,{auth:true}) }
+function fetchReportFeedback(id) { return get(`/community/reports/${encodeURIComponent(id)}`,null,{auth:true}) }
+function readReportFeedback(id) { return put(`/community/reports/${encodeURIComponent(id)}/read`,null,{auth:true}) }
 function setCommunityFollowing(key, following) { return put(`/community/profiles/${encodeURIComponent(key)}/following`, { following }, { auth: true }) }
 function fetchCommunityList(mode, params) {
   if (!['following', 'collections', 'messages', 'profiles'].includes(mode)) return Promise.reject(new Error('列表类型不正确'))
@@ -211,6 +215,10 @@ function fetchCommunityArticles(params = {}) {
     .then(page => ({ ...page, records: (page.records || []).map(mapCommunityArticle) }))
 }
 function fetchMyArticles(params) { return get('/community/articles/mine', params, { auth: true }) }
+function fetchMutualFriends(params) { return get('/community/friends',params,{auth:true}) }
+function setArticleVisibility(id,payload) { return put(`/community/articles/${encodeURIComponent(id)}/visibility`,payload,{auth:true}) }
+function hideCommunityArticle(id) { return put(`/community/articles/${encodeURIComponent(id)}/hidden`,{hidden:true},{auth:true}) }
+function recordArticleView(id) { return post(`/community/articles/${encodeURIComponent(id)}/views`,null,{auth:true}) }
 function fetchCommunityArticle(id) { return get(`/community/articles/${encodeURIComponent(id)}`, null, { auth: true }) }
 function submitCommunityArticle(payload) { return post('/community/articles', payload, { auth: true, timeout: 15000 }) }
 function editCommunityArticle(id, payload) { return put(`/community/articles/${encodeURIComponent(id)}`, payload, { auth: true, timeout: 15000 }) }
@@ -528,12 +536,13 @@ function fetchGlucoseSummary(params) {
 }
 
 module.exports = {
+  fetchMutualFriends,setArticleVisibility,hideCommunityArticle,recordArticleView,
   fetchInformationSummary, fetchInteractionNotices, readInteractionNotices,
   fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
   createExportTask, fetchExportTasks, generateExportTask,
   fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
   submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
-  fetchCommunityProfile, setCommunityFollowing, fetchCommunityList,
+  fetchCommunityProfile, setCommunityFollowing, fetchCommunityList, fetchMyReports, fetchReportFeedback, readReportFeedback,
   fetchNewsComments, fetchCommentReplies, addNewsComment, deleteNewsComment,
   fetchDirectMessages, sendDirectMessage, readDirectMessages, fetchUnreadMessages,
   channelName,

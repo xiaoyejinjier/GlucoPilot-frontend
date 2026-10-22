@@ -23,5 +23,6 @@ Page({
     catch (error) { social.failure(this,error,version) }
     finally { if (social.active(this,version)) this.setData({ sending:false }) }
   },
+  onMyReports(){if(social.active(this))wx.navigateTo({url:'/pages/community-reports/community-reports'})},
   onBack() { wx.navigateBack({ delta:1 }) }
 })

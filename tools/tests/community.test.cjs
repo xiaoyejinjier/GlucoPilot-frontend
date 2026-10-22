@@ -9,11 +9,11 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a, b)
 const message = (id, mine = false) => ({ id: String(id), content: `消息${id}`, senderId: mine ? '1' : '2', recipientId: mine ? '2' : '1', mine, createdAt: '2026-10-19T12:30:00', readAt: null })
 
 function harness(name, options = {}) {
-  const state = { token: 'account-one', calls: [], toasts: [], navs: [], scrolls: [], intervals: new Map(), timeouts:new Map(), modals: [], clipboard: [], reset: 0, speech:[] }
+  const state = { token: 'account-one', calls: [], toasts: [], feedback:[], ticks:[], navs: [], scrolls: [], intervals: new Map(), timeouts:new Map(), modals: [], clipboard: [], reset: 0, speech:[] }
   const app = { checkLogin: () => !!state.token, resetLoginState() { state.token = ''; state.reset++ } }
   const request = { getToken: () => state.token }
   const wx = { showToast: v => state.toasts.push(v), navigateTo: v => state.navs.push(v), reLaunch: v => state.navs.push(v),
-    setNavigationBarTitle() {}, pageScrollTo(v) { state.scrolls.push(v);if(v.complete)v.complete() }, showModal: v => state.modals.push(v), setClipboardData: v => state.clipboard.push(v.data) }
+    setNavigationBarTitle() {}, nextTick(fn) { if(options.manualNextTick)state.ticks.push(fn);else fn() }, pageScrollTo(v) { state.scrolls.push(v);if(v.success)v.success();if(v.complete)v.complete() }, showModal: v => state.modals.push(v), setClipboardData: v => state.clipboard.push(v.data) }
   const socialModule = { exports: {} }
   vm.runInNewContext(fs.readFileSync(path.join(root, 'utils/community.js'), 'utf8'), { module: socialModule, require: () => request, wx, getApp: () => app })
   const implementations = {
@@ -38,9 +38,9 @@ function harness(name, options = {}) {
     setTimeout:(fn,ms)=>{if(!options.manualTimeouts){fn();return 0}const id=++timerId;state.timeouts.set(id,{fn:()=>{state.timeouts.delete(id);fn()},ms});return id},
     clearTimeout:id=>state.timeouts.delete(id),
     require: key => ({ '../../services/api': api, '../../utils/community': socialModule.exports,
-      '../../utils/request': request, '../../utils/message-notifications':{refresh:()=>state.calls.push({name:'refreshUnread'}),count:v=>Math.max(0,Number(v)||0),label:v=>Number(v)>99?'99+':Number(v)>0?String(v):''}, '../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>url}, '../../utils/display': { applyDisplayToCurrentPage() {} } }[key])
+      '../../utils/request': request, '../../utils/message-notifications':{refresh:()=>state.calls.push({name:'refreshUnread'}),count:v=>Math.max(0,Number(v)||0),label:v=>Number(v)>99?'99+':Number(v)>0?String(v):''}, '../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>options.cover ? options.cover(url) : url}, '../../utils/display': { applyDisplayToCurrentPage() {} } }[key])
   })
-  const page = { ...definition, selectComponent:()=>({beginHold:()=>state.speech.push('start'),endHold:cancel=>state.speech.push(cancel?'cancel':'stop')}), data: JSON.parse(JSON.stringify(definition.data)), setData(patch,callback) {
+  const page = { ...definition, selectComponent:selector=>selector==='#social-feedback'?{show:text=>state.feedback.push(text)}:({beginHold:()=>state.speech.push('start'),endHold:cancel=>state.speech.push(cancel?'cancel':'stop')}), data: JSON.parse(JSON.stringify(definition.data)), setData(patch,callback) {
     for (const [key, value] of Object.entries(patch)) {
       const keys = key.split('.'); let object = this.data
       for (const part of keys.slice(0, -1)) object = object[part]
@@ -222,6 +222,9 @@ test('公开资料可以关注取消及给用户发私信，未关联用户的�
   await page.onFollow(); assert.equal(page.data.profile.followed, false)
   page.onMessage(); assert.match(state.navs[0].url, /messages.*peer=2/)
   page.setData({ profile: { key: 'b1', userId: null, followed: true } }); page.onMessage(); assert.equal(state.navs.length, 1)
+  page.onMyArticles();page.onEditProfile();assert.equal(state.navs.length,1)
+  page.setData({profile:{key:'u1',userId:'1',isSelf:true}});page.onMyArticles();page.onEditProfile()
+  assert.match(state.navs[1].url,/community-articles/);assert.match(state.navs[2].url,/profile-edit/)
 })
 test('消息ID超过JS安全整数时仍按字符串正确排序和去重', () => {
   const { social, page } = harness('messages')
@@ -332,4 +335,43 @@ test('仅在消息底部向上拉出现阻尼，松手或取消回弹，不请�
   p.onElasticStart(touch(10,200));p.onElasticMove(touch(100,180));assert.equal(p.data.bottomPull,0)
   p.onElasticMove(touch(10,100));assert.equal(p.data.bottomPull,32);p.onHide();assert.equal(p.data.bottomPull,0)
   assert.equal(state.calls.length,calls);assert.equal(JSON.stringify(p.data.messages),rows)
+})
+
+test('从评论入口加载后定位评论区，不等待封面，不弹键盘，后续刷新不重复定位',async()=>{
+  const cover=deferred(),{page:p,state}=harness('news-detail',{route:{id:'10',comments:'1'},cover:()=>cover.promise})
+  await flush();assert.equal(p.data.loading,false);assert.equal(state.scrolls.length,1);assert.equal(state.scrolls[0].selector,'#article-comments');assert.equal(p.data.commentFocus,false)
+  cover.resolve('wxfile://cover.jpg');await flush();assert.equal(p.data.news.cover,'wxfile://cover.jpg')
+  await p.loadDetail();assert.equal(state.scrolls.length,1)
+  p.onComments();assert.equal(state.scrolls.length,2);assert.equal(state.navs.length,0);p.onUnload()
+})
+test('普通正文入口不自动滚动，文章失败或离页后的布局回调也不跳转',async()=>{
+  const normal=harness('news-detail');await flush();assert.equal(normal.state.scrolls.length,0);normal.page.onUnload()
+  const failed=harness('news-detail',{route:{id:'10',comments:'1'},api:{fetchNewsDetail:async()=>{throw new Error('文章不可见')}}});await flush();assert.equal(failed.state.scrolls.length,0);failed.page.onUnload()
+  const late=harness('news-detail',{route:{id:'10',comments:'1'},manualNextTick:true});await flush();assert.equal(late.state.ticks.length,1)
+  late.page.onHide();late.state.ticks[0]();assert.equal(late.state.scrolls.length,0);late.page.onUnload()
+})
+test('详情点赞收藏依服务端结果给出底部反馈，失败保留状态且没有成功提示',async()=>{
+  let liked=false,collected=false,fail=false
+  const {page:p,state}=harness('news-detail',{api:{updateNewsAction:async(id,patch)=>{
+    if(fail)throw new Error('网络异常');if('liked' in patch)liked=patch.liked;if('collected' in patch)collected=patch.collected
+    return{liked,collected,likeCount:liked?1:0,collectCount:collected?1:0}
+  }}});await flush()
+  await p.onLike();await p.onCollect();assert.equal(p.data.liked,true);assert.equal(p.data.collected,true)
+  await p.onLike();await p.onCollect();assert.equal(state.feedback.join(','),'点赞成功,收藏成功,已取消点赞,已取消收藏')
+  fail=true;await p.onLike();assert.equal(state.feedback.length,4);assert.equal(p.data.liked,false);assert.match(state.toasts.at(-1).title,/网络异常/);p.onUnload()
+})
+test('文章及个人资料的关注取消都有底部反馈，旧账号迟到结果不提示成功',async()=>{
+  const profile=harness('community-profile');await flush();await profile.page.onFollow();await profile.page.onFollow()
+  assert.equal(profile.state.feedback.join(','),'关注成功,取消关注成功');profile.page.onUnload()
+  const late=deferred(),detail=harness('news-detail',{api:{fetchNewsDetail:async()=>({id:'10',author:{key:'u2',followed:false}}),setCommunityFollowing:()=>late.promise}})
+  await flush();const pending=detail.page.onFollowAuthor();detail.page.onHide();detail.state.token='other';late.resolve({key:'u2',followed:true});await pending;assert.equal(detail.state.feedback.length,0);detail.page.onUnload()
+  const article=harness('news-detail',{api:{fetchNewsDetail:async()=>({id:'10',author:{key:'u2',followed:false}})}})
+  await flush();await article.page.onFollowAuthor();await article.page.onFollowAuthor();assert.equal(article.state.feedback.join(','),'关注成功,取消关注成功');article.page.onUnload()
+})
+test('评论及线程回复成功显示对应反馈，回复目标异常保留草稿且不显示成功',async()=>{
+  const {page:p,state,api}=harness('news-detail',{api:{fetchNewsComments:async()=>({records:[{id:'7',author:{nickname:'糖友'},replies:[]}],pages:1}),addNewsComment:async()=>({id:'8',rootCommentId:'7',replyToCommentId:'7',author:{nickname:'我'}})}})
+  await flush();p.onReply({currentTarget:{dataset:{id:'7'}}});p.onCommentInput({detail:{value:'回复内容'}});await p.onCommentSend();assert.equal(state.feedback.at(-1),'回复成功')
+  p.onCommentInput({detail:{value:'普通评论'}});api.addNewsComment=async()=>({id:'9',content:'普通评论'});await p.onCommentSend();assert.equal(state.feedback.at(-1),'评论成功')
+  p.onReply({currentTarget:{dataset:{id:'7'}}});p.onCommentInput({detail:{value:'不应变成主评论'}});api.addNewsComment=async()=>({id:'10'});await p.onCommentSend()
+  assert.equal(state.feedback.length,2);assert.equal(p.data.commentDraft,'不应变成主评论');p.onUnload()
 })

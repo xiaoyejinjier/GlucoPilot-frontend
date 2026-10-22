@@ -11,8 +11,10 @@
     <scroll-view
       class="disclaimer-scroll"
       scroll-y
+      bindscroll="onDisclaimerScroll"
       bindscrolltolower="onScrollToBottom"
-      lower-threshold="20"
+      bindtouchend="measureReadPosition"
+      lower-threshold="2"
     >
       <view class="disclaimer-text">
         <view wx:for="{{paragraphs}}" wx:key="*this" class="disclaimer-para">

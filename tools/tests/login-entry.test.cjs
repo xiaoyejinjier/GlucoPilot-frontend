@@ -11,7 +11,7 @@ function createFlow(options = {}) {
     storage: new Map(Object.entries(options.storage || {})),
     route: options.route || 'pages/login/login',
     profile: { disclaimerAgreed: false, disclaimerVersion: '', ...options.profile },
-    routes: [], toasts: [], timers: [], profiles: 0, configs: 0, agreements: 0, logins: []
+    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: []
   }
   const token = () => state.storage.get('accessToken') || ''
   const request = { getToken: token, setToken(value) { if (value) state.storage.set('accessToken', value); else state.storage.delete('accessToken') } }
@@ -23,7 +23,7 @@ function createFlow(options = {}) {
   const display = { applyDisplayToCurrentPage() {}, saveDisplaySettings() {}, getDisplayStyle: () => '' }
   const services = {
     async fetchMe() { state.profiles++; if (options.profileError) throw options.profileError; return { ...state.profile } },
-    async fetchAppConfig() { state.configs++; return { TEXT: { 'text.disclaimer.version': 'v1' } } },
+    async fetchAppConfig() { state.configs++; return options.configFetch ? options.configFetch() : { TEXT: { 'text.disclaimer.version': 'v1' } } },
     async agreeDisclaimer(version) {
       state.agreements++
       if (options.agreementError) throw options.agreementError
@@ -70,12 +70,121 @@ function createFlow(options = {}) {
       clearInterval() {}, setInterval: () => 1
     })
     return { ...definition, data: JSON.parse(JSON.stringify(definition.data)),
-      setData(value) { Object.assign(this.data, value) } }
+      setData(value, callback) { Object.assign(this.data, value); if (callback) callback() },
+      createSelectorQuery() {
+        const query = { select() { return query }, boundingClientRect() { return query },
+          exec(callback) { state.measurements.push(callback) } }
+        return query
+      } }
   }
   return { app, state, page, request }
 }
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+function loggedInDisclaimer(options) {
+  const flow = createFlow(options)
+  flow.app.globalData.isLoggedIn = true
+  flow.request.setToken('current-user')
+  return { ...flow, disclaimer: flow.page('disclaimer') }
+}
+
+const layout = (viewportHeight, contentBottom, contentHeight = 1200) => [
+  { top: 100, bottom: 100 + viewportHeight, height: viewportHeight },
+  { top: contentBottom - contentHeight, bottom: contentBottom, height: contentHeight }
+]
+
+test('首次滚动到底即解锁，不依赖触底事件，读完不会自动提交同意', async () => {
+  const { disclaimer, state } = loggedInDisclaimer()
+  await disclaimer.onLoad({ forced: '1' })
+  disclaimer.onReady()
+  state.measurements.at(-1)(layout(400, 1300))
+  disclaimer.onDisclaimerScroll({ detail: { scrollTop: 780, scrollHeight: 1200 } })
+  assert.equal(disclaimer.data.canAgree, false)
+  disclaimer.onDisclaimerScroll({ detail: { scrollTop: 798.5, scrollHeight: 1200 } })
+  assert.equal(disclaimer.data.canAgree, true)
+  assert.equal(state.agreements, 0)
+  disclaimer.onDisclaimerScroll({ detail: { scrollTop: 0, scrollHeight: 1200 } })
+  assert.equal(disclaimer.data.canAgree, true)
+})
+
+test('文案不足一屏时渲染后即可同意，零尺寸和非法滚动数据不提前解锁', async () => {
+  const { disclaimer, state } = loggedInDisclaimer()
+  await disclaimer.onLoad({})
+  disclaimer.onReady()
+  state.measurements.at(-1)(layout(0, 100, 0))
+  disclaimer.onDisclaimerScroll({ detail: { scrollTop: -100, scrollHeight: 100 } })
+  state.measurements.at(-1)(layout(400, 1300))
+  for (const detail of [{}, { scrollTop: 1000, scrollHeight: 0 }, { scrollTop: NaN, scrollHeight: 1200 }]) {
+    disclaimer.onDisclaimerScroll({ detail })
+    assert.equal(disclaimer.data.canAgree, false)
+  }
+  disclaimer.measureReadPosition()
+  state.measurements.at(-1)(layout(400, 380, 280))
+  assert.equal(disclaimer.data.canAgree, true)
+  assert.equal(state.agreements, 0)
+})
+
+test('已滑到底后异步文案回填会复核当前位置，不需要再向上向下滑', async () => {
+  let resolveConfig
+  const { disclaimer, state } = loggedInDisclaimer({ configFetch: () => new Promise(resolve => { resolveConfig = resolve }) })
+  const loading = disclaimer.onLoad({ forced: '1' })
+  disclaimer.onReady()
+  state.measurements.at(-1)(layout(400, 1300))
+  disclaimer.onDisclaimerScroll({ detail: { scrollTop: 800, scrollHeight: 1200 } })
+  assert.equal(disclaimer.data.canAgree, true)
+  resolveConfig({ TEXT: { 'text.disclaimer.version': 'v1' } })
+  await loading
+  assert.equal(disclaimer.data.canAgree, false)
+  state.measurements.at(-1)(layout(400, 500))
+  assert.equal(disclaimer.data.canAgree, true)
+  assert.equal(state.agreements, 0)
+})
+
+test('更新为更长文案时旧布局不解锁，必须读到新内容底部', async () => {
+  const { disclaimer, state } = loggedInDisclaimer()
+  await disclaimer.onLoad({})
+  disclaimer.onReady()
+  const oldMeasurement = state.measurements.at(-1)
+  await disclaimer.loadDisclaimer()
+  oldMeasurement(layout(400, 500))
+  assert.equal(disclaimer.data.canAgree, false)
+  state.measurements.at(-1)(layout(400, 900, 1600))
+  assert.equal(disclaimer.data.canAgree, false)
+  disclaimer.onDisclaimerScroll({ detail: { scrollTop: 1200, scrollHeight: 1600 } })
+  assert.equal(disclaimer.data.canAgree, true)
+})
+
+test('声明隐藏后忽略旧测量与滚动，返回或窗口变化重新测量', async () => {
+  const { disclaimer, state } = loggedInDisclaimer()
+  await disclaimer.onLoad({})
+  disclaimer.onReady()
+  const pending = state.measurements.at(-1)
+  disclaimer.onHide()
+  pending(layout(400, 500))
+  disclaimer.onScrollToBottom()
+  assert.equal(disclaimer.data.canAgree, false)
+  disclaimer.onShow()
+  state.measurements.at(-1)(layout(300, 900))
+  disclaimer.onResize()
+  state.measurements.at(-1)(layout(600, 700))
+  assert.equal(disclaimer.data.canAgree, true)
+})
+
+test('卸载或切换账号后忽略迟到的声明配置，不更新版本和可同意状态', async () => {
+  for (const reason of ['unload', 'account']) {
+    let resolveConfig
+    const { disclaimer, state, request } = loggedInDisclaimer({ configFetch: () => new Promise(resolve => { resolveConfig = resolve }) })
+    const loading = disclaimer.onLoad({})
+    if (reason === 'unload') disclaimer.onUnload()
+    else request.setToken('another-user')
+    resolveConfig({ TEXT: { 'text.disclaimer.version': 'v-new' } })
+    await loading
+    assert.equal(disclaimer.data.version, '')
+    assert.equal(disclaimer.data.canAgree, false)
+    assert.equal(state.storage.get('disclaimerCurrentVersion'), undefined)
+  }
+})
 
 test('服务地址不可用时不发起登录请求，展示具体配置原因', () => {
   const { page, state } = createFlow({ connectionIssue: '未配置地址' })

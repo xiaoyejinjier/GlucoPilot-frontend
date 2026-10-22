@@ -20,7 +20,7 @@ Page({
   onInput(event) { this.setData({ keyword: event.detail.value }) },
   onSearch() {
     if (this._busy) return
-    if (this.data.keyword.trim().length < 2) { wx.showToast({ title: '请输入昵称或对方社区号', icon: 'none' }); return }
+    if (this.data.keyword.trim().length < 2) { wx.showToast({ title: '请输入对方的昵称', icon: 'none' }); return }
     return this.load(true)
   },
   onRetry() { return this.load(true) }, onMore() { return this.load(false) },

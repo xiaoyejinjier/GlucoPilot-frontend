@@ -42,3 +42,12 @@ test('当前聊天不重复提示，后台不轮询，换账号丢弃迟到数�
   assert.equal(page.data.unreadCount,1);assert.equal(state.toasts.length,1)
   state.token='';await n.refresh();assert.equal(page.data.unreadLabel,'');assert.equal(state.timers.size,0)
 })
+
+test('举报反馈计入全局数量，查看后归零，不把已读回退的编号重复弹出',async()=>{
+  const {notifications:n,state,page,tab}=harness(true)
+  state.queue.push(Promise.resolve({messages:0,reports:2,total:2,latestReportId:'10'}));n.start();await flush()
+  assert.equal(page.data.informationCounts.reports,2);assert.equal(tab.unreadCount,2);assert.match(state.toasts.at(-1).title,/举报/)
+  state.queue.push(Promise.resolve({reports:1,total:1,latestReportId:'9'}));await n.refresh();assert.equal(state.toasts.length,1)
+  state.queue.push(Promise.resolve({reports:0,total:0}));await n.refresh();assert.equal(page.data.unreadLabel,'');assert.equal(tab.unreadCount,0)
+  page.route='pages/community-reports/community-reports';state.queue.push(Promise.resolve({reports:1,total:1,latestReportId:'11'}));await n.refresh();assert.equal(state.toasts.length,1);n.stop()
+})

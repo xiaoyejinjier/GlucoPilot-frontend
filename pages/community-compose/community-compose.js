@@ -7,12 +7,12 @@ const { uploadMediaFile, BIZ_TYPE, MAX_IMAGE_BYTES } = require('../../utils/medi
 const { getToken } = require('../../utils/request')
 Page({
   data: { displayStyle:'', title:'', body:'', tags:publication.TAGS, tagCodes:[], selectedTags:[], customTags:[], customTagInput:'', tagCount:0, posting:false,
-    loading:false, loadError:'', editing:false, submitted:null, statusInfo:null, revision:null, originalState:'', images:[], videos:[], recentTags:[], uploading:false, savingDraft:false,draftSaved:false,leaveGuardActive:false },
+    visibility:'PUBLIC',viewerIds:[],visibilityLabel:'公开',visibilityOpen:false,loading:false, loadError:'', editing:false, submitted:null, statusInfo:null, revision:null, originalState:'', images:[], videos:[], recentTags:[], uploading:false, savingDraft:false,draftSaved:false,leaveGuardActive:false },
   onLoad(options) { this._id = /^[1-9]\d{0,18}$/.test(String(options.id || '')) ? String(options.id) : ''; this._draftId = /^[1-9]\d{0,18}$/.test(String(options.draft || '')) ? String(options.draft) : ''; this.captureSavedEditor() },
   onShow() {
     if (!getApp().checkLogin()) return
     if (this._communityToken && this._communityToken !== require('../../utils/request').getToken()) {
-      this._attempt = this._saveAttempt = this._draftPublishAttempt = null; this._loaded = false; this._savedSnapshot = null; this._savedHadContent = false; this._uploadRun = (this._uploadRun || 0) + 1; this.setData({ title:'', body:'', tagCodes:[], selectedTags:[], customTags:[], customTagInput:'', tagCount:0, submitted:null, images:[], videos:[], recentTags:[], uploading:false,draftSaved:false })
+      this._attempt = this._saveAttempt = this._draftPublishAttempt = null; this._loaded = false; this._savedSnapshot = null; this._savedHadContent = false; this._uploadRun = (this._uploadRun || 0) + 1; this.setData({ title:'', body:'', tagCodes:[], selectedTags:[], customTags:[], customTagInput:'', tagCount:0, submitted:null, images:[], videos:[], recentTags:[], uploading:false,draftSaved:false,visibility:'PUBLIC',viewerIds:[],visibilityLabel:'公开',visibilityOpen:false })
     }
     this._leaving = false; this._leavePrompt = false
     social.begin(this); applyDisplayToCurrentPage(); this.setData({ posting:false }); this.setTags(this.data.tagCodes)
@@ -20,7 +20,7 @@ Page({
     this.syncEditorState(); this.loadRecentTags()
     if ((this._id || this._draftId) && !this._loaded) this.load()
   },
-  onHide() { social.end(this) }, onUnload() { this._disposed = true; this._leaving = true; this._uploadRun = (this._uploadRun || 0) + 1; social.end(this) },
+  onHide() { this.setData({visibilityOpen:false});social.end(this) }, onUnload() { this._disposed = true; this._leaving = true; this._uploadRun = (this._uploadRun || 0) + 1; social.end(this) },
   editorSnapshot() {
     const content=this.draftContent()
     return JSON.stringify({...content,tagCodes:[...content.tagCodes].sort(),customTags:[...content.customTags].sort(),customTagInput:this.data.customTagInput.trim()})
@@ -86,21 +86,25 @@ Page({
         const draft = await api.fetchDraft(this._draftId)
         if(!social.active(this,version))return
         this._id = draft.sourceArticleId || ''; this._draftRevision = draft.revision; this._loaded = true
-        this.setData({title:draft.title,body:draft.body,videos:draft.videos || [],images:draft.images || [],customTags:draft.customTags || [],revision:draft.sourceRevision,editing:!!this._id,draftSaved:true})
+        this.setData({visibility:draft.visibility||'PUBLIC',viewerIds:draft.viewerIds||[],visibilityLabel:this.visibilityText(draft.visibility),title:draft.title,body:draft.body,videos:draft.videos || [],images:draft.images || [],customTags:draft.customTags || [],revision:draft.sourceRevision,editing:!!this._id,draftSaved:true})
         this.setTags(draft.tagCodes || []); this.captureSavedEditor();this.syncEditorState();return
       }
       const article = await api.fetchCommunityArticle(this._id)
       if (!social.active(this,version)) return
       if (!article.mine) throw new Error('只能编辑自己的文章')
-      this._loaded = true; this.setData({ title:article.title, body:article.body, revision:article.revision, editing:true, originalState:article.state, videos:article.videos || [],images:article.images || [] })
+      this._loaded = true; this.setData({visibility:article.visibility||'PUBLIC',viewerIds:article.viewerIds||[],visibilityLabel:this.visibilityText(article.visibility), title:article.title, body:article.body, revision:article.revision, editing:true, originalState:article.state, videos:article.videos || [],images:article.images || [] })
       const builtins = new Set(publication.TAGS.map(tag => tag.code))
       this.setData({ customTags:article.tags.filter(tag => !builtins.has(tag.code)).map(tag => tag.name) })
       this.setTags(article.tags.filter(tag => builtins.has(tag.code)).map(tag => tag.code));this.captureSavedEditor();this.syncEditorState()
     } catch (error) { if (social.active(this,version,error)) { this.setData({ loadError:error.message || '文章加载失败' }); social.failure(this,error,version) } }
     finally { if (social.active(this,version)) {this.setData({ loading:false });this.syncEditorState()} }
   },
+  visibilityText(mode){return mode==='PRIVATE'?'仅自己可见':mode==='FRIENDS'?'指定好友可见':'公开'},
+  onVisibility(){if(social.active(this)&&!this.data.posting&&!this.data.uploading&&!this.data.loading)this.setData({visibilityOpen:true})},
+  onVisibilityClose(){this.setData({visibilityOpen:false})},
+  onVisibilityConfirm(event){if(!social.active(this)||this.data.posting)return;const {visibility,viewerIds}=event.detail;this.setData({visibility,viewerIds,visibilityLabel:this.visibilityText(visibility),visibilityOpen:false});this.syncEditorState()},
   onTitle(e) { this.setData({ title:e.detail.value });this.syncEditorState() }, onBody(e) { this.setData({ body:e.detail.value });this.syncEditorState() },
-  draftContent() { return { title:this.data.title.trim(),body:this.data.body,tagCodes:this.data.tagCodes,customTags:this.data.customTags,videoMediaIds:this.data.videos.map(video=>video.mediaId),imageMediaIds:this.data.images.map(image=>image.mediaId),sourceArticleId:this._id || null,sourceRevision:this._id ? this.data.revision : null } },
+  draftContent() { return { visibility:this.data.visibility,viewerIds:[...(this.data.viewerIds||[])].sort(),title:this.data.title.trim(),body:this.data.body,tagCodes:this.data.tagCodes,customTags:this.data.customTags,videoMediaIds:this.data.videos.map(video=>video.mediaId),imageMediaIds:this.data.images.map(image=>image.mediaId),sourceArticleId:this._id || null,sourceRevision:this._id ? this.data.revision : null } },
   async persistDraft(version) {
     const snapshot=this.editorSnapshot(),hadContent=this.hasEditorContent()
     const content = this.draftContent(), fingerprint = JSON.stringify({...content,revision:this._draftId?this._draftRevision:null})
@@ -179,7 +183,7 @@ Page({
     if (this.data.customTagInput.trim()) { this.onAddCustomTag(); if (this.data.customTagInput.trim()) return }
     const issue = publication.validate(this.data.title,this.data.body,this.data.tagCodes,this.data.customTags,this.data.images.length+this.data.videos.length)
     if (issue) return wx.showToast({ title:issue, icon:'none' })
-    const draft = { title:this.data.title.trim(), body:this.data.body.trim(), tagCodes:this.data.tagCodes, customTags:this.data.customTags, videoMediaIds:this.data.videos.map(video=>video.mediaId),imageMediaIds:this.data.images.map(image => image.mediaId), ...(this._id ? { revision:this.data.revision } : {}) }
+    const draft = { visibility:this.data.visibility,viewerIds:[...(this.data.viewerIds||[])].sort(),title:this.data.title.trim(), body:this.data.body.trim(), tagCodes:this.data.tagCodes, customTags:this.data.customTags, videoMediaIds:this.data.videos.map(video=>video.mediaId),imageMediaIds:this.data.images.map(image => image.mediaId), ...(this._id ? { revision:this.data.revision } : {}) }
     const fingerprint = JSON.stringify(draft)
     if (!this._attempt || this._attempt.fingerprint !== fingerprint) this._attempt = { fingerprint, payload:{ ...draft, clientRequestId:social.requestId() } }
     const version = this._communityVersion; this.setData({ posting:true });this.syncEditorState()

@@ -5,7 +5,7 @@
 .tip-card .tip-line {
   display: block;
   font-size: var(--fs-small);
-  color: #6b7280;
+  color: var(--muted);
   line-height: 1.5;
 }
 

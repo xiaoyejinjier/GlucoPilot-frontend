@@ -15,12 +15,12 @@ Page({
     fontSizes: ['标准', '较大', '更大'],
     fontSize: '较大',
     themes: [
-      { id: 'green', label: '品牌绿' },
-      { id: 'teal', label: '青绿' },
+      { id: 'green', label: '经典蓝' },
+      { id: 'teal', label: '静谧蓝' },
       { id: 'simple', label: '简洁白' }
     ],
     theme: 'green',
-    themeLabel: '品牌绿'
+    themeLabel: '经典蓝'
   },
 
   onLoad() {

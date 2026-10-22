@@ -1,6 +1,6 @@
 .empty {
   text-align: center;
-  color: #6b7280;
+  color: var(--muted);
   font-size: var(--fs-body);
   padding: 40rpx 0;
 }
@@ -20,7 +20,7 @@
   flex-shrink: 0;
   margin-right: 20rpx;
   border-radius: 14rpx;
-  background: #e8eee9;
+  background: var(--line);
 }
 
 .food-main {

@@ -2,7 +2,7 @@ Component({
   properties: {
     unreadCount: { type:Number, value:0 },
     selected: { type: Number, value: 0 },
-    brandColor: { type: String, value: '#07c160' },
+    brandColor: { type: String, value: '#0969da' },
     guideActive: {
       type: Boolean, value: false,
       observer(active) {
@@ -14,6 +14,7 @@ Component({
         }
         if (!this._guideRunning) {
           this._guideRunning = true
+          this._guideFinished = false
           this.setData({ guideIndex: 0, guideReady: false })
         }
         if (this._ready) this.measureGuide()
@@ -72,10 +73,22 @@ Component({
     nextGuide() {
       if (!this.data.guideActive || !this.data.guideReady) return
       if (this.data.guideIndex === this.data.guideSteps.length - 1) {
-        this.triggerEvent('guidecomplete')
+        this.finishGuide(false)
         return
       }
       this.setData({ guideIndex: this.data.guideIndex + 1, guideReady: false }, () => this.measureGuide())
+    },
+
+    skipGuide() {
+      this.finishGuide(true)
+    },
+
+    finishGuide(skipped) {
+      if (!this.data.guideActive || this._guideFinished) return
+      this._guideFinished = true
+      this._measureVersion = (this._measureVersion || 0) + 1
+      this.setData({ guideReady: false })
+      this.triggerEvent('guidecomplete', { skipped })
     },
 
     stopGuideTouch() {},

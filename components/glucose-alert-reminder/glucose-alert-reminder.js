@@ -9,7 +9,7 @@ function formatTime(value) {
 Component({
   options: { styleIsolation: 'isolated' },
   properties: {
-    socialCounts: { type:Object,value:{},observer(counts) { this.setData({ socialTotal:Number(counts && counts.total)||0, socialItems:[{key:'messages',title:'私信'},{key:'likes',title:'点赞'},{key:'collections',title:'收藏'},{key:'comments',title:'评论'},{key:'follows',title:'新关注我的'}].map(item=>({...item,count:Math.max(0,Number(counts && counts[item.key])||0)})).filter(item=>item.count>0) }) } },
+    socialCounts: { type:Object,value:{},observer(counts) { this.setData({ socialTotal:Number(counts && counts.total)||0, socialItems:[{key:'messages',title:'私信'},{key:'likes',title:'点赞'},{key:'collections',title:'收藏'},{key:'comments',title:'评论'},{key:'follows',title:'新关注我的'},{key:'reports',title:'举报反馈'}].map(item=>({...item,count:Math.max(0,Number(counts && counts[item.key])||0)})).filter(item=>item.count>0) }) } },
     nodes: { type: Array, value: [], observer(nodes) { this.setData({ alerts: buildGlucoseAlerts(nodes) }) } }
   },
   data: { alerts: [], replies: [], noticeVisible: false, replyTotal: 0, repliesLoading: false, repliesError: '', hasMoreReplies: false, socialTotal:0,socialItems:[] },
@@ -28,7 +28,7 @@ Component({
     }
   },
   methods: {
-    onInformation(e) { this.closeNotice(); wx.navigateTo({url:`/pages/information/information?tab=${e.currentTarget.dataset.key}`}) },
+    onInformation(e) { this.closeNotice(); const key=e.currentTarget.dataset.key;wx.navigateTo({url:key==='reports'?'/pages/community-reports/community-reports':`/pages/information/information?tab=${key}`}) },
     openNotice() {
       if (!this._alive || !this._visible || this.data.noticeVisible) return
       this.setData({ noticeVisible: true })

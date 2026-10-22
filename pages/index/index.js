@@ -46,26 +46,46 @@ Page({
   onWrite() { wx.navigateTo({ url: '/pages/community-compose/community-compose' }) },
   onMyArticles() { wx.navigateTo({ url: '/pages/community-articles/community-articles' }) },
   onOpen(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}` }) },
+  onComments(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}&comments=1` }) },
   onProfile(e) { const key = e.currentTarget.dataset.key; if (/^[ub][1-9]\d{0,18}$/.test(String(key || ''))) wx.navigateTo({ url: `/pages/community-profile/community-profile?key=${key}` }) },
   onCommunityEntry(e) { if(e.currentTarget.dataset.mode === 'messages') { wx.navigateTo({url:'/pages/information/information'}); return } const mode = e.currentTarget.dataset.mode; if (['following','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` }) },
-  onReport(e) { const url = reportUrl('ARTICLE',e.currentTarget.dataset.id); if (url) wx.navigateTo({ url }) },
+  onReport(e) {
+    const id=String(e.currentTarget.dataset.id),post=this.data.posts.find(row=>String(row.id)===id)
+    if(!post||!social.active(this))return
+    const version=this._communityVersion
+    wx.showActionSheet({itemList:['举报','减少此类内容'],success:result=>{if(!social.active(this,version))return;if(result.tapIndex===0){const url=reportUrl('ARTICLE',id);if(url)wx.navigateTo({url})}else if(result.tapIndex===1)this.onHideArticle(id,version)}})
+  },
+  async onHideArticle(id,version=this._communityVersion){if(!social.active(this,version))return;if(!this._busy)this._busy=new Set();const key='hide:'+id;if(this._busy.has(key))return;this._busy.add(key);try{await api.hideCommunityArticle(id);if(social.active(this,version)){this._loadRun=(this._loadRun||0)+1;this.setData({posts:this.data.posts.filter(row=>String(row.id)!==id),loading:false});wx.showToast({title:'将减少此类内容，该文章已隐藏',icon:'none'})}}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this._busy.delete(key)}},
   async onAction(e) {
     const id = String(e.currentTarget.dataset.id), field = e.currentTarget.dataset.field
-    const post = this.data.posts.find(item => item.id === id)
+    const post = this.data.posts.find(item => String(item.id) === id)
     if (!post || !['liked','collected'].includes(field) || !social.active(this)) return
     if (!this._busy) this._busy = new Set()
     if (this._busy.has(id)) return
     this._busy.add(id); const version = this._communityVersion
-    try { const result = await api.updateNewsAction(id,{ [field]: !post[field] }); if (social.active(this,version)) this.setData({ posts: this.data.posts.map(item => item.id === id ? { ...item, ...result } : item) }) }
+    try {
+      const result = await api.updateNewsAction(id,{ [field]: !post[field] })
+      if (social.active(this,version)) {
+        this.setData({ posts: this.data.posts.map(item => String(item.id) === id ? { ...item, ...result, [field+'Pulse']:(item[field+'Pulse']||0)+1 } : item) })
+        social.success(this,field,!!result[field])
+      }
+    }
     catch (error) { social.failure(this,error,version) }
     finally { if (social.active(this,version)) this._busy.delete(id) }
   },
   async onFollow(e) {
     const key = e.currentTarget.dataset.key, post = this.data.posts.find(item => item.author && item.author.key === key)
     if (!post || post.author.isSelf || !social.active(this)) return
+    if (!this._busy) this._busy = new Set()
     const busy = `follow:${key}`; if (this._busy.has(busy)) return
     this._busy.add(busy); const version = this._communityVersion
-    try { const profile = await api.setCommunityFollowing(key,!post.author.followed); if (social.active(this,version)) this.setData({ posts: this.data.posts.map(item => item.author && item.author.key === key ? { ...item, author: profile } : item) }) }
+    try {
+      const profile = await api.setCommunityFollowing(key,!post.author.followed)
+      if (social.active(this,version)) {
+        this.setData({ posts: this.data.posts.map(item => item.author && item.author.key === key ? { ...item, author: profile } : item) })
+        social.success(this,'followed',!!profile.followed)
+      }
+    }
     catch (error) { social.failure(this,error,version) }
     finally { if (social.active(this,version)) this._busy.delete(busy) }
   }

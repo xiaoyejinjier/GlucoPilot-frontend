@@ -1,1 +1,6 @@
-{ "navigationBarTitleText": "社区", "usingComponents": {} }
+{
+  "navigationBarTitleText": "社区",
+  "usingComponents": {
+    "avatar-image": "/components/avatar-image/avatar-image"
+  }
+}

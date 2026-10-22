@@ -375,7 +375,7 @@ Page({
       const colors = { ok: brand, warn: '#fa9d3b', danger: '#fa5151', empty: '#c8c8c8' }
       allPoints.forEach(p => {
         if (p.has) {
-          ctx.fillStyle = colors[p.status] || '#07c160'
+          ctx.fillStyle = colors[p.status] || brand
           ctx.beginPath()
           ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2)
           ctx.fill()

@@ -3,32 +3,42 @@ const social = require('../../utils/community')
 const publication = require('../../utils/publication')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 Page({
-  data:{ displayStyle:'', articles:[], loading:false, error:'', pageNum:0, hasMore:false, retrying:'', mode:'articles' },
+  data:{ displayStyle:'', articles:[], totalCount:'', loading:false, error:'', pageNum:0, hasMore:false, retrying:'', mode:'articles',visibilityArticle:null,visibilityOpen:false,visibilityBusy:false },
   onLoad(options) { if(options.mode==='drafts')this.setData({mode:'drafts'}) },
-  onMode(e) { const mode=e.currentTarget.dataset.mode;if(!['articles','drafts'].includes(mode)||mode===this.data.mode)return;this._run=(this._run||0)+1;this.setData({mode,articles:[],pageNum:0,hasMore:false});this.load(true) },
+  onMode(e) { const mode=e.currentTarget.dataset.mode;if(!['articles','drafts'].includes(mode)||mode===this.data.mode)return;this._run=(this._run||0)+1;this.setData({mode,articles:[],totalCount:'',pageNum:0,hasMore:false});this.load(true) },
   onShow() { if (!getApp().checkLogin()) return
-    if (this._communityToken && this._communityToken !== require('../../utils/request').getToken()) this.setData({ articles:[], error:'' })
+    if (this._communityToken && this._communityToken !== require('../../utils/request').getToken()) this.setData({ articles:[], totalCount:'', error:'' })
     social.begin(this); applyDisplayToCurrentPage(); this.setData({ retrying:'' }); this.load(true) },
-  onHide() { social.end(this); this._run = (this._run || 0) + 1 }, onUnload() { this.onHide() },
+  onHide() { this.setData({visibilityOpen:false,visibilityArticle:null,visibilityBusy:false});social.end(this); this._run = (this._run || 0) + 1 }, onUnload() { this.onHide() },
   async load(reset) {
     if (!social.active(this) || (!reset && (this.data.loading || !this.data.hasMore))) return
     const version = this._communityVersion, run = this._run = (this._run || 0) + 1, pageNum = reset ? 1 : this.data.pageNum + 1
     this.setData({ loading:true, error:'' })
     try { const result = await (this.data.mode==='drafts'?api.fetchDrafts({pageNum,pageSize:15}):api.fetchMyArticles({ pageNum, pageSize:15 })); if (!social.active(this,version) || run !== this._run) return
-      const rows = result.records.map(article => ({ ...article, title:article.title || '未命名草稿',summary:this.data.mode==='drafts'?article.body:article.summary,tags:article.tags || [],statusInfo:this.data.mode==='drafts'?{label:'草稿',tone:'muted',hint:'仅自己可见，继续编辑后可发布。'}:publication.state(article.state), timeLabel:social.timeLabel(article.updatedAt || article.createdAt) }))
-      this.setData({ articles:reset ? rows : [...this.data.articles,...rows], pageNum, hasMore:pageNum < Number(result.pages) })
+      const rows = result.records.map(article => ({ ...article, visibilityLabel:this.visibilityText(article.visibility), title:article.title || '未命名草稿',summary:this.data.mode==='drafts'?article.body:article.summary,tags:article.tags || [],statusInfo:this.data.mode==='drafts'?{label:'草稿',tone:'muted',hint:'仅自己可见，继续编辑后可发布。'}:publication.state(article.state), timeLabel:social.timeLabel(article.updatedAt || article.createdAt) }))
+      this.setData({ articles:reset ? rows : [...this.data.articles,...rows], totalCount:result.total!=null&&Number.isFinite(Number(result.total))?Number(result.total):'', pageNum, hasMore:pageNum < Number(result.pages) })
     } catch (error) { if (social.active(this,version,error) && run === this._run) { this.setData({ error:error.message || '文章加载失败' }); if (error.code === 40100) social.failure(this,error,version) } }
     finally { if (social.active(this,version) && run === this._run) this.setData({ loading:false }) }
   },
+  visibilityText(mode){return mode==='PRIVATE'?'仅自己可见':mode==='FRIENDS'?'指定好友可见':'公开'},
+  onVisibility(event){if(!social.active(this)||this.data.visibilityBusy)return;const item=this.data.articles.find(row=>String(row.id)===String(event.currentTarget.dataset.id));if(item&&this.data.mode==='articles')this.setData({visibilityArticle:item,visibilityOpen:true})},
+  onVisibilityClose(){if(!this.data.visibilityBusy)this.setData({visibilityOpen:false,visibilityArticle:null})},
+  async onVisibilityConfirm(event){const item=this.data.visibilityArticle;if(!item||!social.active(this)||this.data.visibilityBusy)return;const version=this._communityVersion;this.setData({visibilityBusy:true});try{const result=await api.setArticleVisibility(item.id,{...event.detail,revision:item.visibilityRevision||0});if(social.active(this,version)){this.setData({articles:this.data.articles.map(row=>row.id===item.id?{...row,visibility:result.visibility,viewerIds:result.viewerIds||[],visibilityRevision:result.revision,visibilityLabel:this.visibilityText(result.visibility)}:row),visibilityOpen:false,visibilityArticle:null});wx.showToast({title:'可见范围已更新',icon:'none'})}}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({visibilityBusy:false})}},
   onMore() { this.load(false) }, onRetry() { this.load(true) }, async onPullDownRefresh() { try { await this.load(true) } finally { wx.stopPullDownRefresh() } },
   onWrite() { wx.navigateTo({ url:'/pages/community-compose/community-compose' }) },
+  onArticleCard(e) {
+    if(!social.active(this)||this.data.retrying)return
+    const item=this.data.articles.find(row=>String(row.id)===String(e.currentTarget.dataset.id))
+    if(!item)return
+    return this.data.mode==='articles'&&item.state==='PUBLISHED'?this.onOpen(e):this.onEdit(e)
+  },
   onEdit(e) {
     const id=String(e.currentTarget.dataset.id),token=this._communityToken
     if(!social.active(this)||!this.data.articles.some(row=>String(row.id)===id)||!/^[1-9]\d{0,18}$/.test(id))return
     const drafts=this.data.mode==='drafts'
     wx.navigateTo({url:`/pages/community-compose/community-compose?${drafts?'draft':'id'}=${id}`,events:{draftPublished:result=>{
       if(drafts&&String(result.id)===id&&this.data.mode==='drafts'&&token===require('../../utils/request').getToken()&&token===this._communityToken)
-        this.setData({articles:this.data.articles.filter(row=>String(row.id)!==id)})
+        this.setData({articles:this.data.articles.filter(row=>String(row.id)!==id),totalCount:this.data.totalCount!==''?Math.max(0,this.data.totalCount-1):''})
     }}})
   },
   async onDeleteDraft(e) { if(this.data.mode!=='drafts'||!social.active(this)||this.data.retrying)return;const item=this.data.articles.find(row=>row.id===String(e.currentTarget.dataset.id));if(!item)return;const version=this._communityVersion;const result=await new Promise(resolve=>wx.showModal({title:'删除草稿',content:'删除后无法恢复，确认删除这份草稿吗？',success:resolve,fail:()=>resolve({confirm:false})}));if(!result.confirm||!social.active(this,version))return;this.setData({retrying:item.id});try{await api.deleteDraft(item.id,item.revision);if(social.active(this,version))await this.load(true)}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({retrying:''})} },

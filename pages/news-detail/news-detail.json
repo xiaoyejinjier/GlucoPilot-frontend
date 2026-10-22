@@ -1,7 +1,10 @@
 {
   "navigationBarTitleText": "资讯详情",
   "usingComponents": {
+    "social-action": "/components/social-action/social-action",
+    "social-feedback": "/components/social-feedback/social-feedback",
     "article-photo": "/components/article-photo/article-photo",
-    "article-video": "/components/article-video/article-video"
+    "article-video": "/components/article-video/article-video",
+    "avatar-image": "/components/avatar-image/avatar-image"
   }
 }

@@ -50,9 +50,9 @@
       <view class="serial-heading"><text>{{formSourceText}}</text><text class="serial-close" bindtap="onCloseSerial" aria-role="button">取消</text></view>
       <text class="serial-note">填写机身或包装上的序列号，先加入待适配列表。</text>
       <text class="input-label">设备 SN <text class="required-mark">*</text></text>
-      <input class="serial-input" value="{{snInput}}" maxlength="64" placeholder="请输入设备 SN 码" bindinput="onSnInput" adjust-position="{{true}}" cursor-spacing="24" />
+      <input class="serial-input" value="{{snInput}}" maxlength="64" placeholder="请输入设备 SN 码" placeholder-class="serial-placeholder" bindinput="onSnInput" adjust-position="{{true}}" cursor-spacing="24" />
       <text class="input-label">设备名称 <text class="optional-label">（选填）</text></text>
-      <input class="serial-input" value="{{nameInput}}" maxlength="40" placeholder="例如：我的血糖仪" bindinput="onNameInput" adjust-position="{{true}}" cursor-spacing="24" />
+      <input class="serial-input" value="{{nameInput}}" maxlength="40" placeholder="例如：我的血糖仪" placeholder-class="serial-placeholder" bindinput="onNameInput" adjust-position="{{true}}" cursor-spacing="24" />
       <text wx:if="{{formError}}" class="serial-error">{{formError}}</text>
       <button class="search-button serial-save" bindtap="onSaveSerial">登记设备信息</button>
       <text class="serial-footnote">仅登记信息，不会连接设备或生成血糖记录</text>

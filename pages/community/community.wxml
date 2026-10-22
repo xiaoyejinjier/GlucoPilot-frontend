@@ -1,9 +1,9 @@
 <view class="page-no-tab" style="{{displayStyle}}">
-  <view wx:if="{{mode === 'profiles'}}" class="card search-row"><input placeholder="输入昵称或对方社区号" maxlength="32" value="{{keyword}}" bindinput="onInput" bindconfirm="onSearch" confirm-type="search" /><button bindtap="onSearch" disabled="{{loading}}">搜索</button></view>
+  <view wx:if="{{mode === 'profiles'}}" class="card search-row"><input placeholder="输入对方的昵称" maxlength="32" value="{{keyword}}" bindinput="onInput" bindconfirm="onSearch" confirm-type="search" /><button bindtap="onSearch" disabled="{{loading}}">搜索</button></view>
   <view wx:for="{{list}}" wx:key="rowKey" class="card social-list-row" data-key="{{item.rowKey}}" bindtap="onOpen" aria-role="button">
     <block wx:if="{{mode === 'collections'}}"><image class="collection-cover" src="{{item.cover}}" mode="aspectFill" /><view class="row-copy"><text class="row-title">{{item.title}}</text><text class="row-muted">{{item.channel}} · {{item.time}}</text></view></block>
     <block wx:elif="{{mode === 'messages'}}"><view class="avatar">聊</view><view class="row-copy"><text class="row-title">{{item.peer.nickname}}</text><text class="row-preview">{{item.lastMessage.content}}</text><text class="row-muted">{{item.timeLabel}}</text></view><text wx:if="{{item.unreadCount > 0}}" class="unread">{{item.unreadLabel}}</text></block>
-    <block wx:else><image wx:if="{{item.avatarUrl}}" class="avatar" src="{{item.avatarUrl}}" mode="aspectFill" /><view wx:else class="avatar">友</view><view class="row-copy"><text class="row-title">{{item.nickname}}</text><text class="row-muted">{{item.bio || (item.followed ? '已关注' : '查看资料，关注或发私信')}}</text></view></block>
+    <block wx:else><view wx:if="{{item.avatarUrl}}" class="avatar" ><avatar-image src="{{item.avatarUrl}}" text="友"></avatar-image></view><view wx:else class="avatar">友</view><view class="row-copy"><text class="row-title">{{item.nickname}}</text><text class="row-muted">{{item.bio || (item.followed ? '已关注' : '查看资料，关注或发私信')}}</text></view></block>
     <text class="row-muted">›</text>
   </view>
   <view wx:if="{{loading}}" class="state">正在加载…</view>

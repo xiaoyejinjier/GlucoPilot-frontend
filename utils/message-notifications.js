@@ -1,11 +1,11 @@
 const api = require('../services/api')
 const { getToken } = require('./request')
-let timer = null, token = '', epoch = 0, busy = false, latest = '', latestNotice = '', enabled = false
+let timer = null, token = '', epoch = 0, busy = false, latest = '', latestNotice = '', latestReport = '', enabled = false
 function count(value) { const number = Number(value); return Number.isFinite(number) ? Math.max(0,Math.floor(number)) : 0 }
 function label(value) { const n = count(value); return n > 99 ? '99+' : n ? String(n) : '' }
 function publish(value) {
   const source = value && typeof value === 'object' ? value : { messages:value }
-  const counts = Object.fromEntries(['messages','likes','collections','comments','follows'].map(key => [key,count(source[key])]))
+  const counts = Object.fromEntries(['messages','likes','collections','comments','follows','reports'].map(key => [key,count(source[key])]))
   counts.total = Object.values(counts).reduce((sum,n) => sum+n,0)
   const n = counts.total, app = getApp()
   app.globalData.unreadCount = n
@@ -40,6 +40,12 @@ async function refresh() {
       latestNotice = noticeId
       if (!newer && (!page || page.route !== 'pages/information/information')) wx.showToast({title:'有新的互动提醒，可在信息中查看',icon:'none',duration:2500})
     }
+    const reportId=String(state.latestReportId||'')
+    const reportNew=reportId&&(!latestReport||reportId.length>latestReport.length||(reportId.length===latestReport.length&&reportId>latestReport))
+    if(reportNew){
+      latestReport=reportId
+      if(count(state.reports)>0&&(!page||page.route!=='pages/community-reports/community-reports'))wx.showToast({title:'举报有了处理反馈，可在我的举报查看',icon:'none',duration:2500})
+    }
   } catch (_) { /* Quiet polling never blocks navigation or reveals message content. */ }
   finally { if (epoch === version) busy = false }
 }
@@ -47,7 +53,7 @@ function start() {
   const current = getToken()
   if (!current) { stop(); return }
   if (enabled && token === current) { publish(getApp().globalData.informationCounts || getApp().globalData.unreadCount); return }
-  if (token !== current) { latest = latestNotice = ''; publish(0) }
+  if (token !== current) { latest = latestNotice = latestReport = ''; publish(0) }
   stop(); token = current; enabled = true; refresh()
   timer = setInterval(refresh,5000)
 }
@@ -56,5 +62,5 @@ function stop() {
   timer = null; epoch++; busy = false; enabled = false
   // Keep the high-water mark across a background/foreground cycle of this account.
 }
-function reset() { stop(); token = ''; latest = latestNotice = ''; publish(0) }
+function reset() { stop(); token = ''; latest = latestNotice = latestReport = ''; publish(0) }
 module.exports = { start, stop, reset, refresh, count, label }

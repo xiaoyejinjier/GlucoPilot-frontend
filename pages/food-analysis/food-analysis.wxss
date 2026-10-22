@@ -7,7 +7,7 @@
 
 .recognition-summary, .recognition-tip, .recognition-warning, .meal-nutrition { display: block; font-size: var(--fs-small); line-height: 1.6; }
 .recognition-summary { margin-bottom: 12rpx; color: var(--brand-dark); }
-.recognition-tip { color: #6b7280; margin: 12rpx 0; }
+.recognition-tip { color: var(--muted); margin: 12rpx 0; }
 .recognition-warning { color: #9a5a12; margin-top: 12rpx; }
 .recognition-error { border: 1rpx solid #e9b9b9; }
 .meal-actions { display: flex; gap: 16rpx; margin-top: 20rpx; }
@@ -38,7 +38,7 @@
 .predict-value { color: var(--brand-dark); font-size: 64rpx; line-height: 1.2; font-weight: 800; }
 .predict-unit { color: #526358; font-size: var(--fs-small); }
 .predict-col-label { display: block; margin-top: 8rpx; color: var(--brand-dark); font-size: var(--fs-small); font-weight: 600; }
-.predict-carbs { display: block; margin-top: 12rpx; color: #6b7280; font-size: var(--fs-small); }
+.predict-carbs { display: block; margin-top: 12rpx; color: var(--muted); font-size: var(--fs-small); }
 .glucose-entry-card { border: 1rpx solid #cce1d4; background: #f7faf8; }
 .glucose-entry-head { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 .glucose-entry-head .section-title { margin: 0; }
@@ -52,7 +52,7 @@
 .photo-meal-img {
   width: 100%;
   display: block;
-  background: #e8eee9;
+  background: var(--line);
 }
 
 .photo-meal {
@@ -75,7 +75,7 @@
   flex: 1;
   width: 0;
   margin-right: 12rpx;
-  background: #f3f6f4;
+  background: var(--surface-subtle);
   border-radius: 16rpx;
   padding: 16rpx 8rpx;
   text-align: center;
@@ -93,7 +93,7 @@
 
 .metric-label {
   font-size: var(--fs-small);
-  color: #6b7280;
+  color: var(--muted);
   font-weight: 600;
 }
 
