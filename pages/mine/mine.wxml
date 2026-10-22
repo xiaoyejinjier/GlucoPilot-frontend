@@ -1,89 +1,11 @@
-<view class="page" style="{{displayStyle}}">
-  <view class="card profile-card">
-    <image
-      wx:if="{{userInfo.avatarUrl}}"
-      class="profile-avatar profile-avatar-img"
-      src="{{userInfo.avatarUrl}}"
-      mode="aspectFill"
-    />
-    <view wx:else class="profile-avatar">{{userInfo.avatarText}}</view>
-    <view class="profile-info">
-      <text class="profile-name">{{userInfo.nickname}}</text>
-      <text wx:if="{{userInfo.communityKey}}" class="profile-desc" bindtap="onCopyCommunityKey" aria-role="button">社区号 {{userInfo.communityKey}} · 复制</text>
-      <text class="profile-desc">{{userInfo.profileDesc}}</text>
-    </view>
-    <text class="profile-edit" bindtap="onEditProfile">编辑资料</text>
+<view class="page mine-page" style="{{displayStyle}}">
+  <view class="mine-hero"><view class="mine-hero-ring"></view><view class="mine-hero-leaf"></view><view class="mine-heading"><text>我的健康空间</text><view class="mine-settings" data-url="/pages/settings/settings" bindtap="onMenuTap"><view class="settings-symbol"></view><text>设置</text></view></view><view class="mine-profile"><view class="mine-avatar" bindtap="onPublicProfile"><avatar-image src="{{userInfo.avatarUrl}}" text="{{userInfo.avatarText || '友'}}"></avatar-image></view><view class="mine-identity"><text class="mine-name" bindtap="onPublicProfile">{{userInfo.nickname || '糖友'}}</text><text class="mine-community-key">电话号码：{{userInfo.phone || '未绑定'}}</text><text class="mine-profile-copy">{{userInfo.bio || '记录点滴，也照顾好自己。'}}</text></view></view><view class="mine-hero-actions"><view bindtap="onPublicProfile"><text>我的主页</text><text>↗</text></view><view bindtap="onEditProfile"><text>编辑资料</text><text>✎</text></view></view></view>
+  <view class="mine-overview"><view class="mine-section-heading"><text>今日健康概览</text><text class="mine-section-hint">来自你的记录</text></view><view class="mine-metrics"><view><text class="mine-metric-value">{{todayCount}}</text><text class="mine-metric-label">今日记录</text></view><view><text class="mine-metric-value">{{avgGlucose}}</text><text class="mine-metric-label">平均血糖 <text>mmol/L</text></text></view><view><text class="mine-metric-value">{{streakDays}}<text>天</text></text><text class="mine-metric-label">连续记录</text></view></view></view>
+  <view class="mine-section"><view class="mine-section-heading"><text>我的社区</text><text class="mine-section-hint">分享与回应，都在这里</text></view><view class="mine-community-grid"><view data-url="/pages/community-articles/community-articles" bindtap="onMenuTap"><view class="mine-icon icon-article"><view class="paper-symbol"><view></view><view></view></view></view><text>我的文章</text></view><view data-url="/pages/community/community?mode=collections" bindtap="onMenuTap"><view class="mine-icon icon-collection"><image src="/assets/icons/social-collect-active.svg" /></view><text>我的收藏</text></view><view data-url="/pages/community/community?mode=following" bindtap="onMenuTap"><view class="mine-icon icon-follow"><view class="person-symbol"></view></view><text>我的关注</text></view><view data-url="/pages/community-articles/community-articles?mode=drafts" bindtap="onMenuTap"><view class="mine-icon icon-draft"><view class="folder-symbol"></view></view><text>草稿箱</text></view></view>
+    <view class="mine-menu-row" data-url="/pages/information/information" bindtap="onMenuTap"><view class="mine-row-icon message-row-icon"><view class="bubble-symbol"></view></view><view class="mine-menu-copy"><text>我的信息</text><text>私信、点赞、收藏与评论</text></view><text wx:if="{{unreadCount > 0}}" class="message-unread-badge">{{unreadLabel}}</text><text class="mine-menu-arrow">›</text></view>
+    <view class="mine-menu-row" data-url="/pages/community-reports/community-reports" bindtap="onMenuTap"><view class="mine-row-icon report-row-icon"><view class="shield-symbol">✓</view></view><view class="mine-menu-copy"><text>我的举报</text><text>{{informationCounts.reports > 0 ? '管理员已回复，查看处理反馈' : '查看举报进度与处理反馈'}}</text></view><text wx:if="{{informationCounts.reports > 0}}" class="report-new-badge">{{informationCounts.reports > 99 ? '99+' : informationCounts.reports}}</text><text class="mine-menu-arrow">›</text></view>
   </view>
-
-  <view class="card">
-    <view class="section-title">今日概览</view>
-    <view class="metric-row">
-      <view class="metric-box">
-        <text class="metric-val">{{todayCount}}</text>
-        <text class="metric-label">已记录</text>
-      </view>
-      <view class="metric-box">
-        <text class="metric-val">{{avgGlucose}}</text>
-        <text class="metric-label">均糖</text>
-      </view>
-      <view class="metric-box">
-        <text class="metric-val">{{streakDays}}</text>
-        <text class="metric-label">连续天</text>
-      </view>
-    </view>
-  </view>
-
-  <view class="card">
-    <view class="section-title">快捷入口</view>
-    <view class="quick-grid">
-      <view class="quick-item" data-url="/pages/health-archive/health-archive" bindtap="onMenuTap">
-        <text class="quick-title">健康档案</text>
-        <text class="quick-desc">类型 · 用药</text>
-      </view>
-      <view class="quick-item" data-url="/pages/nutrition/nutrition" bindtap="onMenuTap">
-        <text class="quick-title">营养库</text>
-        <text class="quick-desc">查碳水热量</text>
-      </view>
-      <view class="quick-item" data-url="/pages/export-data/export-data" bindtap="onMenuTap">
-        <text class="quick-title">导出数据</text>
-        <text class="quick-desc">生成摘要</text>
-      </view>
-      <view class="quick-item" data-url="/pages/feedback/feedback" bindtap="onMenuTap">
-        <text class="quick-title">留言反馈</text>
-        <text class="quick-desc">意见建议</text>
-      </view>
-    </view>
-  </view>
-
-  <view class="card">
-    <view class="section-title">控糖提醒</view>
-    <view class="tip-list">
-      <text class="tip-item">· 餐后 2 小时建议复测一次血糖</text>
-      <text class="tip-item">· 今日目标：完成 9 时段中至少 6 次记录</text>
-      <text class="tip-item">· 低 GI 主食替换可减少餐后波动</text>
-    </view>
-  </view>
-
-  <view class="card menu-list">
-    <view class="menu-item" data-url="/pages/community/community?mode=following" bindtap="onMenuTap"><text>我的关注</text><text class="menu-arrow">›</text></view>
-    <view class="menu-item" data-url="/pages/community-articles/community-articles" bindtap="onMenuTap"><text>我的文章</text><text class="menu-arrow">›</text></view>
-    <view class="menu-item" data-url="/pages/community/community?mode=collections" bindtap="onMenuTap"><text>我的收藏</text><text class="menu-arrow">›</text></view>
-    <view class="menu-item" data-url="/pages/information/information" bindtap="onMenuTap"><text>我的信息</text><view class="message-menu-end"><text wx:if="{{unreadCount > 0}}" class="message-unread-badge">{{unreadLabel}}</text><text class="menu-arrow">›</text></view></view>
-    <view class="menu-item" data-url="/pages/health-archive/health-archive" bindtap="onMenuTap">
-      <text>健康档案</text><text class="menu-arrow">›</text>
-    </view>
-    <view class="menu-item" data-url="/pages/nutrition/nutrition" bindtap="onMenuTap">
-      <text>食物营养查询</text><text class="menu-arrow">›</text>
-    </view>
-    <view class="menu-item" data-url="/pages/feedback/feedback" bindtap="onMenuTap">
-      <text>留言反馈</text><text class="menu-arrow">›</text>
-    </view>
-    <view class="menu-item" data-url="/pages/disclaimer/disclaimer" bindtap="onMenuTap">
-      <text>免责声明</text><text class="menu-arrow">›</text>
-    </view>
-    <view class="menu-item" data-url="/pages/settings/settings" bindtap="onMenuTap">
-      <text>设置</text><text class="menu-arrow">›</text>
-    </view>
-  </view>
-  <view class="mine-logout"><button class="mine-logout-button" bindtap="onLogout" disabled="{{loggingOut}}" loading="{{loggingOut}}">退出登录</button></view>
+  <view class="mine-section"><view class="mine-section-heading"><text>健康与工具</text><text class="mine-section-hint">让日常管理更方便</text></view><view class="mine-tools-grid"><view data-url="/pages/health-archive/health-archive" bindtap="onMenuTap"><view class="tool-symbol tool-health">＋</view><view><text>健康档案</text><text>档案与管理目标</text></view><text class="tool-arrow">›</text></view><view data-url="/pages/nutrition/nutrition" bindtap="onMenuTap"><view class="tool-symbol tool-food"><view class="food-leaf"></view></view><view><text>食物营养</text><text>查询碳水与热量</text></view><text class="tool-arrow">›</text></view><view data-url="/pages/export-data/export-data" bindtap="onMenuTap"><view class="tool-symbol tool-export">↗</view><view><text>数据导出</text><text>保存自己的记录</text></view><text class="tool-arrow">›</text></view><view data-url="/pages/feedback/feedback" bindtap="onMenuTap"><view class="tool-symbol tool-feedback">✎</view><view><text>留言反馈</text><text>建议与使用问题</text></view><text class="tool-arrow">›</text></view></view></view>
+  <view class="mine-service"><view class="mine-service-row" data-url="/pages/account-security/account-security" bindtap="onMenuTap"><text>账号与安全</text><text>›</text></view><view class="mine-service-row" data-url="/pages/disclaimer/disclaimer" bindtap="onMenuTap"><text>免责声明</text><text>›</text></view><view class="mine-service-row" data-url="/pages/about/about" bindtap="onMenuTap"><text>关于我们</text><text>›</text></view></view>
+  <view class="mine-logout"><button class="mine-logout-button" bindtap="onLogout" disabled="{{loggingOut}}" loading="{{loggingOut}}">退出登录</button><text>慢慢来，每一天的认真都算数。</text></view>
 </view>

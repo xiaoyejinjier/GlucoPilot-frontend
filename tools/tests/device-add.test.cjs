@@ -122,7 +122,7 @@ test('附近设备登记需确认、不是配对成功，账号变化时旧确�
   assert.equal(state.nav[0].url, '/pages/ai/ai')
 })
 
-test('入口蓝色且与九时段标题同排，独立全屏页原生标题和返回，无血糖写入依赖', () => {
+test('入口沿用主题色且与九时段标题同排，独立全屏页原生标题和返回，无血糖写入依赖', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
   assert.ok(manifest.pages.includes('pages/device-add/device-add'))
   const config = JSON.parse(fs.readFileSync(path.join(root, 'pages/device-add/device-add.json'), 'utf8'))
@@ -130,7 +130,7 @@ test('入口蓝色且与九时段标题同排，独立全屏页原生标题和�
   const recordTemplate = fs.readFileSync(path.join(root, 'pages/ai/ai.wxml'), 'utf8')
   assert.match(recordTemplate, /record-section-heading[\s\S]*?今日九时段记录[\s\S]*?bindtap="onAddDevice"/)
   const style = fs.readFileSync(path.join(root, 'pages/ai/ai.wxss'), 'utf8')
-  assert.match(style, /\.bind-device-link\s*\{[^}]*color:#2878dc/)
+  assert.match(style, /\.bind-device-link\s*\{[^}]*color:\s*var\(--brand\)/)
   const template = fs.readFileSync(path.join(root, 'pages/device-add/device-add.wxml'), 'utf8')
   for (const text of ['未搜索到附近蓝牙设备', '请确保设备已开机并打开蓝牙', '扫码添加', 'SN 添加', '待适配', '本次登录会话', 'mascot-scene']) assert.ok(template.includes(text), text)
   assert.equal(template.includes('tab-bar'), false)

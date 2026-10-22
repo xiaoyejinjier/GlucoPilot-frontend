@@ -1,7 +1,7 @@
 .photo-placeholder {
   height: 240rpx;
   border-radius: 20rpx;
-  background: #e8eee9;
+  background: var(--line);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -16,7 +16,7 @@
   height: 240rpx;
   border-radius: 16rpx;
   display: block;
-  background: #e8eee9;
+  background: var(--line);
 }
 
 .ocr-result {
@@ -44,7 +44,7 @@
 }
 
 .ocr-unit {
-  color: #6b7280;
+  color: var(--muted);
   font-size: var(--fs-small);
   font-weight: 700;
   margin-left: 12rpx;
@@ -101,7 +101,7 @@
 }
 
 .value-unit {
-  color: #6b7280;
+  color: var(--muted);
   font-weight: 700;
   font-size: var(--fs-small);
 }

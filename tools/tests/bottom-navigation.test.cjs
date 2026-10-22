@@ -80,6 +80,29 @@ test('后台恢复不重置步骤，旋转或退出时过期测量不会覆盖�
   assert.equal(navigation.data.guideIndex, 1)
 })
 
+test('指引任何一步均可跳过，测量未完成时也能退出且不会重复完成', () => {
+  for (const index of [0, 2, 4]) {
+    const { navigation, definition, measurements, events } = createNavigation()
+    navigation.data.guideActive = true
+    definition.properties.guideActive.observer.call(navigation, true)
+    definition.lifetimes.ready.call(navigation)
+    navigation.data.guideIndex = index
+    const pending = measurements.at(-1)
+    navigation.skipGuide()
+    assert.equal(events.length, 1)
+    assert.equal(events[0].name, 'guidecomplete')
+    assert.equal(events[0].detail.skipped, true)
+    pending.callback([{ left: 90, top: 600, width: 50, height: 58 }, { left: 0, width: 320 }])
+    assert.equal(navigation.data.guideReady, false)
+    navigation.skipGuide()
+    navigation.nextGuide()
+    assert.equal(events.length, 1)
+  }
+  const { navigation, events } = createNavigation()
+  navigation.skipGuide()
+  assert.equal(events.length, 0)
+})
+
 test('原生TabBar读取当前登录的引导状态，完成后通知记录页恢复图表', () => {
   let definition, token = 'first-account', completed = 0, restored = 0
   const app = {
@@ -160,7 +183,9 @@ function pageForNavigation(name, tabBar) {
       '../../utils/display': { applyDisplayToCurrentPage: () => state.display++ },
       '../../utils/community': { begin() {}, active: () => false },
       '../../utils/publication': { TAGS: [] },
-      '../../services/api': { fetchCommunityTags: async () => [] }
+      '../../utils/request': { getToken: () => 'navigation-test-account' },
+      '../../utils/device-drafts': { listDeviceDrafts: () => [] },
+      '../../services/api': { fetchCommunityTags: async () => [], fetchMyDevices: async () => [] }
     }[name] || {}),
     wx: { navigateTo: options => state.pages.push(options), switchTab: options => state.tabs.push(options) }
   })
@@ -192,6 +217,27 @@ function cachedGuideBars() {
   return { bars, definition, completed: () => completed }
 }
 
+test('跳过沿用全局完成状态，切换缓存Tab后不重现遮罩并恢复导航', () => {
+  const { bars, completed } = cachedGuideBars()
+  const { navigation, definition, requests } = createNavigation()
+  navigation.data.guideActive = true
+  definition.properties.guideActive.observer.call(navigation, true)
+  navigation.triggerEvent = name => {
+    assert.equal(name, 'guidecomplete')
+    bars[0].onGuideComplete()
+    navigation.data.guideActive = bars[0].data.guideActive
+    definition.properties.guideActive.observer.call(navigation, navigation.data.guideActive)
+  }
+  navigation.skipGuide()
+  assert.equal(completed(), 1)
+  assert.equal(navigation.data.guideActive, false)
+  const { page } = pageForNavigation('devices', bars[1])
+  page.onShow()
+  assert.equal(bars[1].data.guideActive, false)
+  navigation.switchTab({ currentTarget: { dataset: { path: '/pages/devices/devices', index: 1 } } })
+  assert.equal(requests[0].url, '/pages/devices/devices')
+})
+
 test('完成指引后切换设备管理等缓存Tab时清除旧遮罩，不依赖组件show事件', () => {
   const { bars, definition, completed } = cachedGuideBars()
   bars[0].onGuideComplete()
@@ -219,7 +265,7 @@ test('已完成的指引在其他缓存实例再次触发完成时仍能关闭�
   assert.equal(completed(), 1)
 })
 
-test('四个Tab页面选中索引同步，社区沿用现有首页，设备管理仅展示占位', () => {
+test('四个Tab页面选中索引同步，社区沿用现有首页，设备管理加载实际设备', () => {
   for (const [name, selected] of [['ai', 0], ['devices', 1], ['index', 2], ['mine', 3]]) {
     const { page, state } = pageForNavigation(name)
     page.load = page.loadData = page.syncTodayFromServer = page.startRecordWindowTimer = page.loadRemote = page.refresh = () => {}
@@ -228,8 +274,9 @@ test('四个Tab页面选中索引同步，社区沿用现有首页，设备管�
     assert.equal(state.display, 1)
   }
   const device = fs.readFileSync(path.join(root, 'pages/devices/devices.js'), 'utf8')
-  assert.equal(/services\/api|device-discovery|startBluetooth|openBluetooth|wx\.request/.test(device), false)
-  assert.match(fs.readFileSync(path.join(root, 'pages/devices/devices.wxml'), 'utf8'), /即将上线/)
+  assert.match(device, /fetchMyDevices/)
+  assert.equal(/device-discovery|startBluetooth|openBluetooth|wx\.request/.test(device), false)
+  assert.match(fs.readFileSync(path.join(root, 'pages/devices/devices.wxml'), 'utf8'), /已绑定设备/)
   for (const name of ['confirm', 'food-analysis']) {
     assert.match(fs.readFileSync(path.join(root, `pages/${name}/${name}.wxml`), 'utf8'), /<tab-bar selected="\{\{0\}\}"/)
   }

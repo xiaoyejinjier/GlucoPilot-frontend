@@ -74,6 +74,7 @@ Page({
   onEditProfile() {
     wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
   },
+  onPublicProfile(){const key=this.data.userInfo.communityKey;if(this.sessionActive(getToken(),this._mineEpoch)&&/^u[1-9]\d{0,18}$/.test(String(key||'')))wx.navigateTo({url:`/pages/community-profile/community-profile?key=${key}`})},
 
   onCopyCommunityKey() {
     const key = this.data.userInfo.communityKey

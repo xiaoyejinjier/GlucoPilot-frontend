@@ -4,18 +4,45 @@
  * wx.downloadFile 与 wx.request 走同一条调试通道。
  */
 const cache = Object.create(null)
+const pending = Object.create(null)
+
+// Backend object and avatar routes follow the current API host. External image URLs stay intact.
+function resolveImageUrl(url) {
+  const source = String(url || '').trim()
+  const match = source.match(/^(?:https?:\/\/[^/?#]+)?(\/api\/v1\/media-files\/(?:local-objects|avatars\/[1-9]\d{0,18}))(\?[^#]*)?(?:#.*)?$/i)
+  if (!match) return source
+  const base = String(require('./config').baseUrl || '').replace(/\/+$/, '')
+  return base ? base + match[1].slice('/api/v1'.length) + (match[2] || '') : source
+}
+
+function invalidateRemoteImage(url) { delete cache[resolveImageUrl(url)] }
+
+function accessible(path) {
+  return new Promise(resolve => {
+    try {
+      const fs = wx.getFileSystemManager()
+      if (!fs || typeof fs.access !== 'function') return resolve(false)
+      fs.access({ path,success:()=>resolve(true),fail:()=>resolve(false) })
+    } catch (_) { resolve(false) }
+  })
+}
 
 function isHttp(url) {
   return /^https?:\/\//i.test(String(url || ''))
 }
 
-function loadRemoteImage(url) {
-  const source = String(url || '').trim()
-  if (!isHttp(source)) return Promise.resolve(source)
-  if (cache[source]) return Promise.resolve(cache[source])
-  return new Promise((resolve) => {
+async function loadRemoteImage(url) {
+  const source = resolveImageUrl(url)
+  if (!isHttp(source)) return source
+  if (pending[source]) return pending[source]
+  const cached = cache[source]
+  if (cached && await accessible(cached)) return cached
+  if (pending[source]) return pending[source]
+  delete cache[source]
+  const task = new Promise((resolve) => {
     wx.downloadFile({
       url: source,
+      timeout:15000,
       success(res) {
         const local = res.statusCode === 200 && res.tempFilePath ? res.tempFilePath : source
         if (local !== source) cache[source] = local
@@ -26,6 +53,8 @@ function loadRemoteImage(url) {
       }
     })
   })
+  pending[source] = task
+  try { return await task } finally { if(pending[source]===task)delete pending[source] }
 }
 
 function mapField(list, field) {
@@ -38,4 +67,4 @@ function mapField(list, field) {
   }))
 }
 
-module.exports = { loadRemoteImage, mapField }
+module.exports = { loadRemoteImage, mapField, resolveImageUrl, invalidateRemoteImage }

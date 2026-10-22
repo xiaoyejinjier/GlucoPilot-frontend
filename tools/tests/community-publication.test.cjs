@@ -23,8 +23,53 @@ test('回复请求使用目标路径，普通评论沿用原接口；用户内�
 })
 const flush = async () => { for (let i=0;i<20;i++) await Promise.resolve() }
 const deferred = () => { let resolve,reject; const promise = new Promise((a,b) => { resolve=a;reject=b });return {promise,resolve,reject} }
+
+test('发文和存草稿保留所选可见范围，失败不丢失，回填后可以继续修改',async()=>{
+  const {page:p,state}=page('community-compose');await flush()
+  p.setData({title:'好友生活记录',body:'今天认真记录了早餐和运动情况，想和互相关注的好友一起交流。'});p.setTags(['daily'])
+  p.onVisibilityConfirm({detail:{visibility:'FRIENDS',viewerIds:['3']}});await p.onSaveDraft()
+  const draft=state.calls.find(row=>row.key==='createDraft').args[0];assert.equal(draft.visibility,'FRIENDS');assert.deepEqual(Array.from(draft.viewerIds),['3'])
+  p.onVisibilityConfirm({detail:{visibility:'PRIVATE',viewerIds:[]}});assert.equal(p.hasUnsavedContent(),true)
+  await p.onSubmit();const updated=state.calls.filter(row=>row.key==='updateDraft').at(-1).args[1];assert.equal(updated.visibility,'PRIVATE');assert.equal(updated.viewerIds.length,0);p.onUnload()
+})
+
+test('本人文章可见范围保存成功才回填，离页或换账号忽略迟到修改结果',async()=>{
+  const late=deferred(),{page:p,state}=page('community-articles',{setArticleVisibility:()=>late.promise});await flush()
+  p.setData({articles:[{id:'21',visibility:'PUBLIC',visibilityRevision:2,viewerIds:[]}]});p.onVisibility({currentTarget:{dataset:{id:'21'}}})
+  const saving=p.onVisibilityConfirm({detail:{visibility:'PRIVATE',viewerIds:[]}});assert.equal(p.data.articles[0].visibility,'PUBLIC')
+  late.resolve({visibility:'PRIVATE',revision:3,viewerIds:[]});await saving;assert.equal(p.data.articles[0].visibility,'PRIVATE');assert.equal(p.data.articles[0].visibilityRevision,3);assert.equal(state.calls.find(row=>row.key==='setArticleVisibility').args[1].revision,2)
+  p.onUnload()
+})
+
+test('减少此类内容在保存后移除当前文章，失败保留，举报只打开表单',async()=>{
+  const late=deferred(),{page:p,state,wx}=page('index',{hideCommunityArticle:()=>late.promise});await flush();const sheets=[];wx.showActionSheet=options=>sheets.push(options)
+  p.setData({posts:[{id:'21',author:{isSelf:false}},{id:'22',author:{isSelf:false}}]});p.onReport({currentTarget:{dataset:{id:'21'}}})
+  assert.deepEqual(Array.from(sheets[0].itemList),['举报','减少此类内容']);sheets[0].success({tapIndex:0});assert.match(state.navs.at(-1).url,/community-report/);assert.equal(state.calls.some(row=>row.key==='hideCommunityArticle'),false)
+  const hiding=p.onHideArticle('21');assert.equal(p.data.posts.length,2);late.resolve({});await hiding;assert.deepEqual(Array.from(p.data.posts,row=>row.id),['22']);p.onUnload()
+  const failed=page('index',{hideCommunityArticle:async()=>{throw Error('暂时不可用')}});await flush();failed.page.setData({posts:[{id:'21'}]});await failed.page.onHideArticle('21');assert.equal(failed.page.data.posts.length,1);failed.page.onUnload()
+})
+
+test('社区评论按钮带定位参数，正文入口保持原行为，非法文章ID不会导航',async()=>{
+  const {page:p,state}=page('index');await flush()
+  const event={currentTarget:{dataset:{id:'10'}}};p.onComments(event);p.onOpen(event)
+  assert.equal(state.navs[0].url,'/pages/news-detail/news-detail?id=10&comments=1');assert.equal(state.navs[1].url,'/pages/news-detail/news-detail?id=10')
+  p.onComments({currentTarget:{dataset:{id:'bad?id=2'}}});assert.equal(state.navs.length,2);p.onUnload()
+})
+test('社区卡片点赞收藏及关注显示服务器确认反馈，连点不重复，离页不回填',async()=>{
+  const late=deferred();let first=true
+  const {page:p,state}=page('index',{updateNewsAction:async(id,patch)=>{if(first){first=false;return late.promise}return{...patch}},setCommunityFollowing:async(key,followed)=>({key,followed})});await flush()
+  p.setData({posts:[{id:'10',liked:false,collected:false,author:{key:'u2',followed:false}},{id:'11',author:{key:'u2',followed:false}}]})
+  const tap=field=>({currentTarget:{dataset:{id:'10',field}}});const pending=p.onAction(tap('liked'));p.onAction(tap('liked'))
+  assert.equal(state.calls.filter(c=>c.key==='updateNewsAction').length,1);assert.equal(state.feedback.length,0)
+  late.resolve({liked:true,collected:false,likeCount:1,collectCount:0});await pending
+  assert.equal(p.data.posts[0].likedPulse,1);assert.equal(p.data.posts[0].collectedPulse,undefined);assert.equal(p.data.posts[1].likedPulse,undefined)
+  await p.onAction(tap('collected'));assert.equal(p.data.posts[0].likedPulse,1);assert.equal(p.data.posts[0].collectedPulse,1);assert.equal(p.data.posts[1].collectedPulse,undefined)
+  const follow={currentTarget:{dataset:{key:'u2'}}};await p.onFollow(follow);assert.equal(p.data.posts.every(row=>row.author.followed),true);await p.onFollow(follow)
+  assert.equal(state.feedback.join(','),'点赞成功,收藏成功,关注成功,取消关注成功')
+  p.onUnload();p.onAction(tap('liked'));assert.equal(state.feedback.length,4)
+})
 function page(name, overrides={}, options={}) {
-  const state={token:'one',calls:[],toasts:[],navs:[],modals:[],emitted:[],manualModals:false,storage:new Map()}
+  const state={token:'one',calls:[],toasts:[],feedback:[],navs:[],modals:[],emitted:[],manualModals:false,storage:new Map()}
   const wx={getStorageSync:k=>state.storage.get(k),setStorageSync:(k,v)=>state.storage.set(k,v),showToast:v=>state.toasts.push(v), showModal:v=>{state.modals.push(v);if(!state.manualModals)v.success({confirm:true})}, navigateTo:v=>state.navs.push(v), redirectTo:v=>state.navs.push(v), switchTab:v=>state.navs.push(v), reLaunch:v=>state.navs.push(v), setNavigationBarTitle(){},stopPullDownRefresh(){},navigateBack:v=>state.navs.push({back:true,...v})}
   const request={getToken:()=>state.token}, socialModule={exports:{}}
   vm.runInNewContext(fs.readFileSync(path.join(root,'utils/community.js'),'utf8'),{module:socialModule,wx,require:()=>request})
@@ -37,7 +82,7 @@ function page(name, overrides={}, options={}) {
   dependencies['../../utils/article-tags']=history.exports
   let definition
   vm.runInNewContext(fs.readFileSync(path.join(root,`pages/${name}/${name}.js`),'utf8'),{Page:value=>{definition=value},wx,getApp:()=>({checkLogin:()=>!!state.token}),require:key=>{assert.ok(dependencies[key],key);return dependencies[key]}})
-  const instance={...definition,data:JSON.parse(JSON.stringify(definition.data)),setData(values){Object.assign(this.data,values)},getOpenerEventChannel:()=>({emit:(name,value)=>state.emitted.push({name,value})})}
+  const instance={...definition,data:JSON.parse(JSON.stringify(definition.data)),selectComponent:()=>({show:text=>state.feedback.push(text)}),setData(values){Object.assign(this.data,values)},getOpenerEventChannel:()=>({emit:(name,value)=>state.emitted.push({name,value})})}
   if(instance.onLoad) instance.onLoad(options)
   instance.onShow()
   return {page:instance,state,api,wx}
@@ -72,9 +117,9 @@ test('短内容可存草稿，继续编辑保存版本后发布，发布重试�
 
 test('草稿箱读取本人保存数据，继续编辑使用草稿ID，删除成功后刷新列表',async()=>{
   let deleted=false
-  const {page:p,state}=page('community-articles',{fetchDrafts:async()=>({records:deleted?[]:[{id:'81',title:'',body:'草稿正文',revision:3,images:[],tagCodes:[],customTags:[]}],pages:1}),deleteDraft:async()=>{deleted=true}},{mode:'drafts'})
-  await flush();assert.equal(p.data.articles[0].title,'未命名草稿');p.onEdit({currentTarget:{dataset:{id:'81'}}});assert.match(state.navs[0].url,/draft=81/)
-  await p.onDeleteDraft({currentTarget:{dataset:{id:'81'}}});assert.equal(p.data.articles.length,0);assert.equal(state.calls.find(c=>c.key==='deleteDraft').args[1],3);p.onUnload()
+  const {page:p,state}=page('community-articles',{fetchDrafts:async()=>({records:deleted?[]:[{id:'81',title:'',body:'草稿正文',revision:3,images:[],tagCodes:[],customTags:[]}],total:deleted?0:1,pages:1}),deleteDraft:async()=>{deleted=true}},{mode:'drafts'})
+  await flush();assert.equal(p.data.articles[0].title,'未命名草稿');assert.equal(p.data.totalCount,1);p.onArticleCard({currentTarget:{dataset:{id:'81'}}});assert.match(state.navs[0].url,/draft=81/)
+  await p.onDeleteDraft({currentTarget:{dataset:{id:'81'}}});assert.equal(p.data.articles.length,0);assert.equal(p.data.totalCount,0);assert.equal(state.calls.find(c=>c.key==='deleteDraft').args[1],3);p.onUnload()
 })
 
 test('配图携带当前身份下载，换账号后迟到文件被清理，预览与离页不泄漏旧图',()=>{
@@ -156,9 +201,12 @@ test('社区快速切换话题后，迟到的列表响应不会覆盖当前话�
 })
 
 test('我的文章切换账号时立即清除旧记录，审核状态文案不混淆通过与待审',async()=>{
-  const {page:p,state}=page('community-articles',{fetchMyArticles:async()=>({records:[{id:'1',title:'旧账号文章',state:'PENDING_ADMIN',tags:[]}],pages:1})})
-  await flush();assert.match(p.data.articles[0].statusInfo.label,/待管理员/)
-  p.onHide();state.token='two';p.onShow();assert.equal(p.data.articles.length,0);p.onUnload()
+  const {page:p,state}=page('community-articles',{fetchMyArticles:async()=>({records:[{id:'1',title:'旧账号文章',state:'PENDING_ADMIN',tags:[]},{id:'2',title:'已发布文章',state:'PUBLISHED',tags:[]}],total:2,pages:1})})
+  await flush();assert.match(p.data.articles[0].statusInfo.label,/待管理员/);assert.equal(p.data.totalCount,2)
+  p.onArticleCard({currentTarget:{dataset:{id:'1'}}});assert.match(state.navs[0].url,/community-compose.*id=1$/)
+  p.onArticleCard({currentTarget:{dataset:{id:'2'}}});assert.match(state.navs[1].url,/news-detail.*id=2$/)
+  p.setData({retrying:'1'});p.onArticleCard({currentTarget:{dataset:{id:'1'}}});assert.equal(state.navs.length,2)
+  p.onHide();state.token='two';p.onShow();assert.equal(p.data.articles.length,0);assert.equal(p.data.totalCount,'');p.onUnload()
   assert.equal(publication.state('PUBLISHED').label,'已发布');assert.equal(publication.state('AI_ERROR').tone,'warning')
 })
 

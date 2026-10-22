@@ -1,1 +1,8 @@
-{"navigationBarTitleText":"我的文章","enablePullDownRefresh":true}
+{
+  "navigationBarTitleText": "我的文章",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "article-photo": "/components/article-photo/article-photo",
+    "article-visibility": "/components/article-visibility/article-visibility"
+  }
+}

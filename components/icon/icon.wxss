@@ -1,5 +1,5 @@
 .icon {
-  --icon-color: #7a7a7a;
+  --icon-color: var(--muted, #59636e);
   --s: 3rpx;
   display: flex;
   align-items: center;
@@ -8,7 +8,7 @@
 }
 
 .icon.active {
-  --icon-color: var(--brand, #07c160);
+  --icon-color: var(--brand, #0969da);
 }
 
 .icon-sm { width: 40rpx; height: 40rpx; }

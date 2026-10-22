@@ -1,0 +1,3 @@
+:host{display:block;width:100%;height:100%;border-radius:inherit;overflow:hidden}
+.avatar-image,.avatar-placeholder{display:block;width:100%;height:100%;border-radius:inherit}
+.avatar-placeholder{display:flex;align-items:center;justify-content:center;background:var(--brand-soft,#ddf4ff);color:var(--brand-dark,#39825a);font-size:inherit}

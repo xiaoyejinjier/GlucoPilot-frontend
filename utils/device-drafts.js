@@ -61,4 +61,24 @@ function removeDeviceDraft(token, id) {
   return listDeviceDrafts(token)
 }
 
-module.exports = { validateSerial, parseDeviceCode, listDeviceDrafts, addDeviceDraft, removeDeviceDraft }
+/** 为待适配草稿补充 SN（保留原 draft id，供蓝牙候选后续确认绑定）。 */
+function updateDeviceDraftSn(token, id, sn) {
+  forSession(token)
+  const normalized = validateSerial(sn)
+  const target = drafts.find((item) => item.id === id)
+  if (!target) throw new Error('待适配设备不存在或已移除')
+  if (drafts.some((entry) => entry.id !== id && entry.sn === normalized)) {
+    throw new Error('该 SN 已在待适配列表中')
+  }
+  target.sn = normalized
+  return listDeviceDrafts(token)
+}
+
+module.exports = {
+  validateSerial,
+  parseDeviceCode,
+  listDeviceDrafts,
+  addDeviceDraft,
+  removeDeviceDraft,
+  updateDeviceDraftSn
+}

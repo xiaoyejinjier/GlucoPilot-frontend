@@ -1,1 +1,7 @@
-{ "navigationBarTitleText":"信息", "enablePullDownRefresh":true }
+{
+  "navigationBarTitleText": "信息",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "avatar-image": "/components/avatar-image/avatar-image"
+  }
+}

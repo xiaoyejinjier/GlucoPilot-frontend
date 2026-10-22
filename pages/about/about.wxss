@@ -27,7 +27,7 @@
 .app-ver {
   margin-top: 8rpx;
   font-size: var(--fs-small);
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .company {
@@ -39,6 +39,6 @@
 
 .desc {
   font-size: var(--fs-small);
-  color: #6b7280;
+  color: var(--muted);
   line-height: 1.6;
 }

@@ -1,0 +1,3 @@
+<view wx:if="{{visible}}" class="feedback-position {{aboveTab ? 'above-tab' : ''}}" style="{{keyboardHeight > 0 ? 'bottom:' + (keyboardHeight + 20) + 'px;' : ''}}" aria-role="status" aria-label="{{message}}">
+  <view class="feedback-pill"><text class="feedback-check">✓</text><text>{{message}}</text></view>
+</view>

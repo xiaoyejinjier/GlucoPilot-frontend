@@ -9,7 +9,7 @@ Component({
   },
 
   data: {
-    brandColor: '#07c160'
+    brandColor: '#0969da'
   },
 
   lifetimes: {

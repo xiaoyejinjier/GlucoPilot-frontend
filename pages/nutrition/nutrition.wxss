@@ -59,7 +59,7 @@
   width: 96rpx;
   height: 96rpx;
   border-radius: 14rpx;
-  background: #e8eee9;
+  background: var(--line);
   flex-shrink: 0;
   margin-right: 20rpx;
 }
@@ -79,13 +79,13 @@
 .food-info {
   display: block;
   font-size: var(--fs-small);
-  color: #6b7280;
+  color: var(--muted);
   margin-top: 8rpx;
 }
 
 .empty-tip {
   font-size: var(--fs-small);
-  color: #6b7280;
+  color: var(--muted);
   text-align: center;
   padding: 24rpx;
 }

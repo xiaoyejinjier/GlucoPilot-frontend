@@ -5,12 +5,10 @@
 
   <view class="card">
     <view class="avatar-block" bindtap="onChooseAvatar">
-      <image
+      <view
         wx:if="{{avatarPreview || form.avatarUrl}}"
         class="avatar-img"
-        src="{{avatarPreview || form.avatarUrl}}"
-        mode="aspectFill"
-      />
+      ><avatar-image src="{{avatarPreview || form.avatarUrl}}" text="{{form.avatarText || '用'}}"></avatar-image></view>
       <view wx:else class="avatar">{{form.avatarText}}</view>
       <text class="avatar-tip">{{uploadingAvatar ? '正在上传头像…' : '点击更换头像'}}</text>
     </view>
@@ -25,6 +23,14 @@
     <view class="form-item">
       <text class="label">年龄</text>
       <input class="input" type="number" value="{{form.age}}" bindinput="onField" data-key="age" />
+    </view>
+    <view class="form-item">
+      <text class="label">电话号码</text>
+      <view class="input">{{form.phone || '未绑定'}}</view>
+    </view>
+    <view class="form-item">
+      <text class="label">个性签名</text>
+      <textarea class="bio-input" value="{{form.bio}}" bindinput="onField" data-key="bio" maxlength="160" placeholder="写一句话介绍自己" auto-height />
     </view>
     <view class="form-item">
       <text class="label">身高(cm)</text>

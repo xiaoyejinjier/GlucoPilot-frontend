@@ -103,7 +103,7 @@ Page({
       this.setData({avatarPreview:file.tempFilePath})
       const media=await uploadMediaFile(BIZ_TYPE.AVATAR,file.tempFilePath,{maxBytes:MAX_IMAGE_BYTES,label:'头像',isCurrent:current})
       if(!current())return
-      if(!media || !/^https?:\/\//.test(media.fileUrl || ''))throw new Error('头像上传未完成，请重新选择')
+      if(!media || !/^(?:https?:\/\/|\/api\/v1\/media-files\/avatars\/[1-9]\d{0,18}$)/.test(media.fileUrl || ''))throw new Error('头像上传未完成，请重新选择')
       this._avatarChanged=true
       this.setData({form:{...this.data.form,avatarUrl:media.fileUrl},avatarPreview:''})
     }catch(error){if(current()&&!/cancel/i.test(error.errMsg||''))wx.showToast({title:error.message||'头像上传失败，请重试',icon:'none'})}
@@ -157,6 +157,7 @@ Page({
     return Promise.all([
       updateProfile({
         nickname: form.nickname.trim(),
+        bio: (form.bio || '').trim(),
         ...(this._avatarChanged ? {avatarUrl:form.avatarUrl} : {}),
         avatarText
       }),

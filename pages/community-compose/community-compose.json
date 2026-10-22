@@ -3,6 +3,7 @@
   "disableScroll": true,
   "usingComponents": {
     "article-photo": "/components/article-photo/article-photo",
-    "article-video": "/components/article-video/article-video"
+    "article-video": "/components/article-video/article-video",
+    "article-visibility": "/components/article-visibility/article-visibility"
   }
 }

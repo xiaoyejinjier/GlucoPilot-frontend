@@ -1,0 +1,16 @@
+<view wx:if="{{visible}}" class="visibility-overlay" style="{{displayStyle}}" catchtouchmove="stopTouch">
+  <view class="visibility-mask" bindtap="close"></view>
+  <view class="visibility-sheet" aria-role="dialog" aria-label="文章可见范围">
+    <view class="visibility-heading"><text>谁可以看</text><text class="visibility-close" bindtap="close">取消</text></view>
+    <view wx:for="{{options}}" wx:key="value" class="visibility-option {{mode === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="onMode"><text class="visibility-symbol">{{item.symbol}}</text><view class="visibility-copy"><text>{{item.title}}</text><text>{{item.note}}</text></view><view class="visibility-check">{{mode === item.value ? '✓' : ''}}</view></view>
+    <block wx:if="{{mode === 'FRIENDS'}}">
+      <view class="friends-heading"><text>已选 {{selectedIds.length}} / 50 位好友</text><text bindtap="onClear">清空选择</text></view>
+      <view class="friends-search"><input value="{{keyword}}" bindinput="onKeyword" bindconfirm="onSearch" maxlength="32" placeholder="搜索好友昵称" confirm-type="search" /><text bindtap="onSearch">搜索</text></view>
+      <scroll-view class="friends-scroll" scroll-y bindscrolltolower="onMore">
+        <view wx:for="{{friends}}" wx:key="userId" class="friend-row" data-id="{{item.userId}}" bindtap="onFriend"><view class="friend-avatar"><avatar-image src="{{item.avatarUrl}}" text="友"></avatar-image></view><text class="friend-name">{{item.nickname}}</text><view class="visibility-check {{item.selected ? 'checked' : ''}}">{{item.selected ? '✓' : ''}}</view></view>
+        <view wx:if="{{loading}}" class="friends-state">正在加载好友…</view><view wx:elif="{{error}}" class="friends-state" bindtap="onRetry">{{error}} · 点击重试</view><view wx:elif="{{!friends.length}}" class="friends-state">{{keyword ? '没有找到这位好友' : '还没有互相关注的好友'}}</view><view wx:elif="{{hasMore}}" class="friends-state" bindtap="onMore">加载更多</view>
+      </scroll-view>
+    </block>
+    <button class="visibility-confirm" bindtap="confirm" disabled="{{busy}}" loading="{{busy}}">{{busy ? '正在保存' : '确定'}}</button>
+  </view>
+</view>

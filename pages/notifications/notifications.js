@@ -10,7 +10,7 @@ const ITEM_META = [
 Page({
   data: {
     displayStyle: '',
-    themeBrand: '#07c160',
+    themeBrand: '#0969da',
     items: ITEM_META.map((m) => ({ key: m.key, title: m.title, desc: m.desc, on: false }))
   },
 

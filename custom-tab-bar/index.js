@@ -3,7 +3,7 @@ Component({
     selected: 0,
     unreadCount: 0,
     guideActive: false,
-    selectedColor: '#07c160'
+    selectedColor: '#0969da'
   },
 
   lifetimes: { attached() { this.refreshGuide() } },

@@ -26,5 +26,5 @@
   display: block;
   margin-top: 6rpx;
   font-size: var(--fs-small);
-  color: #6b7280;
+  color: var(--muted);
 }

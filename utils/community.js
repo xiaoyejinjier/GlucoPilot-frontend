@@ -34,6 +34,13 @@ function failure(page, error, version = page._communityVersion) {
   }
   wx.showToast({ title: (error && error.message) || '操作失败，请重试', icon: 'none' })
 }
+function success(page, kind, enabled = true) {
+  if (!active(page)) return
+  const labels = { liked: enabled ? '点赞成功' : '已取消点赞', collected: enabled ? '收藏成功' : '已取消收藏',
+    followed: enabled ? '关注成功' : '取消关注成功', comment: '评论成功', reply: '回复成功' }
+  const feedback = typeof page.selectComponent === 'function' && page.selectComponent('#social-feedback')
+  if (labels[kind] && feedback && typeof feedback.show === 'function') feedback.show(labels[kind])
+}
 function compareId(a, b) { const x = String(a.id), y = String(b.id); return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0) }
 function report(type, id) {
   if (['ARTICLE','COMMENT','USER','MESSAGE'].includes(type) && /^[1-9]\d{0,18}$/.test(String(id || '')))
@@ -44,4 +51,4 @@ function mergeMessages(existing, incoming) {
   incoming.forEach(message => map.set(String(message.id), { ...message, timeLabel: timeLabel(message.createdAt) }))
   return Array.from(map.values()).sort(compareId)
 }
-module.exports = { requestId, timeLabel, relativeTime, begin, active, end, failure, compareId, mergeMessages, report }
+module.exports = { requestId, timeLabel, relativeTime, begin, active, end, failure, success, compareId, mergeMessages, report }

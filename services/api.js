@@ -55,6 +55,7 @@ function mapNewsItem(n) {
     contentBody: n.contentBody || '',
     likeCount: n.likeCount || 0,
     collectCount: n.collectCount || 0,
+    viewCount: n.viewCount || 0,
     liked: !!n.liked,
     collected: !!n.collected,
     author: n.author || null,
@@ -137,7 +138,7 @@ function fetchNews(channelNameOrCode, pageNum, pageSize) {
     ? channelNameOrCode
     : channelCode(channelNameOrCode)
   if (code) data.channelCode = code
-  return get('/news', data, { auth: false }).then((page) => ({
+  return get('/news', data, { auth: !!wx.getStorageSync('accessToken') }).then((page) => ({
     ...page,
     records: (page && page.records ? page.records : []).map(mapNewsItem)
   }))
@@ -153,6 +154,9 @@ function updateNewsAction(id, payload) {
 }
 
 function fetchCommunityProfile(key) { return get(`/community/profiles/${encodeURIComponent(key)}`, null, { auth: true }) }
+function fetchMyReports(params) { return get('/community/reports/mine',params,{auth:true}) }
+function fetchReportFeedback(id) { return get(`/community/reports/${encodeURIComponent(id)}`,null,{auth:true}) }
+function readReportFeedback(id) { return put(`/community/reports/${encodeURIComponent(id)}/read`,null,{auth:true}) }
 function setCommunityFollowing(key, following) { return put(`/community/profiles/${encodeURIComponent(key)}/following`, { following }, { auth: true }) }
 function fetchCommunityList(mode, params) {
   if (!['following', 'collections', 'messages', 'profiles'].includes(mode)) return Promise.reject(new Error('列表类型不正确'))
@@ -198,6 +202,10 @@ function fetchCommunityArticles(params = {}) {
     })
 }
 function fetchMyArticles(params) { return get('/community/articles/mine', params, { auth: true }) }
+function fetchMutualFriends(params) { return get('/community/friends',params,{auth:true}) }
+function setArticleVisibility(id,payload) { return put(`/community/articles/${encodeURIComponent(id)}/visibility`,payload,{auth:true}) }
+function hideCommunityArticle(id) { return put(`/community/articles/${encodeURIComponent(id)}/hidden`,{hidden:true},{auth:true}) }
+function recordArticleView(id) { return post(`/community/articles/${encodeURIComponent(id)}/views`,null,{auth:true}) }
 function fetchCommunityArticle(id) { return get(`/community/articles/${encodeURIComponent(id)}`, null, { auth: true }) }
 function submitCommunityArticle(payload) { return post('/community/articles', payload, { auth: true, timeout: 15000 }) }
 function editCommunityArticle(id, payload) { return put(`/community/articles/${encodeURIComponent(id)}`, payload, { auth: true, timeout: 15000 }) }
@@ -351,11 +359,49 @@ function fetchDayMeals(recordDate) {
 }
 
 /** ---------- device ---------- */
-function syncMockGlucose(readings) {
-  return post('/device/glucose-sync', {
+/** 当前用户已绑定设备列表。 */
+function fetchMyDevices() {
+  return get('/devices', null, { auth: true }).then((list) => (list || []).map(mapDeviceItem))
+}
+
+function mapDeviceItem(d) {
+  return {
+    id: String(d.id),
+    deviceSn: d.deviceSn || '',
+    deviceName: d.deviceName || '我的血糖仪',
+    provider: String(d.provider || 'MOCK').toUpperCase(),
+    deviceStatus: d.deviceStatus == null ? 1 : Number(d.deviceStatus),
+    lastSyncAt: d.lastSyncAt || '',
+    bound: d.bound !== false
+  }
+}
+
+/** 自助绑定：deviceSn + provider，名称可选。 */
+function bindDevice(payload) {
+  return post('/devices/bind', {
+    deviceSn: payload.deviceSn,
+    provider: payload.provider,
+    deviceName: payload.deviceName || undefined
+  }, { auth: true }).then(mapDeviceItem)
+}
+
+/** 解绑本人设备（清空归属，保留档案）。 */
+function unbindDevice(id) {
+  return post(`/devices/${id}/unbind`, {}, { auth: true })
+}
+
+/**
+ * MOCK 同步演示读数。可附带 deviceSn 以刷新 last_sync_at。
+ * @param {Array|undefined} readings
+ * @param {string|undefined} deviceSn
+ */
+function syncMockGlucose(readings, deviceSn) {
+  const body = {
     provider: 'MOCK',
     payload: { readings: readings || defaultMockReadings() }
-  }, { auth: true })
+  }
+  if (deviceSn) body.deviceSn = deviceSn
+  return post('/device/glucose-sync', body, { auth: true })
 }
 
 function defaultMockReadings() {
@@ -472,12 +518,13 @@ function fetchGlucoseSummary(params) {
 }
 
 module.exports = {
+  fetchMutualFriends,setArticleVisibility,hideCommunityArticle,recordArticleView,
   fetchInformationSummary, fetchInteractionNotices, readInteractionNotices,
   fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
   createExportTask, fetchExportTasks, generateExportTask,
   fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
   submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
-  fetchCommunityProfile, setCommunityFollowing, fetchCommunityList,
+  fetchCommunityProfile, setCommunityFollowing, fetchCommunityList, fetchMyReports, fetchReportFeedback, readReportFeedback,
   fetchNewsComments, fetchCommentReplies, addNewsComment, deleteNewsComment,
   fetchDirectMessages, sendDirectMessage, readDirectMessages, fetchUnreadMessages,
   channelName,
@@ -511,6 +558,9 @@ module.exports = {
   analyzeMealPhoto,
   predictMealGlucose,
   fetchDayMeals,
+  fetchMyDevices,
+  bindDevice,
+  unbindDevice,
   syncMockGlucose,
   defaultMockReadings,
   fetchMe,

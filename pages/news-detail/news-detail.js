@@ -10,10 +10,13 @@ function decorateComment(comment) {
 }
 
 Page({
-  data: { displayStyle: '', news: null, loading: true, error: '', liked: false, collected: false,
+  data: { displayStyle: '', news: null, loading: true, error: '', liked: false, collected: false, likedPulse:0,collectedPulse:0,
     actionBusy: false, comments: [], commentPage: 0, commentHasMore: false, commentsLoading: false,
     commentsError: '', commentDraft: '', posting: false, followBusy: false, replyTarget:null, commentFocus:false },
-  onLoad(options) { this._newsId = /^[1-9]\d{0,18}$/.test(String(options.id || '')) ? String(options.id) : '' },
+  onLoad(options) {
+    this._newsId = /^[1-9]\d{0,18}$/.test(String(options.id || '')) ? String(options.id) : ''
+    this._jumpToComments = options.comments === '1'
+  },
   onShow() {
     if (!getApp().checkLogin()) return
     if (this._communityToken && this._communityToken !== getToken()) {
@@ -30,22 +33,39 @@ Page({
   onHide() { if (this._commentClock) clearInterval(this._commentClock); this._commentClock = null; social.end(this) },
   onUnload() { this.onHide() },
   async loadDetail() {
-    const version = this._communityVersion
+    const version = this._communityVersion, run = this._detailRun = (this._detailRun || 0) + 1
     this.setData({ loading: true, error: '' })
     try {
       if (!this._newsId) throw new Error('文章不存在')
       const news = await api.fetchNewsDetail(this._newsId)
-      const cover = await loadRemoteImage(news.cover)
-      if (!social.active(this, version)) return
-      this.setData({ news:{...news,cover}, liked: !!news.liked, collected: !!news.collected, loading: false })
+      if (!social.active(this, version) || run !== this._detailRun) return
+      this.setData({ news, liked: !!news.liked, collected: !!news.collected, loading: false }, () => {
+        if (!this._jumpToComments || !social.active(this, version) || run !== this._detailRun) return
+        const scroll = () => { if (this._jumpToComments && social.active(this, version) && run === this._detailRun) this.onComments() }
+        if (typeof wx.nextTick === 'function') wx.nextTick(scroll)
+        else scroll()
+      })
+      if(typeof api.recordArticleView==='function')api.recordArticleView(this._newsId).then(result=>{if(social.active(this,version)&&run===this._detailRun)this.setData({'news.viewCount':result.viewCount})}).catch(()=>{})
       if (news.title) wx.setNavigationBarTitle({ title: news.title })
+      // The comment anchor is ready without waiting for a potentially slow cover download.
+      try {
+        const cover = await loadRemoteImage(news.cover)
+        if (social.active(this,version) && run === this._detailRun) this.setData({ 'news.cover':cover })
+      } catch (_) { /* Keep the article and comments available when its cover is unavailable. */ }
     } catch (error) {
-      if (!social.active(this, version, error)) return
-      this.setData({ loading: false, error: error.message || '文章加载失败，点击重试' }); social.failure(this, error, version)
+      if (!social.active(this, version, error) || run !== this._detailRun) return
+      this.setData({ loading: false, error: error.message || '文章加载失败，点击重试',...((error.code===40400||error.statusCode===404)?{news:null,comments:[]}:{} ) }); social.failure(this, error, version)
     }
   },
   onLike() { return this.updateAction('liked') },
   onCollect() { return this.updateAction('collected') },
+  onComments() {
+    if (!this.data.news || !social.active(this)) return
+    const version = this._communityVersion
+    wx.pageScrollTo({ selector:'#article-comments', duration:260, success:() => {
+      if (social.active(this,version)) this._jumpToComments = false
+    } })
+  },
   onReport() { if (this.data.news && social.active(this)) social.report('ARTICLE',this._newsId) },
   onReportComment(e) { const comment = this.findComment(e.currentTarget.dataset.id); if (comment && !comment.mine && social.active(this)) social.report('COMMENT',comment.id) },
   findComment(id) { return this.data.comments.flatMap(comment => [comment,...(comment.replies || [])]).find(comment => comment.id === String(id)) },
@@ -66,7 +86,10 @@ Page({
     const author = this.data.news && this.data.news.author
     if (!author || author.isSelf || this.data.followBusy || !social.active(this)) return
     const version = this._communityVersion; this.setData({ followBusy:true })
-    try { const result = await api.setCommunityFollowing(author.key,!author.followed); if (social.active(this,version)) this.setData({ 'news.author':result }) }
+    try {
+      const result = await api.setCommunityFollowing(author.key,!author.followed)
+      if (social.active(this,version)) { this.setData({ 'news.author':result }); social.success(this,'followed',!!result.followed) }
+    }
     catch (error) { social.failure(this,error,version) }
     finally { if (social.active(this,version)) this.setData({ followBusy:false }) }
   },
@@ -78,7 +101,8 @@ Page({
       const result = await api.updateNewsAction(this._newsId, { [field]: !this.data[field] })
       if (!social.active(this, version)) return
       this.setData({ liked: result.liked, collected: result.collected,
-        'news.likeCount': result.likeCount, 'news.collectCount': result.collectCount })
+        'news.likeCount': result.likeCount, 'news.collectCount': result.collectCount, [field+'Pulse']:(this.data[field+'Pulse']||0)+1 })
+      social.success(this,field,!!result[field])
     } catch (error) { social.failure(this, error, version) }
     finally { if (social.active(this, version)) { this._actionBusy = false; this.setData({ actionBusy: false }) } }
   },
@@ -131,6 +155,7 @@ Page({
       if (!social.active(this, version)) return
       if (targetId && (!saved || String(saved.replyToCommentId) !== String(targetId))) throw new Error('回复结果异常，请刷新评论确认后重试')
       this._commentAttempt = null; this.setData({ commentDraft: '', replyTarget:null, commentFocus:false })
+      social.success(this,targetId ? 'reply' : 'comment')
       const root = saved && saved.replyToCommentId && this.data.comments.find(comment => comment.id === String(saved.rootCommentId))
       if (root && saved.id) {
         const replies = new Map((root.replies || []).map(reply => [reply.id,reply])), existed = replies.has(saved.id)

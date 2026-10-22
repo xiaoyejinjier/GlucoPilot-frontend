@@ -10,7 +10,7 @@
       data-path="{{item.pagePath}}" data-index="{{item.index}}" bindtap="switchTab"
       hover-class="navigation-pressed" aria-role="button" aria-label="{{item.text}}">
       <app-icon name="{{item.icon}}" active="{{selected === item.index}}"
-        color="{{selected === item.index ? brandColor : '#545c66'}}" size="lg"></app-icon>
+        color="{{selected === item.index ? brandColor : '#647970'}}" size="lg"></app-icon>
       <text class="navigation-label">{{item.text}}</text>
       <view wx:if="{{item.index === 2 && unreadCount > 0}}" class="navigation-unread"></view>
     </view>
@@ -29,8 +29,11 @@
       <view class="guide-dots">
         <view wx:for="{{guideSteps}}" wx:key="target" class="guide-dot {{guideIndex === index ? 'guide-dot-active' : ''}}"></view>
       </view>
-      <button class="guide-next" bindtap="nextGuide" disabled="{{!guideReady}}"
-        hover-class="navigation-pressed">{{guideIndex === guideSteps.length - 1 ? '开始使用' : '下一步'}}</button>
+      <view class="guide-actions">
+        <button class="guide-skip" bindtap="skipGuide" hover-class="navigation-pressed">跳过</button>
+        <button class="guide-next" bindtap="nextGuide" disabled="{{!guideReady}}"
+          hover-class="navigation-pressed">{{guideIndex === guideSteps.length - 1 ? '开始使用' : '下一步'}}</button>
+      </view>
     </view>
     <view wx:if="{{guideReady}}" class="guide-arrow" style="{{arrowStyle}}"></view>
   </view>

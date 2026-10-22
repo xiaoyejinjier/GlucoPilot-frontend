@@ -1,0 +1,5 @@
+.feedback-position{position:fixed;left:24rpx;right:24rpx;bottom:calc(40rpx + env(safe-area-inset-bottom));z-index:9900;display:flex;justify-content:center;pointer-events:none}
+.feedback-position.above-tab{bottom:calc(var(--tab-bar-h, 170rpx) + env(safe-area-inset-bottom) + 20rpx)}
+.feedback-pill{display:flex;align-items:center;gap:14rpx;max-width:100%;box-sizing:border-box;padding:20rpx 32rpx;border-radius:48rpx;background:rgba(36,56,46,.94);color:#fff;font-size:26rpx;line-height:1.5;box-shadow:0 10rpx 32rpx rgba(29,57,40,.16);animation:feedback-in .22s ease-out}
+.feedback-check{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:32rpx;height:32rpx;border-radius:50%;background:#d8f3e2;color:#3c7953;font-size:23rpx;font-weight:700}
+@keyframes feedback-in{from{opacity:0;transform:translateY(12rpx)}to{opacity:1;transform:translateY(0)}}

@@ -51,6 +51,7 @@ function mapNewsItem(item) {
     contentBody: item.contentBody || '',
     likeCount: item.likeCount || 0,
     collectCount: item.collectCount || 0,
+    viewCount: item.viewCount || 0,
     liked: !!item.liked,
     collected: !!item.collected
   }
@@ -149,6 +150,8 @@ function mapUserMe(me) {
     communityKey: typeof me.communityKey === 'string' ? me.communityKey : '',
     accountStatus: me.accountStatus,
     phoneMasked: me.phoneMasked || '',
+    phone: me.phone || '',
+    bio: profile.bio || '',
     nickname: profile.nickname || '',
     avatarUrl: profile.avatarUrl || '',
     avatarText: profile.avatarText || (profile.nickname || '用').charAt(0),

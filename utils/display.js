@@ -36,25 +36,27 @@ const FONT_MAP = {
 const THEME_MAP = {
   green: {
     id: 'green',
-    label: '品牌绿',
-    brand: '#07c160',
-    brandDark: '#06ad56',
-    brandSoft: '#e8f8ef',
-    wxGreen: '#95ec69',
+    label: '经典蓝',
+    brand: '#0969da',
+    brandDark: '#0550ae',
+    brandSoft: '#ddf4ff',
+    brandLine: '#b6d7fb',
+    wxGreen: '#ddf4ff',
     navBg: '#ffffff',
     navFront: '#000000',
-    tabSelected: '#07c160'
+    tabSelected: '#0969da'
   },
   teal: {
     id: 'teal',
-    label: '青绿',
-    brand: '#0d9488',
-    brandDark: '#0f766e',
-    brandSoft: '#e6f7f5',
-    wxGreen: '#5eead4',
+    label: '静谧蓝',
+    brand: '#316d9b',
+    brandDark: '#24547c',
+    brandSoft: '#edf4fa',
+    brandLine: '#c9dbea',
+    wxGreen: '#e0edf8',
     navBg: '#ffffff',
     navFront: '#000000',
-    tabSelected: '#0d9488'
+    tabSelected: '#316d9b'
   },
   simple: {
     id: 'simple',
@@ -62,7 +64,8 @@ const THEME_MAP = {
     brand: '#374151',
     brandDark: '#1f2937',
     brandSoft: '#f3f4f6',
-    wxGreen: '#9ca3af',
+    brandLine: '#d9dfe5',
+    wxGreen: '#e8ebef',
     navBg: '#ffffff',
     navFront: '#000000',
     tabSelected: '#374151'
@@ -103,6 +106,7 @@ function getDisplayStyle(settings) {
     `--brand:${t.brand}`,
     `--brand-dark:${t.brandDark}`,
     `--brand-soft:${t.brandSoft}`,
+    `--brand-line:${t.brandLine}`,
     `--wx-green:${t.wxGreen}`,
     `--ok:${t.brand}`,
     `--fs:${f.fs}`,

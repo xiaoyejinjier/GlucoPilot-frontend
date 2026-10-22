@@ -16,6 +16,7 @@
     "pages/community-compose/community-compose",
     "pages/community-articles/community-articles",
     "pages/community-report/community-report",
+    "pages/community-reports/community-reports",
     "pages/camera/camera",
     "pages/confirm/confirm",
     "pages/food-confirm/food-confirm",
@@ -39,13 +40,13 @@
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTitleText": "AI 控糖助手",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f2f4f3",
+    "backgroundColor": "#f4f7f6",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
     "custom": true,
     "color": "#7a7a7a",
-    "selectedColor": "#07c160",
+    "selectedColor": "#0969da",
     "backgroundColor": "#fafafa",
     "borderStyle": "black",
     "list": [

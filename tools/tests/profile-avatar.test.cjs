@@ -28,6 +28,20 @@ test('未修改头像不重提旧URL，清空头像明确提交空串',async()=>
  assert.equal(Object.hasOwn(state.calls.find(c=>c.key==='updateProfile').args[0],'avatarUrl'),false)
  p.onClearAvatar();await p.onSave();assert.equal(state.calls.filter(c=>c.key==='updateProfile').at(-1).args[0].avatarUrl,'');p.onUnload()
 })
+
+test('个性签名作为本人资料保存，电话号码展示不通过资料接口修改',async()=>{
+ const {p,state}=harness();await flush()
+ p.onField({currentTarget:{dataset:{key:'bio'}},detail:{value:'  认真记录每一天  '}})
+ p.setData({form:{...p.data.form,phone:'13800000000'}});await p.onSave()
+ const payload=state.calls.find(c=>c.key==='updateProfile').args[0]
+ assert.equal(payload.bio,'认真记录每一天');assert.equal(Object.hasOwn(payload,'phone'),false);p.onUnload()
+})
+
+test('MinIO私有桶的稳定头像路径可以保存，临时显示地址不替代登记身份',async()=>{
+ const {p,state}=harness({upload:async()=>({id:'101',fileUrl:'/api/v1/media-files/avatars/101'})});await flush()
+ await p.onChooseAvatar();assert.equal(p.data.form.avatarUrl,'/api/v1/media-files/avatars/101');assert.equal(p.data.avatarPreview,'')
+ await p.onSave();assert.equal(state.calls.find(c=>c.key==='updateProfile').args[0].avatarUrl,'/api/v1/media-files/avatars/101');p.onUnload()
+})
 test('头像上传失败保留原图，取消或不合法返回不提交手机路径',async()=>{
  const {p,state}=harness({upload:async()=>{throw Error('对象存储暂不可用')}});await flush();await p.onChooseAvatar()
  assert.equal(p.data.form.avatarUrl,person.avatarUrl);assert.equal(p.data.avatarPreview,'');assert.equal(p.data.uploadingAvatar,false);assert.match(state.toasts.at(-1).title,/对象存储/)

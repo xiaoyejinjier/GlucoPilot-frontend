@@ -1,17 +1,23 @@
 /** 设计规范 Design Tokens */
 page {
-  --bg: #f2f4f3;
+  --bg: #f6f8fa;
   --surface: #ffffff;
-  --ink: #1c1c1c;
-  --muted: #6b7280;
-  --line: #e5e7eb;
-  --brand: #07c160;
-  --brand-dark: #06ad56;
-  --brand-soft: #e8f8ef;
-  --wx-green: #95ec69;
+  --ink: #1f2328;
+  --ink-soft: #3d4854;
+  --muted: #59636e;
+  --hint: #6e7781;
+  --line: #d1d9e0;
+  --surface-subtle: #f6f8fa;
+  --brand: #0969da;
+  --brand-dark: #0550ae;
+  --brand-soft: #ddf4ff;
+  --brand-line: #b6d7fb;
+  --wx-green: #ddf4ff;
+  --accent: #0969da;
+  --accent-soft: #ddf4ff;
   --warn: #fa9d3b;
   --danger: #fa5151;
-  --ok: #07c160;
+  --ok: #0969da;
   --tab-bar-h: 140rpx;
 
   --fs: 28rpx;

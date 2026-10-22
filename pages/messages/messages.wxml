@@ -7,7 +7,7 @@
     <view wx:if="{{error}}" class="dm-state dm-error" bindtap="onRetry">{{error}} · 点击重试</view>
     <view wx:if="{{!messages.length && !error}}" class="dm-state">{{loading ? '正在加载消息…' : '发条消息，打个招呼吧'}}</view>
     <view wx:for="{{messages}}" wx:key="id" id="dm-{{item.id}}" class="dm-item {{item.mine ? 'mine' : ''}}">
-      <text class="dm-time">{{item.timeLabel}}</text><view class="dm-message-row"><view class="dm-avatar" data-mine="{{item.mine}}" bindtap="onAvatar"><image wx:if="{{item.mine ? (me.avatarUrl && !me.avatarFailed) : (peer.avatarUrl && !peer.avatarFailed)}}" src="{{item.mine ? me.avatarUrl : peer.avatarUrl}}" mode="aspectFill" data-mine="{{item.mine}}" binderror="onAvatarError" /><text wx:else>{{item.mine ? '我' : '友'}}</text></view><view class="dm-bubble" data-id="{{item.id}}" bindlongpress="onReportMessage"><text selectable>{{item.content}}</text></view></view>
+      <text class="dm-time">{{item.timeLabel}}</text><view class="dm-message-row"><view class="dm-avatar" data-mine="{{item.mine}}" bindtap="onAvatar"><view wx:if="{{item.mine ? (me.avatarUrl && !me.avatarFailed) : (peer.avatarUrl && !peer.avatarFailed)}}" data-mine="{{item.mine}}" ><avatar-image src="{{item.mine ? me.avatarUrl : peer.avatarUrl}}" text="友"></avatar-image></view><text wx:else>{{item.mine ? '我' : '友'}}</text></view><view class="dm-bubble" data-id="{{item.id}}" bindlongpress="onReportMessage"><text selectable>{{item.content}}</text></view></view>
       <text wx:if="{{item.mine}}" class="dm-read">{{item.readAt ? '已读' : '已发送'}}</text>
     </view>
     </view>

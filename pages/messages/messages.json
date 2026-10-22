@@ -1,1 +1,8 @@
-{ "navigationBarTitleText": "私信", "disableScroll": true, "usingComponents": { "speech-input":"/components/speech-input/speech-input" } }
+{
+  "navigationBarTitleText": "私信",
+  "disableScroll": true,
+  "usingComponents": {
+    "speech-input": "/components/speech-input/speech-input",
+    "avatar-image": "/components/avatar-image/avatar-image"
+  }
+}
