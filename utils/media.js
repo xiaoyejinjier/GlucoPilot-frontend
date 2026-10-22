@@ -49,7 +49,7 @@ function readFileAsArrayBuffer(filePath) {
 /**
  * 直传对象存储。**只看 HTTP 状态码**，不解析 body —— 预签名 URL 的响应没有业务信封。
  *
- * 本地存储地址必须显式使用 application/octet-stream。微信小程序默认会把未指定类型的
+ * 本地存储及 MinIO 同源代理地址必须显式使用 application/octet-stream。微信小程序默认会把未指定类型的
  * wx.request 当作 application/json；后端 JSON 请求过滤器随后按 UTF-8 读取请求体，会把
  * JPEG/PNG 的非法 UTF-8 字节替换掉，最终得到大小相近但已经打不开的损坏图片。
  *
@@ -57,7 +57,7 @@ function readFileAsArrayBuffer(filePath) {
  * 计入待签串，签名时为空、上传时非空会触发 SignatureDoesNotMatch。
  */
 function putToStorage(uploadUrl, arrayBuffer) {
-  const isLocalBackendUpload = uploadUrl.indexOf('/api/v1/media-files/local-uploads/') !== -1
+  const isLocalBackendUpload = /\/api\/v1\/media-files\/(?:local|minio)-uploads\//.test(uploadUrl)
   return new Promise((resolve, reject) => {
     wx.request({
       url: uploadUrl,

@@ -27,19 +27,36 @@ function formatTime(iso) {
   return s.length >= 16 ? s.slice(0, 16) : s
 }
 
-/** 把管理端保存的 /api/v1/cms/images/{id} 解析成小程序可请求的完整地址。 */
-function resolveCmsImage(url) {
+/** 把管理端保存的 /api/v1/cms/images|videos/{id} 解析成小程序可请求的完整地址。 */
+function resolveCmsMedia(url) {
   const source = String(url || '').trim()
   if (!source) return ''
   if (/^https?:\/\//i.test(source)) return source
-  if (/^\/api\/v1\/cms\/images\/\d+$/.test(source)) {
+  if (/^\/api\/v1\/cms\/(images|videos)\/\d+$/.test(source)) {
     return `${String(baseUrl).replace(/\/+$/, '')}${source.slice('/api/v1'.length)}`
   }
   return source
 }
 
+/** 正文 HTML：相对 CMS 图地址补全，供 rich-text 使用。 */
+function rewriteContentHtml(html) {
+  const raw = String(html || '')
+  if (!raw) return ''
+  const prefix = String(baseUrl).replace(/\/+$/, '')
+  return raw.replace(
+    /(src|href)=(["'])(\/api\/v1\/cms\/images\/\d+)\2/gi,
+    (_m, attr, quote, path) => `${attr}=${quote}${prefix}${path.slice('/api/v1'.length)}${quote}`
+  )
+}
+
+/** 官方资讯正文为 HTML；社区投稿为纯文本。仅 HTML 才走 rich-text。 */
+function looksLikeHtml(text) {
+  return /<\/?[a-z][\s\S]*>/i.test(String(text || ''))
+}
+
 function mapNewsItem(n) {
   const type = n.contentType === 2 || (n.videos || []).length ? 'video' : 'article'
+  const contentBody = n.contentBody || ''
   return {
     id: n.id,
     title: n.title,
@@ -49,10 +66,11 @@ function mapNewsItem(n) {
     type,
     typeLabel: type === 'video' ? '视频' : '图文',
     time: formatTime(n.publishAt),
-    cover: resolveCmsImage(n.coverUrl) || '/assets/news/n1.jpg',
-    coverText: type === 'video' ? '▶' : '资讯',
-    videoUrl: n.videoUrl || '',
-    contentBody: n.contentBody || '',
+    cover: resolveCmsMedia(n.coverUrl) || '/assets/news/n1.jpg',
+    coverText: '',
+    videoUrl: resolveCmsMedia(n.videoUrl) || '',
+    contentBody,
+    contentHtml: looksLikeHtml(contentBody) ? rewriteContentHtml(contentBody) : '',
     likeCount: n.likeCount || 0,
     collectCount: n.collectCount || 0,
     viewCount: n.viewCount || 0,
@@ -70,7 +88,7 @@ function mapBanner(b) {
     id: b.id,
     title: b.title,
     desc: b.subtitle || '',
-    imageUrl: resolveCmsImage(b.imageUrl),
+    imageUrl: resolveCmsMedia(b.imageUrl),
     linkUrl: b.linkUrl || ''
   }
 }
@@ -192,14 +210,9 @@ function mapCommunityArticle(item) {
     state: item.state, revision: item.revision, body: item.body || '', summary: item.summary || '', hasCover: !!item.coverUrl }
 }
 function fetchCommunityArticles(params = {}) {
+  // 联调以社区接口为准；404 直接抛出，避免回退旧 /news 掩盖未部署社区 API。
   return get('/community/articles', params, { auth: true })
     .then(page => ({ ...page, records: (page.records || []).map(mapCommunityArticle) }))
-    .catch(error => {
-      // UI升级期间仍可浏览旧后端的真实资讯；筛选失败不伪装成其他话题结果。
-      if (error.statusCode !== 404 || params.tag || params.following || params.keyword) throw error
-      return fetchNews('', params.pageNum, params.pageSize).then(page => ({ ...page,
-        records: page.records.map(item => ({ ...item, state: 'PUBLISHED', hasCover: !!item.cover })) }))
-    })
 }
 function fetchMyArticles(params) { return get('/community/articles/mine', params, { auth: true }) }
 function fetchMutualFriends(params) { return get('/community/friends',params,{auth:true}) }
