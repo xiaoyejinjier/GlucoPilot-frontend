@@ -10,4 +10,4 @@
 @media (prefers-reduced-motion: reduce) {
   .information-tab, .information-symbol, .information-tab::after { transition:none; }
   .information-tab.selected .information-symbol { animation:none; }
-}
+}.my-comment-article{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.my-comment-body{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.my-comment-meta{display:flex;flex-wrap:wrap;align-items:center;gap:16rpx;font-size:var(--fs-tiny);color:var(--hint)}.my-comment-hidden{color:#c1874c}

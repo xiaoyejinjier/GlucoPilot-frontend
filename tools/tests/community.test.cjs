@@ -24,6 +24,7 @@ function harness(name, options = {}) {
     fetchDirectMessages: async () => ({ records: [], hasMore: false, nextBeforeId: null }),
     readDirectMessages: async () => ({}), sendDirectMessage: async () => message(5, true),
     fetchInteractionNotices:async()=>({records:[],pages:0}),readInteractionNotices:async()=>({}),
+    fetchMyComments:async()=>({records:[],pages:0}),
     fetchNewsDetail: async () => ({ id: '10', title: '真实文章', liked: false, collected: false, likeCount: 0, collectCount: 0, commentCount: 0 }),
     fetchNewsComments: async () => ({ records: [], pages: 0 }), addNewsComment: async () => ({}), deleteNewsComment: async () => ({}),
     fetchCommentReplies: async () => ({ records: [], hasMore:false, nextAfterId:null }),
@@ -70,11 +71,29 @@ test('私信表情插入光标位置，语音先按住再确认，超过上限�
 
 test('信息中心包含私信点赞收藏评论新关注，按当前类别标记已读并跳到真实目标',async()=>{
   const {page:p,state}=harness('information',{route:{tab:'likes'},api:{fetchInteractionNotices:async kind=>({records:[{id:'90',kind,actor:{key:'u2',nickname:'糖友'},newsId:'10',newsTitle:'我的文章',createdAt:'2026-10-20T12:00:00',read:false}],pages:1})}})
-  await flush();assert.equal(p.data.tabs.map(t=>t.label).join(','),'私信,点赞,收藏,收到的评论,新关注我的');assert.equal(p.data.list[0].action,'赞了你的文章')
+  await flush();assert.equal(p.data.tabs.map(t=>t.label).join(','),'私信,点赞,收藏,收到的评论,新关注我的,我的评论');assert.equal(p.data.list[0].action,'赞了你的文章')
   assert.deepEqual(state.calls.find(c=>c.name==='readInteractionNotices').args,['LIKE','90'])
   p.onOpen({currentTarget:{dataset:{id:'90'}}});assert.match(state.navs[0].url,/news-detail.*id=10/)
   p.onTab({currentTarget:{dataset:{key:'follows'}}});await flush();p.onOpen({currentTarget:{dataset:{id:'90'}}});assert.match(state.navs[1].url,/community-profile.*key=u2/)
   assert.equal(state.intervals.size,1);p.onHide();assert.equal(state.intervals.size,0)
+})
+
+test('我的评论只取自己的、标出被隐藏的，并跳到文章定位该评论',async()=>{
+  const rows=[
+    {id:'501',newsId:'10',articleTitle:'控糖早餐怎么吃',articleAvailable:true,content:'我的公开评论',createdAt:'2026-10-20T12:00:00',hidden:false,replyCount:2,likeCount:1},
+    {id:'502',newsId:'11',articleTitle:'被删掉的文章',articleAvailable:false,content:'被机器隐藏的评论',createdAt:'2026-10-21T08:00:00',hidden:true,replyCount:0,likeCount:0}
+  ]
+  const {page:p,state}=harness('information',{route:{tab:'myComments'},api:{fetchMyComments:async()=>({records:rows,pages:1})}})
+  await flush()
+  assert.equal(p.data.activeTab,'myComments')
+  // 跨 vm 上下文的对象原型不同，deepEqual 会因原型不等而失败，这里按字段比较
+  const call = state.calls.find(c=>c.name==='fetchMyComments').args[0]
+  assert.equal(call.pageNum,1);assert.equal(call.pageSize,20)
+  assert.equal(p.data.list[0].rowKey,'501')
+  assert.equal(p.data.list[1].hidden,true,'被 AI 隐藏的评论作者自己也要看得到')
+  p.onOpen({currentTarget:{dataset:{id:'501'}}});assert.match(state.navs[0].url,/news-detail\?id=10&comments=1&commentId=501$/)
+  p.onOpen({currentTarget:{dataset:{id:'502'}}});assert.equal(state.navs.length,1,'文章已不可查看时只提示不跳转')
+  p.onUnload()
 })
 
 test('切换信息分类时丢弃旧请求，离页后的提醒不能回填',async()=>{

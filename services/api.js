@@ -187,6 +187,7 @@ function fetchCommentContext(id, commentId) { return get(`/news/${id}/comments/$
 function fetchCommentReplies(id, rootId, params) { return get(`/news/${id}/comments/${rootId}/replies`, params, { auth: true }) }
 function addNewsComment(id, payload) { const path = payload.replyToCommentId ? `/news/${id}/comments/${encodeURIComponent(payload.replyToCommentId)}/replies` : `/news/${id}/comments`; return post(path, payload, { auth: true }) }
 function deleteNewsComment(id, commentId) { return del(`/news/${id}/comments/${commentId}`, null, { auth: true }) }
+function fetchMyComments(params) { return get('/community/comments/mine', params, { auth: true }) }
 function fetchDirectMessages(peer, params) { return get(`/community/messages/${encodeURIComponent(peer)}`, params, { auth: true }) }
 function fetchUnreadMessages() { return get('/community/messages/unread', null, { auth:true }) }
 function fetchInformationSummary() { return get('/community/information/summary', null, { auth:true }) }
@@ -597,7 +598,7 @@ module.exports = {
   fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
   submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
   fetchCommunityProfile, setCommunityFollowing, fetchCommunityList, fetchMyReports, fetchReportFeedback, readReportFeedback,
-  fetchNewsComments, fetchCommentContext, fetchCommentReplies, addNewsComment, deleteNewsComment,
+  fetchNewsComments, fetchCommentContext, fetchCommentReplies, addNewsComment, deleteNewsComment, fetchMyComments,
   fetchDirectMessages, sendDirectMessage, readDirectMessages, fetchUnreadMessages,
   channelName,
   channelCode,
