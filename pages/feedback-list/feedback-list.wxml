@@ -1,26 +1,27 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="page-intro">
-    <text class="page-intro-text">查看已提交的留言与处理进度</text>
+    <text class="page-intro-text">{{i18n.t("查看已提交的留言与处理进度", locale)}}</text>
   </view>
 
   <view wx:if="{{list.length === 0}}" class="card empty-card">
-    <text class="empty-text">暂无反馈记录</text>
-    <text class="empty-hint">可在「用户反馈」页提交留言</text>
+    <text class="empty-text">{{i18n.t("暂无反馈记录", locale)}}</text>
+    <text class="empty-hint">{{i18n.t("可在「用户反馈」页提交留言", locale)}}</text>
   </view>
 
   <view wx:for="{{list}}" wx:key="id" class="card fb-card">
     <view class="fb-head">
-      <text class="fb-type">{{item.type}}</text>
-      <text class="fb-time">{{item.time}}</text>
+      <text class="fb-type">{{i18n.t((item.type), locale)}}</text>
+      <text class="fb-time">{{i18n.t((item.time), locale)}}</text>
     </view>
     <text class="fb-content">{{item.content}}</text>
     <view class="fb-status-row">
-      <text class="fb-status-label">状态</text>
-      <text class="fb-status-val">{{item.status}}</text>
+      <text class="fb-status-label">{{i18n.t("状态", locale)}}</text>
+      <text class="fb-status-val">{{i18n.t((item.status), locale)}}</text>
     </view>
     <view wx:if="{{item.officialReply}}" class="official-reply">
-      <text class="official-title">官方回复</text>
-      <text class="official-text">{{item.officialReply}}</text>
+      <text class="official-title">{{i18n.t("官方回复", locale)}}</text>
+      <text class="official-text">{{i18n.t((item.officialReply), locale)}}</text>
     </view>
   </view>
 </view>

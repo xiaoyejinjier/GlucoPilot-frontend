@@ -3,13 +3,16 @@ const { getToken } = require('./request')
 let timer = null, token = '', epoch = 0, busy = false, latest = '', latestNotice = '', latestReport = '', enabled = false
 function count(value) { const number = Number(value); return Number.isFinite(number) ? Math.max(0,Math.floor(number)) : 0 }
 function label(value) { const n = count(value); return n > 99 ? '99+' : n ? String(n) : '' }
-function publish(value) {
+function currentApp(owner) { return owner || (typeof getApp === 'function' ? getApp() : null) }
+function publish(value, owner) {
   const source = value && typeof value === 'object' ? value : { messages:value }
   const counts = Object.fromEntries(['messages','likes','collections','comments','follows','reports'].map(key => [key,count(source[key])]))
   counts.total = Object.values(counts).reduce((sum,n) => sum+n,0)
-  const n = counts.total, app = getApp()
-  app.globalData.unreadCount = n
-  app.globalData.informationCounts = counts
+  const n = counts.total, app = currentApp(owner)
+  if (app && app.globalData) {
+    app.globalData.unreadCount = n
+    app.globalData.informationCounts = counts
+  }
   const pages = getCurrentPages(), page = pages[pages.length - 1]
   if (!page) return
   page.setData({ unreadCount:n, unreadLabel:label(n), informationCounts:counts })
@@ -52,7 +55,11 @@ async function refresh() {
 function start() {
   const current = getToken()
   if (!current) { stop(); return }
-  if (enabled && token === current) { publish(getApp().globalData.informationCounts || getApp().globalData.unreadCount); return }
+  if (enabled && token === current) {
+    const app = currentApp()
+    if (app && app.globalData) publish(app.globalData.informationCounts || app.globalData.unreadCount, app)
+    return
+  }
   if (token !== current) { latest = latestNotice = latestReport = ''; publish(0) }
   stop(); token = current; enabled = true; refresh()
   timer = setInterval(refresh,5000)
@@ -62,5 +69,5 @@ function stop() {
   timer = null; epoch++; busy = false; enabled = false
   // Keep the high-water mark across a background/foreground cycle of this account.
 }
-function reset() { stop(); token = ''; latest = latestNotice = latestReport = ''; publish(0) }
+function reset(owner) { stop(); token = ''; latest = latestNotice = latestReport = ''; publish(0, owner) }
 module.exports = { start, stop, reset, refresh, count, label }

@@ -52,7 +52,7 @@
 .suggestions-title { display:block; margin:0 8rpx 22rpx; color:var(--voice-ink); font-size:var(--fs-title); font-weight:700; line-height:1.4; }
 .suggestion-item { display:flex; align-items:center; gap:16rpx; min-height:80rpx; margin-top:16rpx; padding:18rpx 20rpx; border:1rpx solid var(--voice-line); border-radius:30rpx; background:var(--voice-bg); }
 .suggestion-icon { flex:none; width:38rpx; height:38rpx; border-radius:50%; background:var(--voice-brand-soft); color:var(--voice-brand); font-size:24rpx; font-weight:600; line-height:38rpx; text-align:center; }
-.suggestion-text { min-width:0; color:var(--voice-ink-soft); font-size:var(--fs-body); line-height:1.5; word-break:break-all; }
+.suggestion-text { min-width:0; color:var(--voice-ink-soft); font-size:var(--fs-body); line-height:1.5; word-break:normal; overflow-wrap:break-word; }
 .suggestion-pressed { background:var(--voice-brand-soft); }
 
 .wx-time {

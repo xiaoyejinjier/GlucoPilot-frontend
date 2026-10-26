@@ -250,7 +250,8 @@ function mapSummary(summary) {
       startDate: week.startDate,
       endDate: week.endDate,
       labels: week.labels || [],
-      points: (week.points || []).map((p) => ({ ...p, value: p.avg })),
+      points: (week.points || []).map((p) => ({ ...p, value: p.avg,
+        predictedValue: p.predictedAvg == null ? null : p.predictedAvg })),
       avg: week.avg,
       max: week.max,
       min: week.min

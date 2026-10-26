@@ -1,1 +1,6 @@
+@import "../../utils/motion.wxss";
 .article-video{width:100%;border-radius:24rpx;overflow:hidden;background:#17212e}.article-video video{display:block;width:100%;height:400rpx}.video-state{padding:80rpx 20rpx;text-align:center;color:#fff;font-size:var(--fs-small)}
+.video-preview{position:relative;width:100%;height:400rpx;background:#e9eff8}
+.video-preview[hidden]{display:none}
+.video-preview article-video-cover{display:block;width:100%;height:100%}
+.video-preview-status{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:14rpx;min-height:76rpx;padding:18rpx 20rpx;box-sizing:border-box;background:rgba(20,38,62,.72);color:#fff;font-size:var(--fs-small);line-height:1.5;text-align:center}

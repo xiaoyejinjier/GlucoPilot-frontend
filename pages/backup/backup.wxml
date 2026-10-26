@@ -1,28 +1,29 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="page-intro">
-    <text class="page-intro-text">原型演示：备份到本地缓存</text>
+    <text class="page-intro-text">{{i18n.t("原型演示：备份到本地缓存", locale)}}</text>
   </view>
 
   <view class="card">
     <view class="kv-list">
       <view class="kv-item">
-        <text class="kv-item-label">血糖/饮食记录</text>
-        <text class="kv-item-value">{{recordDays}} 天</text>
+        <text class="kv-item-label">{{i18n.t("血糖/饮食记录", locale)}}</text>
+        <text class="kv-item-value">{{i18n.t((recordDays) + " 天", locale)}}</text>
       </view>
       <view class="kv-item">
-        <text class="kv-item-label">上次备份</text>
-        <text class="kv-item-value">{{lastBackup || '暂无'}}</text>
+        <text class="kv-item-label">{{i18n.t("上次备份", locale)}}</text>
+        <text class="kv-item-value">{{i18n.t((lastBackup || '暂无'), locale)}}</text>
       </view>
     </view>
   </view>
 
   <view class="card">
-    <button class="btn-primary btn-block btn-sm" bindtap="onBackup">立即备份</button>
-    <button class="btn-ghost btn-block btn-sm restore-btn" bindtap="onRestore">从备份恢复</button>
+    <button class="btn-primary btn-block btn-sm ui-interactive" bindtap="onBackup" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("立即备份", locale)}}</button>
+    <button class="btn-ghost btn-block btn-sm restore-btn ui-interactive" bindtap="onRestore" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("从备份恢复", locale)}}</button>
   </view>
 
   <view class="card tip-card">
-    <text class="tip-line">备份内容包含：个人资料、今日及历史血糖/饮食记录。</text>
-    <text class="tip-line">原型阶段仅写入本机 Storage，不上传服务器。</text>
+    <text class="tip-line">{{i18n.t("备份内容包含：个人资料、今日及历史血糖/饮食记录。", locale)}}</text>
+    <text class="tip-line">{{i18n.t("原型阶段仅写入本机 Storage，不上传服务器。", locale)}}</text>
   </view>
 </view>

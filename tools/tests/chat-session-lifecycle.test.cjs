@@ -279,6 +279,7 @@ function createChatPage(options = {}) {
     streamChatCompletion: (id, payload, handlers) => { state.calls.push({ name: 'streamChatCompletion', args: [id, payload] }); return { abort() {} } }
   }
   const dependencies = {
+    '../../utils/locales/en': require('../../utils/locales/en'),
     '../../utils/display': { applyDisplayToCurrentPage() {} },
     '../../utils/chat-sessions': chatSessions,
     '../../utils/request': { getToken: () => 'token' },

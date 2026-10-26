@@ -323,7 +323,7 @@ test('识别后重新录音只回到按住说话，不会自动开始录音或�
   assert.equal(current.state.events.at(-1).name, 'close')
   assert.equal(current.state.events.some(event => event.name === 'confirm'), false)
   const template = fs.readFileSync(path.join(root, 'components/speech-input/speech-input.wxml'), 'utf8')
-  assert.match(template, /bindtap="retry"[^>]*>重新录音/)
+  assert.match(template, /bindtap="retry"[^>]*>{{i18n\.t\("重新录音", locale\)}}/)
   assert.equal(template.includes('bindtap="start"'), false)
   assert.equal(template.includes('bindtap="stop"'), false)
 })

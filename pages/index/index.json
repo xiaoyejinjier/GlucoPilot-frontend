@@ -5,6 +5,7 @@
     "social-action": "/components/social-action/social-action",
     "social-feedback": "/components/social-feedback/social-feedback",
     "article-photo": "/components/article-photo/article-photo",
-    "avatar-image": "/components/avatar-image/avatar-image"
+    "avatar-image": "/components/avatar-image/avatar-image",
+    "article-video": "/components/article-video/article-video"
   }
 }

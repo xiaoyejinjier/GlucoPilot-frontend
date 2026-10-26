@@ -1,3 +1,4 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="camera-page" style="{{displayStyle}}">
   <view class="camera-view">
     <!-- 真机：实时摄像头 -->
@@ -15,34 +16,34 @@
     <!-- 开发者工具 / 无权限：不挂载 camera，避免出现 OBS 虚拟摄像头怪画面 -->
     <view wx:else class="camera-fallback">
       <view class="fallback-icon"></view>
-      <text class="fallback-title">{{blocked ? '该记录时段已截止' : (isDevtools ? '模拟器无法稳定调用真机摄像头' : '摄像头未就绪')}}</text>
-      <text class="fallback-text">{{cameraTip}}</text>
-      <button wx:if="{{needAuth && !isDevtools}}" class="btn-auth" bindtap="onRequestAuth">去开启权限</button>
-      <button wx:if="{{isDevtools}}" class="btn-auth ghost" bindtap="onAlbum">用相册选图演示</button>
+      <text class="fallback-title">{{i18n.t((blocked ? '该记录时段已截止' : (isDevtools ? '模拟器无法稳定调用真机摄像头' : '摄像头未就绪')), locale)}}</text>
+      <text class="fallback-text">{{i18n.t((cameraTip), locale)}}</text>
+      <button wx:if="{{needAuth && !isDevtools}}" class="btn-auth ui-interactive" bindtap="onRequestAuth" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("去开启权限", locale)}}</button>
+      <button wx:if="{{isDevtools}}" class="btn-auth ghost ui-interactive" bindtap="onAlbum" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("用相册选图演示", locale)}}</button>
     </view>
 
     <view class="camera-overlay">
-      <text class="camera-guide">拍照识别饮食/条形码/指血记录等</text>
-      <text class="camera-hint">{{isMeal ? '对准餐食拍照' : '对准血糖仪读数'}}</text>
-      <text class="camera-node">当前节点：{{nodeName}}</text>
+      <text class="camera-guide">{{i18n.t("拍照识别饮食/条形码/指血记录等", locale)}}</text>
+      <text class="camera-hint">{{i18n.t((isMeal ? '对准餐食拍照' : '对准血糖仪读数'), locale)}}</text>
+      <text class="camera-node">{{i18n.t("当前节点：" + (nodeName), locale)}}</text>
     </view>
   </view>
 
   <view class="camera-bottom">
-    <text class="camera-tip">{{isDevtools ? '提示：请点「真机调试」看实时摄像头；模拟器可点相册继续演示' : '为保证识别率，请保证图片内容完整、清晰，建议俯拍'}}</text>
+    <text class="camera-tip">{{i18n.t((isDevtools ? '提示：请点「真机调试」看实时摄像头；模拟器可点相册继续演示' : '为保证识别率，请保证图片内容完整、清晰，建议俯拍'), locale)}}</text>
     <view class="camera-controls">
-      <view class="camera-side" bindtap="onAlbum">
+      <view class="camera-side ui-interactive" bindtap="onAlbum" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
         <view class="side-icon album">
           <view class="album-frame"></view>
         </view>
-        <text class="side-text">相册</text>
+        <text class="side-text">{{i18n.t("相册", locale)}}</text>
       </view>
-      <view class="camera-shutter {{busy ? 'disabled' : ''}}" bindtap="onCapture"></view>
-      <view class="camera-side" bindtap="onClose">
+      <view class="camera-shutter {{busy ? 'disabled' : ''}} ui-interactive" bindtap="onCapture" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"></view>
+      <view class="camera-side ui-interactive" bindtap="onClose" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
         <view class="side-icon back">
           <view class="back-arrow"></view>
         </view>
-        <text class="side-text">返回</text>
+        <text class="side-text">{{i18n.t("返回", locale)}}</text>
       </view>
     </view>
   </view>

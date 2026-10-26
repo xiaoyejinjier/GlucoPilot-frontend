@@ -1,13 +1,15 @@
-<view wx:if="{{alerts.length || replyTotal > 0 || socialTotal > 0 || repliesError}}" class="notice-entry {{alerts.length ? 'has-alerts' : ''}}" bindtap="openNotice" hover-class="notice-entry-pressed" aria-role="button" aria-label="提醒与回复，血糖提醒{{alerts.length}}条，管理端回复{{replyTotal}}条，点击查看">
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="notice-entry {{alerts.length || replyTotal > 0 || socialTotal > 0 ? 'has-notices' : ''}}" bindtap="openNotice" hover-class="notice-entry-pressed" aria-role="button" aria-label="{{i18n.t('提醒与回复', locale)}}，{{i18n.t('查看新信息、血糖提醒与跟进回复', locale)}}">
   <view class="notice-entry-label">
     <view class="notice-entry-icon" aria-hidden="true"><view class="message-icon"></view></view>
-    <text class="notice-entry-title">提醒与回复</text>
+    <text class="notice-entry-title">{{i18n.t("提醒与回复", locale)}}</text>
   </view>
   <view class="notice-entry-summary">
-    <text wx:if="{{socialTotal > 0}}" class="notice-reply-badge">新信息 {{socialTotal}}</text>
-    <text wx:if="{{alerts.length}}" class="notice-alert-badge">血糖提醒 {{alerts.length}}</text>
-    <text wx:if="{{replyTotal}}" class="notice-reply-badge">回复 {{replyTotal}}</text>
-    <text wx:elif="{{repliesError}}" class="notice-entry-status">待重试</text>
+    <text wx:if="{{socialTotal > 0}}" class="notice-reply-badge">{{i18n.t("新信息 " + (socialTotal), locale)}}</text>
+    <text wx:if="{{alerts.length}}" class="notice-alert-badge">{{i18n.t("血糖提醒 " + (alerts.length), locale)}}</text>
+    <text wx:if="{{replyTotal}}" class="notice-reply-badge">{{i18n.t("回复 " + (replyTotal), locale)}}</text>
+    <text wx:elif="{{repliesError}}" class="notice-entry-status">{{i18n.t("待重试", locale)}}</text>
+    <text wx:if="{{!alerts.length && !replyTotal && !socialTotal && !repliesError}}" class="notice-entry-idle">{{i18n.t(repliesLoading ? '正在加载…' : '暂无新消息', locale)}}</text>
     <view class="notice-entry-arrow" aria-hidden="true"></view>
   </view>
 </view>
@@ -18,44 +20,45 @@
     <view class="notice-handle" aria-hidden="true"></view>
     <view class="notice-dialog-heading">
       <view class="notice-dialog-intro">
-        <text class="notice-dialog-title">提醒与回复</text>
-        <text class="notice-dialog-subtitle">查看新信息、血糖提醒与跟进回复</text>
+        <text class="notice-dialog-title">{{i18n.t("提醒与回复", locale)}}</text>
+        <text class="notice-dialog-subtitle">{{i18n.t("查看新信息、血糖提醒与跟进回复", locale)}}</text>
       </view>
-      <view class="notice-close" bindtap="closeNotice" hover-class="notice-close-pressed" aria-role="button" aria-label="关闭提醒与回复"><view class="close-icon" aria-hidden="true"></view></view>
+      <view class="notice-close" bindtap="closeNotice" hover-class="notice-close-pressed" aria-role="button" aria-label="{{i18n.t('关闭提醒与回复', locale)}}"><view class="close-icon" aria-hidden="true"></view></view>
     </view>
     <scroll-view class="notice-scroll" scroll-y="{{true}}" catchtouchmove="onNoticeContentTap">
       <view class="notice-content">
-        <view wx:if="{{socialItems.length}}" class="reply-card"><view class="reply-heading"><view class="notice-section-label"><text>新信息</text></view></view><view wx:for="{{socialItems}}" wx:key="key" class="social-notice-row" data-key="{{item.key}}" bindtap="onInformation"><text>{{item.title}}</text><view><text class="social-notice-count">{{item.count > 99 ? '99+' : item.count}}</text><text> ›</text></view></view></view>
+        <view wx:if="{{!alerts.length && !socialItems.length && !replyTotal && !repliesError && !repliesLoading}}" class="notice-empty reply-card"><view class="notice-entry-icon" aria-hidden="true"><view class="message-icon"></view></view><text class="empty-title">{{i18n.t('暂无新消息', locale)}}</text><text>{{i18n.t('有新信息、血糖提醒或跟进回复时，会在这里提醒你。', locale)}}</text></view>
+        <view wx:if="{{socialItems.length}}" class="reply-card"><view class="reply-heading"><view class="notice-section-label"><text>{{i18n.t("新信息", locale)}}</text></view></view><view wx:for="{{socialItems}}" wx:key="key" class="social-notice-row ui-interactive" data-key="{{item.key}}" bindtap="onInformation" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text>{{i18n.t((item.title), locale)}}</text><view><text class="social-notice-count">{{i18n.t((item.count > 99 ? '99+' : item.count), locale)}}</text><text> ›</text></view></view></view>
         <view wx:if="{{alerts.length}}" class="alert-card">
           <view class="alert-heading">
-            <view class="notice-section-label"><view class="section-mark alert-mark" aria-hidden="true">!</view><text class="alert-title">血糖提醒</text></view>
-            <text class="section-count">今日 {{alerts.length}} 条</text>
+            <view class="notice-section-label"><view class="section-mark alert-mark" aria-hidden="true">!</view><text class="alert-title">{{i18n.t("血糖提醒", locale)}}</text></view>
+            <text class="section-count">{{i18n.t("今日 " + (alerts.length) + " 条", locale)}}</text>
           </view>
           <view wx:for="{{alerts}}" wx:key="id" class="alert-item {{item.type}}">
-            <view class="alert-item-label"><text class="alert-node-name">{{item.name}}</text><text class="alert-badge">{{item.label}}</text></view>
-            <view class="alert-reading"><text class="alert-value">{{item.value}}</text><text class="alert-unit">mmol/L</text></view>
+            <view class="alert-item-label"><text class="alert-node-name">{{i18n.t((item.name), locale)}}</text><text class="alert-badge">{{i18n.t((item.label), locale)}}</text></view>
+            <view class="alert-reading"><text class="alert-value">{{i18n.t((item.value), locale)}}</text><text class="alert-unit">mmol/L</text></view>
           </view>
-          <view wx:if="{{!alerts.length}}" class="notice-empty"><text class="empty-title">暂无异常提醒</text><text>今日暂无已记录的异常实测血糖提醒。</text></view>
-          <text wx:else class="alert-tip">以上为当日已记录的实测值，请核对测量结果并留意身体状况。如有明显不适或数值持续异常，请及时寻求专业帮助。</text>
+          <view wx:if="{{!alerts.length}}" class="notice-empty"><text class="empty-title">{{i18n.t("暂无异常提醒", locale)}}</text><text>{{i18n.t("今日暂无已记录的异常实测血糖提醒。", locale)}}</text></view>
+          <text wx:else class="alert-tip">{{i18n.t("以上为当日已记录的实测值，请核对测量结果并留意身体状况。如有明显不适或数值持续异常，请及时寻求专业帮助。", locale)}}</text>
         </view>
-        <view wx:if="{{replyTotal > 0 || repliesError}}" class="reply-card">
+        <view wx:if="{{replyTotal > 0 || repliesError || repliesLoading}}" class="reply-card">
           <view class="reply-heading">
-            <view class="notice-section-label"><view class="section-mark reply-mark" aria-hidden="true"><view class="message-icon"></view></view><text>管理端回复</text></view>
-            <view class="reply-action reply-refresh" catchtap="refreshReplies" hover-class="reply-action-pressed" aria-role="button" aria-label="刷新管理端回复"><text class="refresh-icon" aria-hidden="true">↻</text><text>{{repliesLoading ? '刷新中…' : '刷新回复'}}</text></view>
+            <view class="notice-section-label"><view class="section-mark reply-mark" aria-hidden="true"><view class="message-icon"></view></view><text>{{i18n.t("管理端回复", locale)}}</text></view>
+            <view class="reply-action reply-refresh" catchtap="refreshReplies" hover-class="reply-action-pressed" aria-role="button" aria-label="{{i18n.t('刷新管理端回复', locale)}}"><text class="refresh-icon {{repliesLoading ? 'is-loading' : ''}}" aria-hidden="true">↻</text><text>{{i18n.t((repliesLoading ? '刷新中…' : '刷新回复'), locale)}}</text></view>
           </view>
           <view wx:for="{{replies}}" wx:key="id" class="reply-item">
-            <view class="reply-item-heading"><text class="reply-author">管理端</text><text class="reply-time">{{item.repliedAtText}}</text></view>
+            <view class="reply-item-heading"><text class="reply-author">{{i18n.t("管理端", locale)}}</text><text class="reply-time">{{i18n.t((item.repliedAtText), locale)}}</text></view>
             <text class="reply-content">{{item.userReply}}</text>
             <view class="reply-record">
-              <text class="reply-record-label">关联测量</text>
-              <text class="reply-context">{{item.recordDate}} · {{item.nodeName}} · {{item.glucoseValue}} mmol/L</text>
-              <text class="reply-measurement">测量时间：{{item.recordedAtText}}</text>
+              <text class="reply-record-label">{{i18n.t("关联测量", locale)}}</text>
+              <text class="reply-context">{{i18n.t((item.recordDate) + " · " + (item.nodeName) + " · " + (item.glucoseValue) + " mmol/L", locale)}}</text>
+              <text class="reply-measurement">{{i18n.t("测量时间：" + (item.recordedAtText), locale)}}</text>
             </view>
           </view>
-          <view wx:if="{{!replies.length && !repliesLoading && !repliesError}}" class="notice-empty"><text class="empty-title">暂无管理端回复</text><text>有跟进回复时，会在这里展示。</text></view>
-          <view wx:if="{{repliesError}}" class="reply-error"><text>{{repliesError}}</text><text class="reply-action" bindtap="onRetryReplies">重试</text></view>
-          <text wx:if="{{repliesLoading}}" class="reply-loading">正在读取回复…</text>
-          <text wx:elif="{{hasMoreReplies}}" class="reply-more" bindtap="loadMoreReplies">查看更多回复</text>
+          <view wx:if="{{!replies.length && !repliesLoading && !repliesError}}" class="notice-empty"><text class="empty-title">{{i18n.t("暂无管理端回复", locale)}}</text><text>{{i18n.t("有跟进回复时，会在这里展示。", locale)}}</text></view>
+          <view wx:if="{{repliesError}}" class="reply-error"><text>{{i18n.t((repliesError), locale)}}</text><text class="reply-action ui-interactive" bindtap="onRetryReplies" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重试", locale)}}</text></view>
+          <text wx:if="{{repliesLoading}}" class="reply-loading">{{i18n.t("正在读取回复…", locale)}}</text>
+          <text wx:elif="{{hasMoreReplies}}" class="reply-more ui-interactive" bindtap="loadMoreReplies" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("查看更多回复", locale)}}</text>
         </view>
       </view>
     </scroll-view>

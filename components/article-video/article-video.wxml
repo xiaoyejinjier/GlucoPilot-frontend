@@ -1,1 +1,9 @@
-<view class="article-video"><video wx:if="{{source}}" src="{{source}}" controls object-fit="contain" show-center-play-btn /><view wx:else class="video-state" bindtap="load">{{error ? '视频加载失败，点击重试' : '正在加载视频…'}}</view></view>
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="article-video" catchtap="stopPropagation">
+  <video wx:if="{{source}}" id="article-video-player" src="{{source}}" poster="{{poster}}" controls object-fit="contain" show-center-play-btn autoplay="{{lazy && requested}}" bindplay="onPlay" binderror="failed" />
+  <view wx:if="{{lazy}}" class="video-preview" hidden="{{!!source}}" bindtap="activate" aria-role="button" aria-label="{{i18n.t('点击预览视频', locale)}}">
+    <article-video-cover media-id="{{mediaId}}" variant="player" bind:coverchange="onCoverChange"></article-video-cover>
+    <view wx:if="{{requested || error}}" class="video-preview-status"><view wx:if="{{!error}}" class="ui-loading-dots" aria-hidden="true"><view></view><view></view><view></view></view><text>{{i18n.t(error ? '视频加载失败，点击重试' : '正在加载视频…', locale)}}</text></view>
+  </view>
+  <view wx:elif="{{!source}}" class="video-state ui-interactive" bindtap="activate" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t(error ? '视频加载失败，点击重试' : '正在加载视频…', locale)}}</view>
+</view>

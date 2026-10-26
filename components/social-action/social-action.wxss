@@ -9,3 +9,4 @@
 @keyframes social-pop{0%{transform:scale(.8)}40%{transform:scale(1.32)}70%{transform:scale(.96)}100%{transform:scale(1)}}
 @keyframes social-star{0%{transform:scale(.8) rotate(-16deg)}45%{transform:scale(1.3) rotate(12deg)}75%{transform:scale(.98) rotate(-4deg)}100%{transform:scale(1) rotate(0)}}
 @keyframes social-spark{0%{opacity:0;transform:scale(.2)}35%{opacity:.9;transform:scale(1.15)}100%{opacity:0;transform:scale(.2) translateY(-9rpx)}}
+@media(prefers-reduced-motion:reduce){.social-action{transition:none}.pulsing .action-symbol,.collect.pulsing .action-symbol,.spark{animation:none}.spark{display:none}}

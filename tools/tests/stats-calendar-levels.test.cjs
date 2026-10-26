@@ -29,8 +29,10 @@ function createPage(options = {}) {
     }
   }
   const dependencies = {
+    '../../utils/locales/en': require('../../utils/locales/en'),
     '../../services/api': api, '../../utils/constants': { GLUCOSE_NODES }, '../../utils/stats-week': dates,
     '../../utils/meal-details': require('../../utils/meal-details'),
+    '../../utils/glucose-chart': require('../../utils/glucose-chart'),
     '../../utils/display': { applyDisplayToCurrentPage() {}, getTheme: () => ({ brand: '#07c160' }), getDisplaySettings: () => ({}) }
   }
   vm.runInNewContext(source, { Page: (value) => { definition = value },

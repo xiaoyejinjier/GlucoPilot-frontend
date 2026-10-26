@@ -6,19 +6,19 @@ const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { uploadMediaFile, BIZ_TYPE, MAX_IMAGE_BYTES } = require('../../utils/media')
 const { getToken } = require('../../utils/request')
 Page({
-  data: { displayStyle:'', title:'', body:'', tags:publication.TAGS, tagCodes:[], selectedTags:[], customTags:[], customTagInput:'', tagCount:0, posting:false,
+  data: { displayStyle:'', title:'', body:'', tags:[],otherTags:[],tagsLoading:false,tagsError:'',tagNotice:'', tagCodes:[], selectedTags:[], customTags:[], customTagInput:'', tagCount:0, posting:false,
     visibility:'PUBLIC',viewerIds:[],visibilityLabel:'公开',visibilityOpen:false,loading:false, loadError:'', editing:false, submitted:null, statusInfo:null, revision:null, originalState:'', images:[], videos:[], recentTags:[], uploading:false, savingDraft:false,draftSaved:false,leaveGuardActive:false },
   onLoad(options) { this._id = /^[1-9]\d{0,18}$/.test(String(options.id || '')) ? String(options.id) : ''; this._draftId = /^[1-9]\d{0,18}$/.test(String(options.draft || '')) ? String(options.draft) : ''; this.captureSavedEditor() },
   onShow() {
     if (!getApp().checkLogin()) return
     if (this._communityToken && this._communityToken !== require('../../utils/request').getToken()) {
-      this._attempt = this._saveAttempt = this._draftPublishAttempt = null; this._loaded = false; this._savedSnapshot = null; this._savedHadContent = false; this._uploadRun = (this._uploadRun || 0) + 1; this.setData({ title:'', body:'', tagCodes:[], selectedTags:[], customTags:[], customTagInput:'', tagCount:0, submitted:null, images:[], videos:[], recentTags:[], uploading:false,draftSaved:false,visibility:'PUBLIC',viewerIds:[],visibilityLabel:'公开',visibilityOpen:false })
+      this._tagOptions=[];this._tagsReady=false;this._disabledTagNames=[];this._attempt = this._saveAttempt = this._draftPublishAttempt = null; this._loaded = false; this._savedSnapshot = null; this._savedHadContent = false; this._uploadRun = (this._uploadRun || 0) + 1; this.setData({ title:'', body:'', tagCodes:[], selectedTags:[], customTags:[], customTagInput:'', tagCount:0, submitted:null, images:[], videos:[], recentTags:[], uploading:false,draftSaved:false,visibility:'PUBLIC',viewerIds:[],visibilityLabel:'公开',visibilityOpen:false })
     }
     this._leaving = false; this._leavePrompt = false
     social.begin(this); applyDisplayToCurrentPage(); this.setData({ posting:false }); this.setTags(this.data.tagCodes)
     if(this._savedSnapshot == null)this.captureSavedEditor()
-    this.syncEditorState(); this.loadRecentTags()
-    if ((this._id || this._draftId) && !this._loaded) this.load()
+    const version=this._communityVersion
+    this.syncEditorState(); this.loadTagOptions().then(()=>{if(social.active(this,version)&&(this._id||this._draftId)&&!this._loaded)this.load()})
   },
   onHide() { this.setData({visibilityOpen:false});social.end(this) }, onUnload() { this._disposed = true; this._leaving = true; this._uploadRun = (this._uploadRun || 0) + 1; social.end(this) },
   editorSnapshot() {
@@ -72,12 +72,24 @@ Page({
     if(!id||typeof this.getOpenerEventChannel!=='function')return
     try{const channel=this.getOpenerEventChannel();if(channel&&typeof channel.emit==='function')channel.emit('draftPublished',{id:String(id)})}catch(_){/* The opener can already be gone; its next server refresh remains authoritative. */}
   },
-  loadRecentTags() {
-    const version=this._communityVersion
-    const refresh=()=>this.setData({recentTags:tagHistory.list().filter(n=>!this.data.customTags.includes(n) && !publication.TAGS.some(t=>t.name===n))})
-    refresh()
-    api.fetchMyCommunityTags().then(tags=>{if(social.active(this,version)){tagHistory.remember(tags.map(t=>t.name));refresh()}}).catch(()=>{})
+  async loadTagOptions() {
+    if(!social.active(this))return
+    const version=this._communityVersion,run=this._tagsRun=(this._tagsRun||0)+1
+    this.setData({tagsLoading:true,tagsError:''})
+    try {
+      const [catalog,mine]=await Promise.all([api.fetchCommunityTags(),api.fetchMyCommunityTags(true)])
+      if(!social.active(this,version)||run!==this._tagsRun)return
+      if(!Array.isArray(catalog)||!Array.isArray(mine))throw Error('标签加载失败，点击重试')
+      this._disabledTagNames=mine.filter(t=>t.enabled===0).map(t=>t.name)
+      tagHistory.forget(this._disabledTagNames)
+      const choices=new Map(catalog.filter(t=>t.enabled!==0).map(t=>[t.code,t]))
+      mine.filter(t=>t.enabled!==0).forEach(t=>{if(String(t.code).startsWith('custom_')||t.type==='USER')choices.set(t.code,t)})
+      this._tagOptions=Array.from(choices.values());this._tagsReady=true
+      tagHistory.remember(mine.filter(t=>t.enabled!==0).map(t=>t.name))
+      this.setData({tagsLoading:false,tagsError:''});this.setTags(this.data.tagCodes)
+    }catch(error){if(social.active(this,version)&&run===this._tagsRun){this._tagsReady=false;this._tagOptions=[];this.setData({tags:[],otherTags:[],tagsLoading:false,tagsError:'标签加载失败，点击重试'})}}
   },
+  loadRecentTags(){return this.loadTagOptions()},
   onRecentTag(e) {this.onCustomTagInput({detail:{value:e.currentTarget.dataset.name}});this.onAddCustomTag()},
   async load() {
     const version = this._communityVersion; this.setData({ loading:true, loadError:'' })
@@ -93,7 +105,7 @@ Page({
       if (!social.active(this,version)) return
       if (!article.mine) throw new Error('只能编辑自己的文章')
       this._loaded = true; this.setData({visibility:article.visibility||'PUBLIC',viewerIds:article.viewerIds||[],visibilityLabel:this.visibilityText(article.visibility), title:article.title, body:article.body, revision:article.revision, editing:true, originalState:article.state, videos:article.videos || [],images:article.images || [] })
-      const builtins = new Set(publication.TAGS.map(tag => tag.code))
+      const builtins = new Set((this._tagOptions||[]).filter(tag=>!String(tag.code).startsWith('custom_')&&tag.type!=='USER').map(tag=>tag.code))
       this.setData({ customTags:article.tags.filter(tag => !builtins.has(tag.code)).map(tag => tag.name) })
       this.setTags(article.tags.filter(tag => builtins.has(tag.code)).map(tag => tag.code));this.captureSavedEditor();this.syncEditorState()
     } catch (error) { if (social.active(this,version,error)) { this.setData({ loadError:error.message || '文章加载失败' }); social.failure(this,error,version) } }
@@ -114,6 +126,7 @@ Page({
     this._draftId=String(saved.id);this._draftRevision=saved.revision;this._loaded=true;this._saveAttempt=null;this.captureSavedEditor(snapshot,hadContent);this.syncEditorState();return saved
   },
   async onSaveDraft() {
+    if(this.data.tagsLoading||!this._tagsReady){wx.showToast({title:'请先加载标签后再选择',icon:'none'});return false}
     if(!social.active(this)||this.data.posting||this.data.uploading||this.data.loading||this.data.loadError||this.data.submitted)return
     if(!this.hasEditorContent())return wx.showToast({title:'先写一点内容再保存吧',icon:'none'})
     if(this.data.customTagInput.trim()){this.onAddCustomTag();if(this.data.customTagInput.trim())return}
@@ -154,31 +167,43 @@ Page({
   },
   onRemoveVideo(){if(!this.data.posting&&!this.data.uploading){this.setData({videos:[]});this.syncEditorState()}},
   onRemoveImage(e) { if (!this.data.posting && !this.data.uploading) {this.setData({ images:this.data.images.filter(image => image.mediaId !== String(e.currentTarget.dataset.id)) });this.syncEditorState()} },
-  setTags(codes) { this.setData({ recentTags:tagHistory.list().filter(n=>!this.data.customTags.includes(n) && !publication.TAGS.some(t=>t.name===n)),tagCodes:codes, tags:publication.TAGS.map(tag => ({ ...tag, selected:codes.includes(tag.code) })), selectedTags:publication.TAGS.filter(tag => codes.includes(tag.code)), tagCount:codes.length + this.data.customTags.length });this.syncEditorState() },
+  setTags(codes) {
+    const options=this._tagOptions||[],blocked=new Set((this._disabledTagNames||[]).map(n=>n.toLowerCase()))
+    const valid=this._tagsReady?codes.filter(code=>options.some(t=>t.code===code)):codes
+    const custom=this.data.customTags.filter(n=>!blocked.has(n.toLowerCase()))
+    const removed=valid.length!==codes.length||custom.length!==this.data.customTags.length
+    const selected=options.map(t=>({...t,selected:valid.includes(t.code)})),isUser=t=>t.type==='USER'||String(t.code).startsWith('custom_')
+    this.setData({tagCodes:valid,customTags:custom,tags:selected.filter(t=>!isUser(t)),otherTags:selected.filter(isUser),selectedTags:selected.filter(t=>t.selected),tagCount:valid.length+custom.length,
+      recentTags:tagHistory.list().filter(n=>!custom.includes(n)&&!options.some(t=>t.name===n)&&!blocked.has(n.toLowerCase())),...(removed?{tagNotice:'部分标签已删除，请重新选择'}:{})})
+    this.syncEditorState()
+  },
   onCustomTagInput(e) { this.setData({ customTagInput:e.detail.value });this.syncEditorState() },
   onAddCustomTag() {
     if (this.data.posting) return
     const name = publication.normalizeTag(this.data.customTagInput), issue = publication.tagIssue(name)
     if (issue) return wx.showToast({ title:issue, icon:'none' })
-    const key = name.toLowerCase(), builtin = publication.TAGS.find(tag => tag.name.toLowerCase() === key)
+    if(!this._tagsReady)return wx.showToast({title:'请先加载标签后再选择',icon:'none'})
+    if((this._disabledTagNames||[]).some(n=>n.toLowerCase()===name.toLowerCase()))return wx.showToast({title:'该标签已删除，请选择其他标签',icon:'none'})
+    const key = name.toLowerCase(), builtin = (this._tagOptions||[]).find(tag => tag.name.toLowerCase() === key)
     if ((builtin && this.data.tagCodes.includes(builtin.code)) || this.data.customTags.some(tag => tag.toLowerCase() === key)) {
       this.setData({ customTagInput:'' });this.syncEditorState(); return wx.showToast({ title:'这个标签已经选过了', icon:'none' })
     }
     if (this.data.tagCount >= 3) return wx.showToast({ title:'最多选择3个标签', icon:'none' })
     if (builtin) this.setTags([...this.data.tagCodes,builtin.code])
     else { this.setData({ customTags:[...this.data.customTags,name] }); this.setTags(this.data.tagCodes) }
-    tagHistory.remember([name]); this.setData({ customTagInput:'', recentTags:tagHistory.list().filter(n=>!this.data.customTags.includes(n) && !publication.TAGS.some(t=>t.name===n)) });this.syncEditorState()
+    tagHistory.remember([name]); this.setData({ customTagInput:'', recentTags:tagHistory.list().filter(n=>!this.data.customTags.includes(n) && !(this._tagOptions||[]).some(t=>t.name===n)) });this.syncEditorState()
   },
   onRemoveCustomTag(e) { if (this.data.posting) return; this.setData({ customTags:this.data.customTags.filter(tag => tag !== e.currentTarget.dataset.name) }); this.setTags(this.data.tagCodes) },
   onTag(e) {
     if (this.data.posting) return
     const code = e.currentTarget.dataset.code, codes = this.data.tagCodes
-    if (!publication.TAGS.some(tag => tag.code === code)) return
+    if (!this._tagsReady || !(this._tagOptions||[]).some(tag => tag.code === code)) return
     if (codes.includes(code)) this.setTags(codes.filter(item => item !== code))
     else if (this.data.tagCount < 3) this.setTags([...codes,code])
     else wx.showToast({ title:'最多选择3个标签', icon:'none' })
   },
   async onSubmit() {
+    if(this.data.tagsLoading||!this._tagsReady){wx.showToast({title:'请先加载标签后再选择',icon:'none'});return false}
     if (!social.active(this) || this.data.posting || this.data.uploading || this.data.loading || this.data.loadError || this.data.submitted) return
     if (this.data.customTagInput.trim()) { this.onAddCustomTag(); if (this.data.customTagInput.trim()) return }
     const issue = publication.validate(this.data.title,this.data.body,this.data.tagCodes,this.data.customTags,this.data.images.length+this.data.videos.length)

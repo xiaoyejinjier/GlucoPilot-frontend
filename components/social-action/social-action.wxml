@@ -1,4 +1,5 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="social-action {{kind}} {{active ? 'active' : ''}} {{pulsing ? 'pulsing' : ''}}">
   <view class="symbol-wrap"><image class="action-symbol" src="/assets/icons/social-{{kind}}{{active ? '-active' : ''}}.svg" mode="aspectFit" /><view wx:if="{{active && pulsing}}" class="spark spark-one"></view><view wx:if="{{active && pulsing}}" class="spark spark-two"></view><view wx:if="{{active && pulsing}}" class="spark spark-three"></view></view>
-  <text>{{label}}</text><text class="action-count">{{count}}</text>
+  <text>{{i18n.t((label), locale)}}</text><text class="action-count">{{i18n.t((count), locale)}}</text>
 </view>

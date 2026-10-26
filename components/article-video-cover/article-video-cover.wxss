@@ -1,0 +1,16 @@
+@import "../../utils/motion.wxss";
+:host{display:block;width:100%;height:100%}
+.video-cover{position:relative;width:100%;height:100%;overflow:hidden;border-radius:inherit;background:#e9eff8;color:#58799f}
+.cover-image,.cover-shade{position:absolute;inset:0;width:100%;height:100%;display:block}
+.cover-shade{background:linear-gradient(180deg,transparent 45%,rgba(12,30,53,.42))}
+.cover-play{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;width:48rpx;height:48rpx;border-radius:50%;background:rgba(20,38,62,.38);border:2rpx solid rgba(255,255,255,.85)}
+.cover-play>view{width:0;height:0;border-top:9rpx solid transparent;border-bottom:9rpx solid transparent;border-left:14rpx solid #fff;margin-left:4rpx}
+.cover-label{position:absolute;right:10rpx;bottom:8rpx;color:#fff;font-size:18rpx;line-height:1.4;letter-spacing:1rpx;text-shadow:0 1rpx 4rpx rgba(0,0,0,.3)}
+.cover-loading{position:absolute;left:4rpx;right:4rpx;bottom:16rpx;text-align:center;font-size:17rpx;line-height:1.5}
+.cover-retry{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8rpx;width:100%;height:100%;font-size:20rpx;line-height:1.5;text-align:center}
+.retry-icon{font-size:42rpx;line-height:1}
+.player-cover .cover-play{width:80rpx;height:80rpx;background:rgba(20,38,62,.45)}
+.player-cover .cover-play>view{border-top-width:15rpx;border-bottom-width:15rpx;border-left-width:24rpx;margin-left:7rpx}
+.player-cover .cover-label{right:22rpx;bottom:18rpx;font-size:24rpx}
+.player-cover .cover-loading{bottom:32rpx;font-size:24rpx}
+.player-cover .cover-retry{font-size:26rpx;gap:16rpx}

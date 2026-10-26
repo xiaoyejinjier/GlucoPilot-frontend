@@ -1,2 +1,3 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <image wx:if="{{source && !error}}" class="avatar-image" src="{{source}}" mode="{{mode}}" binderror="onImageError" />
-<view wx:else class="avatar-placeholder"><text>{{text || '友'}}</text></view>
+<view wx:else class="avatar-placeholder"><text>{{text || i18n.t('友', locale)}}</text></view>

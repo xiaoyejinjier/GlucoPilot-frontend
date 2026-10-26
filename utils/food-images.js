@@ -88,6 +88,13 @@ function getFoodImage(name, categoryName, imageUrl) {
     return ADMIN_FILE_TO_MINI_IMAGE[fileMatch[1]]
   }
 
+  // 兼容管理端旧内置地址，分类选择了其他内置图时仍展示同款。
+  const legacyMatch = source.match(/^\/img\/food-([^/.]+)\.svg$/i)
+  if (legacyMatch) {
+    const name = legacyMatch[1] === 'bun' ? 'steamed-bun' : legacyMatch[1]
+    if (ADMIN_FILE_TO_MINI_IMAGE[name]) return ADMIN_FILE_TO_MINI_IMAGE[name]
+  }
+
   return FOOD_IMAGE_BY_NAME[String(name || '').trim()] ||
     FOOD_IMAGE_BY_CATEGORY[categoryName || ''] ||
     DEFAULT_FOOD_IMAGE

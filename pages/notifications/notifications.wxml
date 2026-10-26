@@ -1,9 +1,10 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="card">
     <view class="switch-row" wx:for="{{items}}" wx:key="key">
       <view class="switch-main">
-        <text class="switch-title">{{item.title}}</text>
-        <text class="switch-desc">{{item.desc}}</text>
+        <text class="switch-title">{{i18n.t((item.title), locale)}}</text>
+        <text class="switch-desc">{{i18n.t((item.desc), locale)}}</text>
       </view>
       <switch checked="{{item.on}}" color="{{themeBrand}}" data-key="{{item.key}}" bindchange="onToggle" />
     </view>

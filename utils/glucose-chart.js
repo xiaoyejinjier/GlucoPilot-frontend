@@ -19,6 +19,47 @@ function getPointDetails(node) {
     sourceText: SOURCE_TEXT[node.sourceType] || '来源未提供', remark: node.remark || '' }
 }
 
+const PREDICTION_COLOR = '#47976d'
+
+function getRecommendedPrediction(node) {
+  if (!node || !node.isMeal || node.hasRecord === false
+    || node.predictionValue == null || node.predictionValue === '') return null
+  const value = Number(node.predictionValue)
+  return Number.isFinite(value) && value > 0 && value < 40 ? value : null
+}
+
+function getChartPointDetails(node) {
+  const actual = getPointDetails(node)
+  if (actual) return actual
+  const value = getRecommendedPrediction(node)
+  return value == null ? null : { nodeId: node.id, nodeName: node.name + '后预测', value,
+    status: 'prediction', isPrediction: true, sourceText: '按推荐吃法',
+    remark: '预测仅供参考，不计入实测记录' }
+}
+
+/** 先画预测，再画实测；虚线必须重置，避免影响后续实测和坐标轴。 */
+function drawPredictionSeries(ctx, points) {
+  ctx.strokeStyle = PREDICTION_COLOR
+  ctx.lineWidth = 1.5
+  ctx.setLineDash([5, 4])
+  if (points.length > 1) {
+    ctx.beginPath()
+    points.forEach((point, index) => {
+      if (index === 0) ctx.moveTo(point.x, point.y)
+      else ctx.lineTo(point.x, point.y)
+    })
+    ctx.stroke()
+  }
+  ctx.setLineDash([])
+  points.forEach((point) => {
+    ctx.beginPath()
+    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2)
+    ctx.fillStyle = '#fff'
+    ctx.fill()
+    ctx.stroke()
+  })
+}
+
 /** CanvasTouch的x/y是Canvas本地逻辑像素，不乘DPR；client坐标须减去当前视口矩形。 */
 function getTouchPosition(touch, rect, size) {
   if (!touch) return null
@@ -40,4 +81,5 @@ function findChartPoint(points, position, radius = 20) {
   return selected
 }
 
-module.exports = { hasMeasuredGlucose, getPointDetails, getTouchPosition, findChartPoint, formatRecordTime }
+module.exports = { hasMeasuredGlucose, getPointDetails, getTouchPosition, findChartPoint, formatRecordTime,
+  getRecommendedPrediction, getChartPointDetails, drawPredictionSeries, PREDICTION_COLOR }

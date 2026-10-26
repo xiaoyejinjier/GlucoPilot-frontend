@@ -5,6 +5,10 @@ const { fetchMe, fetchAppConfig } = require('./services/api')
 const { fontNameOf, themeIdOf } = require('./utils/mappers')
 const config = require('./utils/config')
 const messageNotifications = require('./utils/message-notifications')
+const i18n = require('./utils/i18n')
+if (typeof Page === 'function') Page = i18n.wrapPage(Page)
+if (typeof Component === 'function') Component = i18n.wrapComponent(Component)
+i18n.install()
 
 App({
   globalData: {
@@ -64,7 +68,8 @@ App({
   onHide() { messageNotifications.stop() },
 
   resetLoginState() {
-    messageNotifications.reset()
+    // During onLaunch the instance exists as this, but getApp() may not be ready yet.
+    messageNotifications.reset(this)
     setToken('')
     wx.setStorageSync('isLoggedIn', false)
     this.globalData.isLoggedIn = false

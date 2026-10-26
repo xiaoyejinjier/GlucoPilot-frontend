@@ -12,10 +12,13 @@ function decorateComment(comment) {
 Page({
   data: { displayStyle: '', news: null, loading: true, error: '', liked: false, collected: false, likedPulse:0,collectedPulse:0,
     actionBusy: false, comments: [], commentPage: 0, commentHasMore: false, commentsLoading: false,
-    commentsError: '', commentDraft: '', posting: false, followBusy: false, replyTarget:null, commentFocus:false },
+    commentsError: '', commentDraft: '', posting: false, followBusy: false, replyTarget:null, commentFocus:false,
+    highlightedCommentId:'', commentTargetLoading:false, commentTargetError:'' },
   onLoad(options) {
     this._newsId = /^[1-9]\d{0,18}$/.test(String(options.id || '')) ? String(options.id) : ''
-    this._jumpToComments = options.comments === '1'
+    this._targetCommentId = /^[1-9]\d{0,18}$/.test(String(options.commentId || '')) ? String(options.commentId) : ''
+    this._jumpCommentPending = !!this._targetCommentId
+    this._jumpToComments = options.comments === '1' && !this._targetCommentId
   },
   onShow() {
     if (!getApp().checkLogin()) return
@@ -24,6 +27,8 @@ Page({
       this.setData({ news: null, comments: [], commentDraft: '', liked: false, collected: false, replyTarget:null, commentFocus:false })
     }
     social.begin(this); this._actionBusy = this._commentsBusy = false
+    this._targetBusy = false; this._targetRun = (this._targetRun || 0) + 1
+    this.setData({ highlightedCommentId:'', commentTargetLoading:false, commentTargetError:'' })
     this._repliesBusy = new Set()
     if (this._commentClock) clearInterval(this._commentClock)
     this._commentClock = setInterval(() => { if (social.active(this) && this.data.comments.length) this.setData({ comments:this.data.comments.map(decorateComment) }) },60000)
@@ -40,7 +45,9 @@ Page({
       const news = await api.fetchNewsDetail(this._newsId)
       if (!social.active(this, version) || run !== this._detailRun) return
       this.setData({ news, liked: !!news.liked, collected: !!news.collected, loading: false }, () => {
-        if (!this._jumpToComments || !social.active(this, version) || run !== this._detailRun) return
+        if (!social.active(this, version) || run !== this._detailRun) return
+        this.scrollToCommentTarget()
+        if (!this._jumpToComments || this._jumpCommentPending) return
         const scroll = () => { if (this._jumpToComments && social.active(this, version) && run === this._detailRun) this.onComments() }
         if (typeof wx.nextTick === 'function') wx.nextTick(scroll)
         else scroll()
@@ -61,6 +68,7 @@ Page({
   onCollect() { return this.updateAction('collected') },
   onComments() {
     if (!this.data.news || !social.active(this)) return
+    this._jumpCommentPending = false
     const version = this._communityVersion
     wx.pageScrollTo({ selector:'#article-comments', duration:260, success:() => {
       if (social.active(this,version)) this._jumpToComments = false
@@ -69,6 +77,41 @@ Page({
   onReport() { if (this.data.news && social.active(this)) social.report('ARTICLE',this._newsId) },
   onReportComment(e) { const comment = this.findComment(e.currentTarget.dataset.id); if (comment && !comment.mine && social.active(this)) social.report('COMMENT',comment.id) },
   findComment(id) { return this.data.comments.flatMap(comment => [comment,...(comment.replies || [])]).find(comment => comment.id === String(id)) },
+  async loadCommentTarget() {
+    if (!this._targetCommentId || !social.active(this) || this._targetBusy) return
+    this._targetBusy = true
+    const version = this._communityVersion, run = this._targetRun = (this._targetRun || 0) + 1
+    this.setData({ commentTargetLoading:true, commentTargetError:'' })
+    try {
+      const context = await api.fetchCommentContext(this._newsId,this._targetCommentId)
+      if (!social.active(this,version) || run !== this._targetRun) return
+      if (!context || String(context.commentId) !== this._targetCommentId || !context.root) throw new Error('invalid comment context')
+      const root = decorateComment(context.root)
+      if (root.id !== this._targetCommentId && !root.replies.some(reply => reply.id === this._targetCommentId)) throw new Error('missing target comment')
+      const old = this.data.comments.find(item => item.id === root.id)
+      if (old) {
+        const replies = new Map((old.replies || []).map(reply => [reply.id,reply]));root.replies.forEach(reply => replies.set(reply.id,reply));root.replies = Array.from(replies.values()).sort(social.compareId)
+      }
+      this.setData({ comments:[root,...this.data.comments.filter(item => item.id !== root.id)], highlightedCommentId:this._targetCommentId }, () => this.scrollToCommentTarget())
+    } catch (error) {
+      if (!social.active(this,version,error) || run !== this._targetRun) return
+      const missing = error.code === 40400 || error.statusCode === 404
+      this.setData({ commentTargetError:missing ? '该评论已删除或暂不可见' : '评论定位失败，点击重试' })
+      if (this._jumpCommentPending) { this._jumpToComments = true; this._jumpCommentPending = false; this.onComments() }
+    } finally { if (social.active(this,version) && run === this._targetRun) { this._targetBusy = false; this.setData({ commentTargetLoading:false }) } }
+  },
+  onRetryCommentTarget() { this._jumpCommentPending = true; return this.loadCommentTarget() },
+  scrollToCommentTarget() {
+    if (!this._jumpCommentPending || !this.data.news || !social.active(this) || this.data.highlightedCommentId !== this._targetCommentId || !this.findComment(this._targetCommentId)) return
+    const version = this._communityVersion, target = this._targetCommentId
+    const scroll = () => {
+      if (!this._jumpCommentPending || !social.active(this,version)) return
+      wx.pageScrollTo({ selector:'#comment-'+target, duration:260, success:() => {
+        if (social.active(this,version)) { this._jumpCommentPending = false; this._jumpToComments = false }
+      } })
+    }
+    if (typeof wx.nextTick === 'function') wx.nextTick(scroll); else scroll()
+  },
   onCommentAvatarError(e) {
     const id = String(e.currentTarget.dataset.id)
     this.setData({ comments:this.data.comments.map(root => ({ ...root, ...(root.id === id ? { avatarFailed:true } : {}), replies:(root.replies || []).map(reply => reply.id === id ? { ...reply, avatarFailed:true } : reply) })) })
@@ -77,7 +120,7 @@ Page({
     const comment = this.findComment(e.currentTarget.dataset.id)
     if (!comment || !this.data.news || this.data.posting || !social.active(this)) return
     const version = this._communityVersion
-    this.setData({ replyTarget:{ id:comment.id, rootId:comment.rootCommentId || comment.id, nickname:comment.author && comment.author.nickname || '糖友' }, commentFocus:false })
+    this.setData({ replyTarget:{ id:comment.id, rootId:comment.rootCommentId || comment.id, key:comment.author && comment.author.key || '', nickname:comment.author && comment.author.nickname || '糖友' }, commentFocus:false })
     wx.pageScrollTo({ selector:'#comment-composer', duration:200, complete:() => { if (social.active(this,version)) this.setData({ commentFocus:true }) } })
   },
   onCancelReply() { if (this.data.posting) return; this._commentAttempt = null; this.setData({ replyTarget:null, commentFocus:false }) },
@@ -116,11 +159,18 @@ Page({
       if (!social.active(this, version)) return
       const incoming = page.records.map(decorateComment)
       const map = new Map((reset ? [] : this.data.comments).map(item => [item.id, item]))
-      incoming.forEach(item => map.set(item.id, item))
+      incoming.forEach(item => {
+        const old = map.get(item.id)
+        if (old && this._targetCommentId && (old.replies || []).some(reply => reply.id === this._targetCommentId)) {
+          const replies = new Map(old.replies.map(reply => [reply.id,reply]));item.replies.forEach(reply => replies.set(reply.id,reply));item.replies = Array.from(replies.values()).sort(social.compareId)
+        }
+        map.set(item.id, item)
+      })
       this.setData({ comments: Array.from(map.values()), commentPage: pageNum, commentHasMore: pageNum < Number(page.pages) })
     } catch (error) {
       if (social.active(this, version, error)) { this.setData({ commentsError: '评论加载失败，点击重试' }); social.failure(this, error, version) }
     } finally { if (social.active(this, version)) { this._commentsBusy = false; this.setData({ commentsLoading: false }) } }
+    if (reset && this._targetCommentId && social.active(this,version)) return this.loadCommentTarget()
   },
   onMoreComments() { return this.loadComments(false) },
   onRetryComments() { return this.loadComments(true) },

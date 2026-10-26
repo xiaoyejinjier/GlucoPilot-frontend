@@ -8,6 +8,9 @@
 .state { text-align:center; padding:32rpx; color:var(--muted); line-height:1.7; font-size:var(--fs-body); }
 .action { color:var(--brand-dark); }
 .unread { background:#e95656; color:white; border-radius:30rpx; padding:4rpx 14rpx; font-size:var(--fs-small); }
-.search-row { display:flex; align-items:center; gap:16rpx; }
-.search-row input { flex:1; min-width:0; font-size:var(--fs-body); }
-.search-row button { margin:0; font-size:var(--fs-small); color:white; background:var(--brand); }
+.search-row { display:flex; align-items:center; gap:14rpx; padding:18rpx 20rpx; border:1rpx solid var(--line); }
+.search-row input { flex:1; min-width:0; height:64rpx; font-size:var(--fs-small); }
+.search-symbol { flex:none; color:var(--brand); font-size:36rpx; }
+.search-clear { flex:none; display:flex; align-items:center; justify-content:center; width:48rpx; height:56rpx; color:var(--muted); font-size:34rpx; }
+.search-row button { flex:none; display:flex; align-items:center; justify-content:center; width:auto; min-height:64rpx; height:64rpx; margin:0; padding:0 24rpx; border-radius:18rpx; font-size:var(--fs-small); line-height:1; color:white; background:var(--brand); }
+.search-row button::after { border:0; }

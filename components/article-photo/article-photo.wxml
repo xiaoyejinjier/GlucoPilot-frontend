@@ -1,2 +1,3 @@
-<image wx:if="{{source}}" class="article-photo" style="{{mode === 'aspectFill' ? 'height:100%;' : ''}}" src="{{source}}" mode="{{mode}}" bindtap="preview" binderror="failed" />
-<view wx:else class="photo-state" bindtap="load">{{error ? '图片加载失败，点击重试' : '正在加载图片…'}}</view>
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<image wx:if="{{source}}" class="article-photo ui-image-enter" style="{{mode === 'aspectFill' ? 'height:100%;' : ''}}" src="{{source}}" mode="{{mode}}" bindtap="preview" binderror="failed" />
+<view wx:else class="photo-state ui-interactive" bindtap="load" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((error ? '图片加载失败，点击重试' : '正在加载图片…'), locale)}}</view>

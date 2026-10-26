@@ -2,5 +2,11 @@
 
 .community-shortcuts > view { position:relative; }
 .community-shortcuts .message-unread-badge { position:absolute; top:0; right:14rpx; }
+.feed-heading { flex-wrap:wrap; gap:16rpx; }
+.feed-tabs { flex:none; }
+.feed-caption { flex:1; min-width:210rpx; text-align:right; }
 
 .post-video-entry{padding:48rpx 28rpx;margin-top:20rpx;background:var(--brand-soft);color:var(--brand-dark);border-radius:22rpx;text-align:center;font-size:var(--fs-small)}.post-photo-entry{width:100%;height:320rpx;margin-top:20rpx;overflow:hidden;border-radius:22rpx}.post-photo-entry article-photo{display:block;width:100%;height:100%}
+.post-video-preview{display:flex;flex-direction:column;gap:20rpx;margin:20rpx 0}
+
+.other-topic-list{display:flex;flex-wrap:wrap;gap:12rpx;padding:10rpx 4rpx 24rpx}.tag-catalog-error{color:var(--brand);font-size:var(--fs-small);padding:18rpx;text-align:center}

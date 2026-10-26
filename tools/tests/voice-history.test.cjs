@@ -23,7 +23,7 @@ function harness(fetch = async () => ({ records: [row(1), row(2)], hasMore: fals
     sendChatMessage: (...args) => { state.sends.push(args); return Promise.resolve({ id: '99' }) },
     streamChatCompletion: () => ({ abort() {} })
   }
-  const dependencies = { '../../utils/display': { applyDisplayToCurrentPage() {} },
+  const dependencies = { '../../utils/locales/en': require('../../utils/locales/en'), '../../utils/display': { applyDisplayToCurrentPage() {} },
     '../../services/api': api, '../../utils/chat-sessions': chatSessions, '../../utils/media': {}, '../../utils/request': { getToken: () => state.token } }
   vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/voice/voice.js'), 'utf8'), {
     Page: value => { definition = value }, getApp: () => app,

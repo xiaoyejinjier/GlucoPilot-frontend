@@ -1,0 +1,20 @@
+/* Transform only the touched control; surrounding layout remains stationary. */
+.ui-interactive { transition:transform .16s ease, opacity .16s ease; transform-origin:center; }
+.ui-pressed { transform:scale(.97); opacity:.78; }
+.ui-image-enter { animation:ui-image-in .2s ease-out; }
+.ui-loading-line { display:flex; align-items:center; justify-content:center; gap:14rpx; }
+.ui-loading-dots { display:inline-flex; align-items:center; gap:5rpx; height:24rpx; flex-shrink:0; }
+.ui-loading-dots>view { width:7rpx; height:7rpx; border-radius:50%; background:currentColor; opacity:.35; animation:ui-dot-wave .96s ease-in-out infinite; }
+.ui-loading-dots>view:nth-child(2) { animation-delay:.12s; }
+.ui-loading-dots>view:nth-child(3) { animation-delay:.24s; }
+@keyframes ui-image-in { from { opacity:0; } to { opacity:1; } }
+@keyframes ui-backdrop-in { from { opacity:0; } to { opacity:1; } }
+@keyframes ui-surface-in { from { opacity:0; transform:translateY(16rpx); } to { opacity:1; transform:translateY(0); } }
+@keyframes ui-icon-pop { 0% { opacity:.5; transform:scale(.86); } 65% { opacity:1; transform:scale(1.08); } 100% { opacity:1; transform:scale(1); } }
+@keyframes ui-dot-wave { 0%, 65%, 100% { opacity:.35; transform:translateY(0); } 30% { opacity:1; transform:translateY(-5rpx); } }
+@keyframes ui-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .ui-interactive { transition:none; }
+  .ui-pressed { transform:none; }
+  .ui-image-enter, .ui-loading-dots>view { animation:none; }
+}

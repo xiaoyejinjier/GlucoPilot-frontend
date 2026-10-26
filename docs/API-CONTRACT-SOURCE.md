@@ -26,3 +26,6 @@
 ## 合入备注（邮箱登录 / 设备 payload）
 
 权威契约见 backend 仓 `docs/API-CONTRACT.md`。邮箱：`POST /api/v1/auth/email/codes`、`POST /api/v1/auth/email/sessions`、`PATCH /api/v1/users/me/email`。设备同步请求体改为 `{ provider, deviceSn?, payload }`；MOCK 使用 `payload.readings`。
+# 2026-10-26 推荐吃法预测曲线
+
+权威契约见 backend/docs/API-CONTRACT.md“正餐推荐预测与实测血糖分离”。GET /api/v1/glucose-records/summary 的 week.points 新增 predictedAvg（可空）和 predictionCount（0–3）；前端映射为独立 predictedValue，实测 value/周摘要语义不变。推荐预测只取 predictSuggest；不足三餐按已有有效推荐预测取均值，无有效预测保留空值。记录页实测进度固定六节点，正餐预测放到对应餐后位置，以绿色虚线和白底空心点绘制。

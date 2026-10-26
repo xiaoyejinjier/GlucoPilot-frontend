@@ -1,5 +1,6 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const api = require('../../services/api')
+const { t } = require('../../utils/locales/en')
 const media = require('../../utils/media')
 const { getToken } = require('../../utils/request')
 const { SESSION_STATUS, DEFAULT_TITLE, sessionGate, gateFromError, toIdString } = require('../../utils/chat-sessions')
@@ -338,7 +339,7 @@ Page({
     if (this.data.sessionReadOnly) return
     const index = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(index) || index < 0 || index >= this.data.suggestions.length || this.data.sending) return
-    this.setData({ inputValue: this.data.suggestions[index], voiceMode: false, speechVisible: false, holdingSpeech: false, inputFocus: true })
+    this.setData({ inputValue: t(this.data.suggestions[index], this.data.locale), voiceMode: false, speechVisible: false, holdingSpeech: false, inputFocus: true })
   },
 
   onInput(e) {

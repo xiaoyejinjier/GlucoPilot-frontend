@@ -1,3 +1,4 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab page-embed-tab confirm-page" style="{{displayStyle}}">
   <view class="card">
     <image
@@ -6,48 +7,48 @@
       src="{{imagePath}}"
       mode="aspectFill"
     />
-    <view wx:else class="photo-placeholder">拍照图片（示意）</view>
+    <view wx:else class="photo-placeholder">{{i18n.t("拍照图片（示意）", locale)}}</view>
   </view>
 
   <view class="card">
-    <view class="section-title">OCR 识别结果</view>
+    <view class="section-title">{{i18n.t("OCR 识别结果", locale)}}</view>
     <view wx:if="{{recognitionStatus === 'success'}}" class="ocr-result success">
       <view>
-        <text class="ocr-value">{{recognizedValue}}</text>
+        <text class="ocr-value">{{i18n.t((recognizedValue), locale)}}</text>
         <text class="ocr-unit">mmol/L</text>
       </view>
-      <text class="ocr-confidence">识别置信度 {{confidence}}%</text>
-      <text wx:if="{{rawText}}" class="ocr-raw">图片原文：{{rawText}}</text>
+      <text class="ocr-confidence">{{i18n.t("识别置信度 " + (confidence) + "%", locale)}}</text>
+      <text wx:if="{{rawText}}" class="ocr-raw">{{i18n.t("图片原文：", locale)}}{{rawText}}</text>
     </view>
     <view wx:else class="ocr-result failed">
-      <text class="ocr-failed-title">未可靠识别出血糖值</text>
-      <text class="ocr-message">{{recognitionMessage || '请检查照片清晰度，或直接手动输入。'}}</text>
+      <text class="ocr-failed-title">{{i18n.t("未可靠识别出血糖值", locale)}}</text>
+      <text class="ocr-message">{{i18n.t((recognitionMessage || '请检查照片清晰度，或直接手动输入。'), locale)}}</text>
     </view>
     <view wx:if="{{recognizedValue}}" class="ocr-choice-row">
-      <button class="btn-primary btn-choice" bindtap="onAcceptRecognized" disabled="{{busy}}">结果正确，直接记录</button>
-      <button class="btn-ghost btn-choice" bindtap="onUseManual" disabled="{{busy}}">结果不对，手动输入</button>
+      <button class="btn-primary btn-choice ui-interactive" bindtap="onAcceptRecognized" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("结果正确，直接记录", locale)}}</button>
+      <button class="btn-ghost btn-choice ui-interactive" bindtap="onUseManual" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("结果不对，手动输入", locale)}}</button>
     </view>
   </view>
 
   <view class="card">
-    <view class="section-title">{{manualEdit ? '手动输入血糖值' : '本次记录值'}}</view>
+    <view class="section-title">{{i18n.t((manualEdit ? '手动输入血糖值' : '本次记录值'), locale)}}</view>
     <view class="value-box">
       <input
         wx:if="{{manualEdit}}"
         class="value-input"
         type="digit"
-        placeholder="请输入血糖值"
+        placeholder="{{i18n.t('请输入血糖值', locale)}}"
         value="{{value}}"
         bindinput="onValueInput"
         focus="{{manualEdit}}"
       />
-      <text wx:else class="value-num">{{value || '待填写'}}</text>
+      <text wx:else class="value-num">{{i18n.t((value || '待填写'), locale)}}</text>
       <text class="value-unit">mmol/L</text>
     </view>
-    <text class="warn-text">血糖值必须经你确认后才会保存。</text>
+    <text class="warn-text">{{i18n.t("血糖值必须经你确认后才会保存。", locale)}}</text>
     <view class="actions-row">
-      <button class="btn-ghost btn-sm" bindtap="onBack" disabled="{{busy}}">返回</button>
-      <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{busy}}">{{manualEdit ? '保存手动值' : '确认并记录'}}</button>
+      <button class="btn-ghost btn-sm ui-interactive" bindtap="onBack" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("返回", locale)}}</button>
+      <button class="btn-primary btn-sm ui-interactive" bindtap="onConfirm" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((manualEdit ? '保存手动值' : '确认并记录'), locale)}}</button>
     </view>
   </view>
 

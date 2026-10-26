@@ -3,22 +3,11 @@ const { searchFoods, getFoodsByCategory } = require('../../utils/food-db')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { fetchFoodCategories, fetchFoods, fetchFoodDetail } = require('../../services/api')
 const config = require('../../utils/config')
-const { DEFAULT_FOOD_IMAGE } = require('../../utils/food-images')
+const { DEFAULT_FOOD_IMAGE, getFoodImage } = require('../../utils/food-images')
 
-const CATEGORY_ICONS = {
-  '主食类': '/assets/foods/rice.svg',
-  '肉蛋类': '/assets/foods/chicken.svg',
-  '蔬菜类': '/assets/foods/broccoli.svg',
-  '水果类': '/assets/foods/apple.svg',
-  '奶类': '/assets/foods/milk.svg',
-  '豆制品': '/assets/foods/tofu.svg',
-  '坚果类': '/assets/foods/walnut.svg',
-  '饮料类': '/assets/foods/water.svg',
-  '零食及其他': '/assets/foods/cracker.svg'
-}
-
-function categoryItem(name) {
-  return { name, icon: CATEGORY_ICONS[name] || DEFAULT_FOOD_IMAGE }
+function categoryItem(category) {
+  const name = typeof category === 'string' ? category : category.categoryName
+  return { id: String(category.id || name), name, icon: getFoodImage('', name, category.imageUrl) }
 }
 
 Page({
@@ -36,21 +25,40 @@ Page({
     this.loadCategories()
   },
 
+  onHide() { this._categoryRequest = (this._categoryRequest || 0) + 1 },
+  onUnload() { this._categoryRequest = (this._categoryRequest || 0) + 1 },
+
+  onPullDownRefresh() {
+    return this.loadCategories().finally(() => wx.stopPullDownRefresh())
+  },
+
   loadCategories() {
-    fetchFoodCategories()
+    const request = this._categoryRequest = (this._categoryRequest || 0) + 1
+    return fetchFoodCategories()
       .then((list) => {
-        if (!list || !list.length) return
+        if (request !== this._categoryRequest) return
+        const rows = list || []
         this.setData({
           usingRemote: true,
-          categoryMeta: list,
-          categories: list.map((c) => categoryItem(c.categoryName))
+          categoryMeta: rows,
+          categories: rows.map(categoryItem)
         })
       })
       .catch(() => {
+        if (request !== this._categoryRequest) return
         if (!config.fallbackLocal) {
-          this.setData({ categories: [], categoryMeta: [] })
+          this.setData({ categories: [], categoryMeta: [], usingRemote: false })
         }
       })
+  },
+
+  onCategoryImageError(e) {
+    const { id, src } = e.currentTarget.dataset
+    const index = this.data.categories.findIndex(item => item.id === String(id))
+    const category = this.data.categories[index]
+    if (!category || category.icon !== src) return
+    const fallback = getFoodImage('', category.name)
+    if (category.icon !== fallback) this.setData({ [`categories[${index}].icon`]: fallback })
   },
 
   onSearch(e) {

@@ -172,6 +172,7 @@ function updateNewsAction(id, payload) {
 }
 
 function fetchCommunityProfile(key) { return get(`/community/profiles/${encodeURIComponent(key)}`, null, { auth: true }) }
+function fetchEnglishLocalizations(items,retry=false) { return post('/localizations/en',{items,retry},{auth:true,timeout:15000}) }
 function fetchMyReports(params) { return get('/community/reports/mine',params,{auth:true}) }
 function fetchReportFeedback(id) { return get(`/community/reports/${encodeURIComponent(id)}`,null,{auth:true}) }
 function readReportFeedback(id) { return put(`/community/reports/${encodeURIComponent(id)}/read`,null,{auth:true}) }
@@ -182,6 +183,7 @@ function fetchCommunityList(mode, params) {
     ? { ...page, records: (page.records || []).map(mapNewsItem) } : page)
 }
 function fetchNewsComments(id, params) { return get(`/news/${id}/comments`, params, { auth: true }) }
+function fetchCommentContext(id, commentId) { return get(`/news/${id}/comments/${encodeURIComponent(commentId)}/context`, null, { auth: true }) }
 function fetchCommentReplies(id, rootId, params) { return get(`/news/${id}/comments/${rootId}/replies`, params, { auth: true }) }
 function addNewsComment(id, payload) { const path = payload.replyToCommentId ? `/news/${id}/comments/${encodeURIComponent(payload.replyToCommentId)}/replies` : `/news/${id}/comments`; return post(path, payload, { auth: true }) }
 function deleteNewsComment(id, commentId) { return del(`/news/${id}/comments/${commentId}`, null, { auth: true }) }
@@ -198,11 +200,12 @@ function deleteDraft(id,revision) { return del(`/community/drafts/${encodeURICom
 function publishDraft(id,payload) { return post(`/community/drafts/${encodeURIComponent(id)}/publish`,payload,{auth:true}) }
 function createExportTask(payload) { return post('/data-export-tasks',payload,{auth:true}) }
 function fetchExportTasks(params) { return get('/data-export-tasks',params,{auth:true}) }
+function deleteExportTask(id) { return del(`/data-export-tasks/${encodeURIComponent(id)}`,null,{auth:true}) }
 function generateExportTask(id) { return post(`/data-export-tasks/${encodeURIComponent(id)}/generate`,null,{auth:true,timeout:60000}) }
 function sendDirectMessage(peer, payload) { return post(`/community/messages/${encodeURIComponent(peer)}`, payload, { auth: true, timeout: 15000 }) }
 function readDirectMessages(peer, throughId) { return put(`/community/messages/${encodeURIComponent(peer)}/read`, { throughId }, { auth: true }) }
 
-function fetchMyCommunityTags() { return get('/community/tags/mine',null,{auth:true}) }
+function fetchMyCommunityTags(includeDisabled=false) { return get('/community/tags/mine',{includeDisabled},{auth:true}) }
 function fetchProfileArticles(key,params) { return get(`/community/profiles/${encodeURIComponent(key)}/articles`,params,{auth:true}).then(page=>({...page,records:(page.records || []).map(mapCommunityArticle)})) }
 function fetchCommunityTags() { return get('/community/tags', null, { auth: true }) }
 function mapCommunityArticle(item) {
@@ -531,14 +534,15 @@ function fetchGlucoseSummary(params) {
 }
 
 module.exports = {
+  fetchEnglishLocalizations,
   fetchMutualFriends,setArticleVisibility,hideCommunityArticle,recordArticleView,
   fetchInformationSummary, fetchInteractionNotices, readInteractionNotices,
   fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
-  createExportTask, fetchExportTasks, generateExportTask,
+  createExportTask, fetchExportTasks, generateExportTask, deleteExportTask,
   fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
   submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
   fetchCommunityProfile, setCommunityFollowing, fetchCommunityList, fetchMyReports, fetchReportFeedback, readReportFeedback,
-  fetchNewsComments, fetchCommentReplies, addNewsComment, deleteNewsComment,
+  fetchNewsComments, fetchCommentContext, fetchCommentReplies, addNewsComment, deleteNewsComment,
   fetchDirectMessages, sendDirectMessage, readDirectMessages, fetchUnreadMessages,
   channelName,
   channelCode,

@@ -1,3 +1,5 @@
+@import "../../utils/glucose-chart.wxss";
+
 .chart-canvas {
   display: block;
   width: 100%;
@@ -86,6 +88,9 @@
   font-size: var(--fs-small);
   font-weight: 700;
   line-height: 1.2;
+  text-align: center;
+  max-width:100%;
+  overflow-wrap:break-word;
 }
 
 .node-val {
@@ -177,6 +182,13 @@
   color: var(--brand-dark);
 }
 
+.node.meal.recorded { background:#f2f8f4; border-color:#a9cfb9; filter:none; opacity:1; }
+.node.meal.recorded .node-dot { background:#47976d; }
+.node.meal.recorded .node-recorded, .meal-legend-item { color:#397957; }
+.node.meal.recorded .meal-tag, .status-meal-badge { color:#397957; background:#e6f2eb; }
+.chart-details.prediction { background:#f2f8f4; border-color:#a9cfb9; }
+.chart-details.prediction .chart-details-name, .chart-details.prediction .chart-details-value { color:#397957; }
+
 .status-legend {
   display: flex;
   flex-wrap: wrap;
@@ -224,15 +236,15 @@
 }
 
 .meal-legend-item {
-  color: var(--brand-dark);
+  color: #397957;
 }
 
 .status-meal-badge {
   margin-right: 8rpx;
   padding: 4rpx 8rpx;
   border-radius: 7rpx;
-  color: var(--brand-dark);
-  background: var(--brand-soft);
+  color: #397957;
+  background: #e6f2eb;
   font-size: 18rpx;
   font-weight: 700;
   line-height: 1;

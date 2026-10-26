@@ -1,38 +1,39 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="card">
-    <view class="section-title">字号</view>
+    <view class="section-title">{{i18n.t("字号", locale)}}</view>
     <view class="chip-row">
       <view
         wx:for="{{fontSizes}}"
         wx:key="*this"
-        class="chip {{fontSize === item ? 'on' : ''}}"
+        class="chip {{fontSize === item ? 'on' : ''}} ui-interactive"
         data-val="{{item}}"
         bindtap="onFont"
-      >{{item}}</view>
+       hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((item), locale)}}</view>
     </view>
-    <text class="preview-title">标题预览 · 控糖助手</text>
-    <text class="preview-body">正文预览：餐后血糖建议控制在合理范围。</text>
+    <text class="preview-title">{{i18n.t("标题预览 · 控糖助手", locale)}}</text>
+    <text class="preview-body">{{i18n.t("正文预览：餐后血糖建议控制在合理范围。", locale)}}</text>
   </view>
 
   <view class="card">
-    <view class="section-title">主题色</view>
+    <view class="section-title">{{i18n.t("主题色", locale)}}</view>
     <view class="chip-row">
       <view
         wx:for="{{themes}}"
         wx:key="id"
-        class="chip {{theme === item.id ? 'on' : ''}}"
+        class="chip {{theme === item.id ? 'on' : ''}} ui-interactive"
         data-val="{{item.id}}"
         bindtap="onTheme"
-      >{{item.label}}</view>
+       hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((item.label), locale)}}</view>
     </view>
     <view class="theme-demo">
-      <view class="demo-btn primary">主按钮</view>
-      <view class="demo-btn ghost">次按钮</view>
+      <view class="demo-btn primary">{{i18n.t("主按钮", locale)}}</view>
+      <view class="demo-btn ghost">{{i18n.t("次按钮", locale)}}</view>
     </view>
   </view>
 
   <view class="card tip-card">
-    <text class="tip-line">当前：字号 {{fontSize}} · 主题 {{themeLabel}}</text>
-    <text class="tip-line">切换后立即生效，返回其他页面即可看到。</text>
+    <text class="tip-line">{{i18n.t("当前：字号 " + (fontSize) + " · 主题 " + (themeLabel), locale)}}</text>
+    <text class="tip-line">{{i18n.t("切换后立即生效，返回其他页面即可看到。", locale)}}</text>
   </view>
 </view>

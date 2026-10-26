@@ -1,10 +1,12 @@
 const { GLUCOSE_NODES, getGlucoseStatus } = require('../../utils/constants')
+const { t } = require('../../utils/locales/en')
 const { fetchDayBoard, fetchDayMeals, fetchGlucoseRecords } = require('../../services/api')
 const { getToken } = require('../../utils/request')
-const { getTodayKey, getRecords, getRecordCount, replaceDayRecords } = require('../../utils/storage')
+const { getTodayKey, getRecords, replaceDayRecords } = require('../../utils/storage')
 const { applyDisplayToCurrentPage, getTheme, getDisplaySettings } = require('../../utils/display')
 const { getNodeRecordWindow, getRecordWindowHint } = require('../../utils/record-window')
-const { hasMeasuredGlucose, getPointDetails, getTouchPosition, findChartPoint } = require('../../utils/glucose-chart')
+const { hasMeasuredGlucose, getRecommendedPrediction, getChartPointDetails, drawPredictionSeries,
+  PREDICTION_COLOR, getTouchPosition, findChartPoint } = require('../../utils/glucose-chart')
 
 const HUNGER_LEVEL_TEXT = ['', '饱腹', '一般', '微饿']
 
@@ -24,8 +26,8 @@ Page({
     displayStyle: '',
     nodes: [],
     recordCount: 0,
-  /** 血糖节点总数（进度分母）。后端 DayBoard.glucoseTotalNodes 优先，取不到时退回常量 6。 */
-  glucoseTotalNodes: 6,
+    /** 只统计三个餐前、三个餐后的实测节点。 */
+    glucoseTotalNodes: 6,
     timeRuleHint: '',
     selectedChartNodeId: '',
     chartSelection: null,
@@ -113,13 +115,6 @@ Page({
     ])
       .then(([boardResult, mealResult, glucoseResult]) => {
         if (syncVersion !== this._syncVersion || this._visible === false || recordDate !== getTodayKey() || getToken() !== token) return
-        // 进度分母用"血糖节点数"：后端 DayBoard.totalNodes 是全部启用节点（含 3 个餐点），
-        // 而下面 recordCount 只数血糖记录，用 9 当分母会让人以为还差 3 个时段。
-        // 存实例字段而不是局部变量：渲染用的 setData 在 promise 回调之外的路径上，闭包变量在那里不可见
-        // （写成局部变量会让 loadData 直接 ReferenceError，本题的测试就是这样抓出来的）。
-        this._glucoseTotalNodes = boardResult.value && boardResult.value.glucoseTotalNodes
-          ? boardResult.value.glucoseTotalNodes
-          : 6
         const cached = getRecords(recordDate)
         const records = { ...cached }
 
@@ -193,12 +188,13 @@ Page({
     const now = new Date()
     const nodes = GLUCOSE_NODES.map(n => {
       const rec = records[n.id]
-      // 餐点已记录仍计完成数，但预测值不得作为实测血糖绘制。
+      // 三个正餐独立保存推荐预测，不进入六个实测节点的进度。
       const value = !n.isMeal && rec && rec.value != null ? rec.value : null
       return {
         ...n,
         ...getNodeRecordWindow(n.id, now),
         value,
+        predictionValue: n.isMeal && rec ? rec.suggestedGlucose : null,
         recordedAt: rec ? rec.recordedAt || '' : '',
         sourceType: rec ? rec.sourceType : undefined,
         remark: rec ? rec.remark || '' : '',
@@ -207,13 +203,13 @@ Page({
       }
     })
     const selected = nodes.find((node) => node.id === this.data.selectedChartNodeId)
-    const chartSelection = getPointDetails(selected)
+    const chartSelection = getChartPointDetails(selected)
     this.setData({
       nodes,
       chartSelection,
       selectedChartNodeId: chartSelection ? chartSelection.nodeId : '',
-      recordCount: getRecordCount(records),
-      glucoseTotalNodes: this._glucoseTotalNodes || 6,
+      recordCount: nodes.filter(hasMeasuredGlucose).length,
+      glucoseTotalNodes: 6,
       timeRuleHint: getRecordWindowHint(now)
     })
     // 等 setData 与页面布局都稳定后再绘制，避免首次进入时 Canvas 尺寸错位。
@@ -306,12 +302,14 @@ Page({
       ctx.lineTo(padding.left + chartW, padding.top + chartH)
       ctx.stroke()
 
-      const count = nodes.length || 9
+      const measuredNodes = nodes.filter((node) => !node.isMeal)
+      const mealNodes = nodes.filter((node) => getRecommendedPrediction(node) != null)
+      const count = measuredNodes.length || 6
       const stepX = count > 1 ? chartW / (count - 1) : 0
       const glucoseValues = nodes
         .filter(hasMeasuredGlucose)
         .map((node) => Number(node.value))
-        .filter((value) => Number.isFinite(value) && value > 0)
+        .concat(mealNodes.map(getRecommendedPrediction))
       const smallestValue = glucoseValues.length ? Math.min(...glucoseValues) : 3
       const largestValue = glucoseValues.length ? Math.max(...glucoseValues) : 12
       const minY = smallestValue < 3 ? 0 : 3
@@ -343,8 +341,8 @@ Page({
         ctx.fillText(String(val), padding.left - 6, y)
       })
 
-      // 固定 9 个 X 轴位置（有无值都画）
-      const allPoints = nodes.map((n, i) => {
+      // 六个实测横轴；正餐预测位于对应的餐后位置。
+      const allPoints = measuredNodes.map((n, i) => {
         const x = padding.left + i * stepX
         const numericValue = Number(n.value)
         const has = hasMeasuredGlucose(n)
@@ -355,7 +353,15 @@ Page({
         return { x, y, has, nodeId: n.id, isMeal: n.isMeal,
           value: has ? numericValue : null, status: n.status, short: n.short }
       })
-      this._chartGeometry = { width, height, points: allPoints }
+      const predictionPoints = mealNodes.map((node) => {
+        const target = allPoints.find((point) => point.nodeId === 'after_' + node.id)
+        if (!target) return null
+        const value = getRecommendedPrediction(node)
+        return { x: target.x, y: padding.top + chartH - ((value - minY) / (maxY - minY)) * chartH,
+          has: true, nodeId: node.id, value, isPrediction: true }
+      }).filter(Boolean)
+      this._chartGeometry = { width, height, points: allPoints, predictionPoints }
+      drawPredictionSeries(ctx, predictionPoints)
 
       // 折线只连接有值点
       const valued = allPoints.filter(p => p.has)
@@ -379,7 +385,8 @@ Page({
           ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2)
           ctx.fill()
         } else {
-          // 未记录：灰色空心点，占满 9 时段视觉
+          // 缺测位置使用灰色占位，预测值不会被当成实测。
+          if (predictionPoints.some((point) => point.x === p.x)) return
           ctx.strokeStyle = '#c8c8c8'
           ctx.lineWidth = 2
           ctx.beginPath()
@@ -388,22 +395,22 @@ Page({
         }
       })
 
-      const selected = valued.find((point) => point.nodeId === this.data.selectedChartNodeId)
+      const selected = valued.concat(predictionPoints).find((point) => point.nodeId === this.data.selectedChartNodeId)
       if (selected) {
-        ctx.strokeStyle = colors[selected.status] || brand
+        ctx.strokeStyle = selected.isPrediction ? PREDICTION_COLOR : colors[selected.status] || brand
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.arc(selected.x, selected.y, 8, 0, Math.PI * 2)
         ctx.stroke()
       }
 
-      // X 轴 9 时段标签全显示
+      // X 轴六个餐前/餐后标签全显示。
       ctx.fillStyle = '#888'
       ctx.font = '10px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'alphabetic'
       allPoints.forEach(p => {
-        ctx.fillText(p.short, p.x, height - 8)
+        ctx.fillText(t(p.short, this.data.locale), p.x, height - 8)
       })
     })
   },
@@ -445,14 +452,16 @@ Page({
 
   selectChartPoint(position, geometry) {
     if (geometry !== this._chartGeometry || this._visible === false || !position) return
-    const point = findChartPoint(geometry.points, position)
+    // 重合时优先选实测，预测也能查看明确标注的推荐依据。
+    const point = findChartPoint((geometry.predictionPoints || []).concat(geometry.points.filter((p) => p.has)), position)
+      || findChartPoint(geometry.points, position)
     if (!point || !point.has) {
       this.onCloseChartDetails()
-      if (point) wx.showToast({ title: point.isMeal ? '餐点是饮食记录，不是实测血糖' : '该时段暂无实测血糖', icon: 'none' })
+      if (point) wx.showToast({ title: '该时段暂无实测血糖', icon: 'none' })
       return
     }
     const node = this.data.nodes.find((item) => item.id === point.nodeId)
-    const details = getPointDetails(node)
+    const details = getChartPointDetails(node)
     if (!details) return
     if (this.data.chartSelection && this.data.selectedChartNodeId === point.nodeId) {
       this.onCloseChartDetails()

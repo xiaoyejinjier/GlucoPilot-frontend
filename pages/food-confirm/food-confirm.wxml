@@ -1,3 +1,4 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="confirm-shot-page" style="{{displayStyle}}">
   <image
     wx:if="{{imagePath}}"
@@ -8,13 +9,13 @@
     binderror="onImgError"
     bindload="onImgLoad"
   />
-  <view wx:else class="photo-missing">照片无法读取，请点击左下角重新拍摄</view>
+  <view wx:else class="photo-missing">{{i18n.t("照片无法读取，请点击左下角重新拍摄", locale)}}</view>
 
   <view class="bottom-actions">
-    <view class="circle-btn retake {{busy ? 'disabled' : ''}}" bindtap="onRetake" aria-role="button" aria-label="重新拍摄">
+    <view class="circle-btn retake {{busy ? 'disabled' : ''}} ui-interactive" bindtap="onRetake" aria-role="button" aria-label="{{i18n.t('重新拍摄', locale)}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <view class="icon-undo"></view>
     </view>
-    <view class="circle-btn ok {{busy ? 'disabled' : ''}}" bindtap="onConfirm" aria-role="button" aria-label="确认照片并识别">
+    <view class="circle-btn ok {{busy ? 'disabled' : ''}} ui-interactive" bindtap="onConfirm" aria-role="button" aria-label="{{i18n.t('确认照片并识别', locale)}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <view class="icon-check"></view>
     </view>
   </view>

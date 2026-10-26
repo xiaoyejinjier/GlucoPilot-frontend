@@ -1,0 +1,10 @@
+.language-heading{display:flex;justify-content:space-between;align-items:center;color:var(--ink);font-size:var(--fs-body);font-weight:600;gap:16rpx}
+.language-caption{color:var(--muted);font-size:var(--fs-small);font-weight:400}
+.language-options{display:flex;gap:16rpx;margin-top:24rpx}
+.language-option{display:flex;align-items:center;justify-content:space-between;gap:12rpx;flex:1;min-width:0;margin:0;padding:22rpx 18rpx;border:2rpx solid var(--line);border-radius:18rpx;background:var(--bg);color:var(--ink-soft);font-size:var(--fs-body);line-height:1.5}
+.language-option::after{border:0}.language-option.selected{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-dark)}
+.language-check{flex:none;min-width:24rpx;color:var(--brand)}
+.language-note{display:block;margin-top:20rpx;color:var(--muted);font-size:var(--fs-small);line-height:1.7}
+.language-option{transition:transform .16s ease,opacity .16s ease,background-color .18s ease,border-color .18s ease,color .18s ease}
+.language-option.selected .language-check{animation:ui-icon-pop .22s ease-out}
+@media(prefers-reduced-motion:reduce){.language-option{transition:none}.language-option.selected .language-check{animation:none}}

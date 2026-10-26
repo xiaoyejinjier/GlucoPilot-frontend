@@ -44,6 +44,7 @@ function createFlow(options = {}) {
     navigateBack() { state.routes.push('back') }
   }
   const dependencies = {
+    './utils/i18n': { install() {} },
     './utils/message-notifications': { start(){},stop(){},reset(){} },
     './utils/display': display, './utils/storage': storage, './utils/request': request,
     './services/api': services, './utils/config': { baseUrl: '' },

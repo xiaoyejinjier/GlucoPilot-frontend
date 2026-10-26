@@ -1,3 +1,4 @@
-<view wx:if="{{visible}}" class="feedback-position {{aboveTab ? 'above-tab' : ''}}" style="{{keyboardHeight > 0 ? 'bottom:' + (keyboardHeight + 20) + 'px;' : ''}}" aria-role="status" aria-label="{{message}}">
-  <view class="feedback-pill"><text class="feedback-check">✓</text><text>{{message}}</text></view>
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view wx:if="{{visible}}" class="feedback-position {{aboveTab ? 'above-tab' : ''}}" style="{{keyboardHeight > 0 ? 'bottom:' + (keyboardHeight + 20) + 'px;' : ''}}" aria-role="status" aria-label="{{i18n.t((message), locale)}}">
+  <view class="feedback-pill"><text class="feedback-check">✓</text><text>{{i18n.t((message), locale)}}</text></view>
 </view>

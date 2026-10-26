@@ -96,3 +96,5 @@
 .social-empty,.social-link { display:block; padding:24rpx 0; text-align:center; font-size:var(--fs-small); }
 
 .article-photos { display:flex; flex-direction:column; gap:24rpx; margin:28rpx 0; }
+.comment-target { background:#edf5ff; border-radius:12rpx; box-shadow:0 0 0 10rpx #edf5ff; }
+.comment-target-state { color:var(--brand); }
