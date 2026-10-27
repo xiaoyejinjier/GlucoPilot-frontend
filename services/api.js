@@ -9,7 +9,6 @@ const {
   buildSessionListQuery,
   buildHistoryQuery
 } = require('../utils/chat-sessions')
-const mealAnalysisMock = require('./meal-analysis-mock')
 
 const CHANNEL_NAMES = ['', '企业动态', '行业快讯', '设备新知', '控糖科普']
 
@@ -353,9 +352,6 @@ function fetchOcrTask(id) {
 /** ---------- meal（正餐记录） ---------- */
 
 function analyzeMealPhoto(payload, idempotencyKey) {
-  // 视觉模型未接入时的页面联调：仅替换识别结果，上传与保存仍走真实后端。
-  // 详见 services/meal-analysis-mock.js，接入真实模型后连同该文件一并移除本分支。
-  if (mealAnalysisMock.isEnabled()) return mealAnalysisMock.analyzeMealPhoto()
   return post('/meal-analysis', payload, {
     auth: true,
     timeout: 90000,

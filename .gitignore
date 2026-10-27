@@ -72,3 +72,6 @@ ui-design.html
 *.tmp
 *.temp
 desktop.ini
+
+### 本地联调临时数据（AI 视觉占位，仅保留本地不入库）###
+/services/meal-analysis-mock.js
