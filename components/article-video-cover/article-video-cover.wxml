@@ -1,0 +1,9 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="video-cover {{variant === 'player' ? 'player-cover' : ''}}" aria-label="{{i18n.t('视频封面', locale)}}">
+  <image wx:if="{{source}}" class="cover-image ui-image-enter" src="{{source}}" mode="aspectFill" binderror="failed" />
+  <view wx:if="{{source}}" class="cover-shade"></view>
+  <view wx:if="{{!error}}" class="cover-play"><view></view></view>
+  <text wx:if="{{source}}" class="cover-label">{{i18n.t('视频', locale)}}</text>
+  <view wx:elif="{{error}}" class="cover-retry" catchtap="retry"><text class="retry-icon">↻</text><text>{{i18n.t('点击重试', locale)}}</text></view>
+  <text wx:else class="cover-loading">{{i18n.t('封面加载中…', locale)}}</text>
+</view>

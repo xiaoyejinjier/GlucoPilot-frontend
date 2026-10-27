@@ -1,17 +1,18 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <template name="assistantWelcome">
     <view class="welcome-stage">
       <view class="welcome-hero">
         <view class="welcome-mascot"><assistant-mascot variant="welcome"></assistant-mascot></view>
-        <text class="welcome-title">您好呀，我是小语</text>
-        <view class="welcome-description"><text>血糖、饮食、运动方面的问题，</text><text>都可以和我聊聊～</text></view>
+        <text class="welcome-title">{{i18n.t("您好呀，我是小语", locale)}}</text>
+        <view class="welcome-description"><text>{{i18n.t("血糖、饮食、运动方面的问题，", locale)}}</text><text>{{i18n.t("都可以和我聊聊～", locale)}}</text></view>
       </view>
       <view class="welcome-suggestions">
-        <text class="suggestions-title">您可以说</text>
+        <text class="suggestions-title">{{i18n.t("您可以说", locale)}}</text>
         <view wx:for="{{suggestions}}" wx:key="*this" class="suggestion-item"
           data-index="{{index}}" bindtap="onSuggestionTap" hover-class="suggestion-pressed"
-          aria-role="button" aria-label="{{item}}">
+          aria-role="button" aria-label="{{i18n.t((item), locale)}}">
           <text class="suggestion-icon" aria-hidden="true">?</text>
-          <text class="suggestion-text">{{item}}</text>
+          <text class="suggestion-text">{{i18n.t((item), locale)}}</text>
         </view>
       </view>
     </view>
@@ -21,22 +22,22 @@
   bindtouchend="onHoldEnd" bindtouchcancel="onHoldCancel"
   style="{{displayStyle}};{{viewportHeight ? 'height:' + viewportHeight + 'px;' : ''}}">
   <scroll-view class="wx-body" scroll-y scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
-    <template wx:if="{{!hasHistory && !sessionReadOnly}}" is="assistantWelcome" data="{{suggestions: suggestions}}" />
+    <template wx:if="{{!hasHistory && !sessionReadOnly}}" is="assistantWelcome" data="{{suggestions: suggestions, locale: locale}}" />
     <view class="history-status">
-      <text wx:if="{{historyLoading}}">正在加载历史记录…</text>
-      <text wx:elif="{{historyError}}" class="history-action" bindtap="onRetryHistory">{{historyError}}</text>
-      <text wx:elif="{{historyHasMore}}" class="history-action" bindtap="onLoadEarlier">查看更早的对话</text>
-      <text wx:elif="{{sessionReadOnly && historyReady && !messages.length}}">这段对话没有可展示的记录</text>
+      <text wx:if="{{historyLoading}}">{{i18n.t("正在加载历史记录…", locale)}}</text>
+      <text wx:elif="{{historyError}}" class="history-action ui-interactive" bindtap="onRetryHistory" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((historyError), locale)}}</text>
+      <text wx:elif="{{historyHasMore}}" class="history-action ui-interactive" bindtap="onLoadEarlier" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("查看更早的对话", locale)}}</text>
+      <text wx:elif="{{sessionReadOnly && historyReady && !messages.length}}">{{i18n.t("这段对话没有可展示的记录", locale)}}</text>
     </view>
     <view wx:if="{{messages.length}}" class="wx-messages">
       <block wx:for="{{messages}}" wx:key="id">
       <view id="message-{{item.id}}"
         style="{{item.localWelcome && index === messages.length - 1 && viewportHeight ? 'min-height:' + viewportHeight + 'px;' : ''}}">
-      <template wx:if="{{item.localWelcome}}" is="assistantWelcome" data="{{suggestions: suggestions}}" />
+      <template wx:if="{{item.localWelcome}}" is="assistantWelcome" data="{{suggestions: suggestions, locale: locale}}" />
       <block wx:else>
-      <text wx:if="{{item.timeLabel}}" class="wx-time">{{item.timeLabel}}</text>
+      <text wx:if="{{item.timeLabel}}" class="wx-time">{{i18n.t((item.timeLabel), locale)}}</text>
       <view class="wx-row {{item.role === 'user' ? 'user' : ''}}">
-        <view wx:if="{{item.role === 'user'}}" class="wx-avatar">我</view>
+        <view wx:if="{{item.role === 'user'}}" class="wx-avatar">{{i18n.t("我", locale)}}</view>
         <view wx:else class="wx-avatar assistant-avatar"><assistant-mascot variant="avatar"></assistant-mascot></view>
         <view class="wx-bubble">
           <block wx:if="{{item.type === 'image'}}">
@@ -49,16 +50,16 @@
               data-src="{{item.fileUrl || item.imagePath}}"
               bindtap="onPreviewImage"
             />
-            <text wx:if="{{item.imageUnavailable}}">［图片已不可用］</text>
+            <text wx:if="{{item.imageUnavailable}}">{{i18n.t("［图片已不可用］", locale)}}</text>
             <text wx:if="{{item.content}}">{{item.content}}</text>
             <!-- 直传+登记完成前还没有 mediaId，给一个明确的过程提示 -->
-            <text wx:if="{{item.uploading}}" class="wx-typing">图片上传中…</text>
+            <text wx:if="{{item.uploading}}" class="wx-typing">{{i18n.t("图片上传中…", locale)}}</text>
           </block>
           <block wx:else>
-            <text wx:if="{{item.pending && !item.content}}" class="wx-typing">正在思考…</text>
+            <text wx:if="{{item.pending && !item.content}}" class="wx-typing">{{i18n.t("正在思考…", locale)}}</text>
             <chat-markdown wx:elif="{{item.role !== 'user'}}" content="{{item.content}}" pending="{{item.pending}}"></chat-markdown>
             <text wx:else>{{item.content}}</text>
-            <view wx:if="{{item.error && !item.history && !sessionReadOnly}}" class="wx-retry" data-id="{{item.id}}" bindtap="onRetry">重新生成</view>
+            <view wx:if="{{item.error && !item.history && !sessionReadOnly}}" class="wx-retry ui-interactive" data-id="{{item.id}}" bindtap="onRetry" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新生成", locale)}}</view>
           </block>
         </view>
       </view>
@@ -70,36 +71,36 @@
   </scroll-view>
 
   <view wx:if="{{sessionReadOnly}}" class="wx-locked">
-    <text class="wx-locked-text">{{sessionNotice}}</text>
+    <text class="wx-locked-text">{{i18n.t((sessionNotice), locale)}}</text>
   </view>
   <view class="wx-foot">
     <view class="composer-row">
       <view class="composer-pill">
         <view class="composer-mode" bindtap="onToggleVoiceMode" hover-class="composer-pressed"
-          aria-role="button" aria-label="{{voiceMode ? '切换到键盘输入' : '切换到语音输入'}}">
+          aria-role="button" aria-label="{{i18n.t((voiceMode ? '切换到键盘输入' : '切换到语音输入'), locale)}}">
           <view wx:if="{{voiceMode}}" class="keyboard-symbol" aria-hidden="true"></view>
           <view wx:else class="voice-symbol" aria-hidden="true"><view class="sound-dot"></view><view class="sound-wave wave-inner"></view><view class="sound-wave wave-outer"></view></view>
         </view>
-        <input wx:if="{{!voiceMode}}" class="wx-input" placeholder="请输入您想咨询的问题"
+        <input wx:if="{{!voiceMode}}" class="wx-input" placeholder="{{i18n.t('请输入您想咨询的问题', locale)}}"
           placeholder-class="composer-placeholder" value="{{inputValue}}" focus="{{inputFocus}}" bindinput="onInput"
           confirm-type="send" bindconfirm="onSend" bindfocus="onInputFocus" bindblur="onInputBlur"
           bindkeyboardheightchange="onKeyboardHeightChange" adjust-position="{{false}}" disabled="{{sessionReadOnly}}" />
         <view wx:else class="composer-hold {{holdingSpeech ? 'is-holding' : ''}}"
           bindtouchstart="onHoldStart" bindtouchend="onHoldEnd" bindtouchcancel="onHoldCancel"
-          aria-role="button" aria-label="按住说话，松开后识别">{{holdingSpeech ? '松开结束' : '按住说话'}}</view>
+          aria-role="button" aria-label="{{i18n.t('按住说话，松开后识别', locale)}}">{{i18n.t((holdingSpeech ? '松开结束' : '按住说话'), locale)}}</view>
         <view wx:if="{{!voiceMode}}" class="composer-send {{sending ? 'is-sending' : ''}}"
           bindtap="onSend" hover-class="composer-pressed" aria-role="button"
-          aria-label="{{sending ? '正在回复' : '发送消息'}}" aria-disabled="{{sending}}">
+          aria-label="{{i18n.t((sending ? '正在回复' : '发送消息'), locale)}}" aria-disabled="{{sending}}">
           <view wx:if="{{sending}}" class="send-spinner" aria-hidden="true"></view>
           <view wx:else class="send-symbol" aria-hidden="true"></view>
         </view>
       </view>
       <view class="composer-add {{sending ? 'is-sending' : ''}}" bindtap="onChooseImage"
-        hover-class="composer-pressed" aria-role="button" aria-label="添加图片" aria-disabled="{{sending}}">
+        hover-class="composer-pressed" aria-role="button" aria-label="{{i18n.t('添加图片', locale)}}" aria-disabled="{{sending}}">
         <view class="add-symbol" aria-hidden="true"></view>
       </view>
     </view>
-    <text class="composer-notice">内容由 AI 生成，仅供参考，不作为医疗诊断</text>
+    <text class="composer-notice">{{i18n.t("内容由 AI 生成，仅供参考，不作为医疗诊断", locale)}}</text>
   </view>
   <speech-input id="speechInput" visible="{{speechVisible}}" draft="{{inputValue}}" disabled="{{sending || sessionReadOnly}}"
     viewport-height="{{viewportHeight}}" bind:close="onCloseSpeechInput" bind:confirm="onConfirmSpeechInput"></speech-input>

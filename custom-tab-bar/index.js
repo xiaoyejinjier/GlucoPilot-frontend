@@ -17,7 +17,7 @@ Component({
       this.setData({ guideActive: !!this._guideToken })
     },
 
-    onGuideComplete() {
+    onGuideComplete(event) {
       const app = getApp()
       const completed = app.completeNavigationGuide(this._guideToken)
       // 其他Tab可能保留了完成前的实例；即使全局已完成，也必须清理旧遮罩。
@@ -26,6 +26,10 @@ Component({
       const pages = getCurrentPages()
       const page = pages[pages.length - 1]
       if (page && typeof page.onNavigationGuideComplete === 'function') page.onNavigationGuideComplete()
+      if (event && event.detail && event.detail.tryAssistant && !this._openingAssistant) {
+        this._openingAssistant = true
+        wx.navigateTo({url:'/pages/voice/voice',complete:()=>{this._openingAssistant=false}})
+      }
     },
 
     onTabChange(e) {

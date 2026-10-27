@@ -279,3 +279,4 @@
 }
 
 .export-task-row{display:flex;justify-content:space-between;gap:20rpx;align-items:center;padding:24rpx 0;border-top:1rpx solid var(--line)}.export-task-row>view{flex:1;min-width:0}.export-task-row button{flex:none;margin:0;background:var(--brand-soft);color:var(--brand);font-size:24rpx;border-radius:18rpx}.export-task-dates{font-size:var(--fs-small);display:block}.export-task-state{display:block;font-size:22rpx;color:var(--muted);line-height:1.8;margin-top:8rpx}
+.export-task-actions{flex:0 0 auto!important;display:flex;flex-direction:column;gap:10rpx}.export-task-actions button{min-width:104rpx;line-height:2.4}.export-task-actions .export-task-delete{background:transparent;color:var(--muted);border:1rpx solid var(--line)}

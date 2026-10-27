@@ -1,72 +1,84 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="page-intro">
-    <text class="page-intro-text">修改后点保存即可生效</text>
+    <text class="page-intro-text">{{i18n.t("修改后点保存即可生效", locale)}}</text>
   </view>
 
   <view class="card">
-    <view class="avatar-block" bindtap="onChooseAvatar">
+    <view class="avatar-block ui-interactive" bindtap="onChooseAvatar" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <view
         wx:if="{{avatarPreview || form.avatarUrl}}"
         class="avatar-img"
       ><avatar-image src="{{avatarPreview || form.avatarUrl}}" text="{{form.avatarText || '用'}}"></avatar-image></view>
-      <view wx:else class="avatar">{{form.avatarText}}</view>
-      <text class="avatar-tip">{{uploadingAvatar ? '正在上传头像…' : '点击更换头像'}}</text>
+      <view wx:else class="avatar">{{i18n.t((form.avatarText), locale)}}</view>
+      <text class="avatar-tip">{{i18n.t((uploadingAvatar ? '正在上传头像…' : '点击更换头像'), locale)}}</text>
     </view>
     <view wx:if="{{avatarPreview || form.avatarUrl}}" class="avatar-actions">
-      <text class="avatar-clear" catchtap="onClearAvatar">恢复默认头像</text>
+      <text class="avatar-clear ui-interactive" catchtap="onClearAvatar" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("恢复默认头像", locale)}}</text>
     </view>
 
     <view class="form-item">
-      <text class="label">昵称</text>
+      <text class="label">{{i18n.t("昵称", locale)}}</text>
       <input class="input" value="{{form.nickname}}" bindinput="onField" data-key="nickname" maxlength="12" />
     </view>
     <view class="form-item">
-      <text class="label">年龄</text>
+      <text class="label">{{i18n.t("年龄", locale)}}</text>
       <input class="input" type="number" value="{{form.age}}" bindinput="onField" data-key="age" />
     </view>
-    <view class="form-item">
-      <text class="label">电话号码</text>
-      <view class="input">{{form.phone || '未绑定'}}</view>
+    <view class="form-item profile-link" bindtap="onBindPhone" aria-role="button">
+      <text class="label">{{i18n.t("电话号码", locale)}}</text>
+      <view class="input">{{form.phone || i18n.t('未绑定，点击绑定', locale)}}<text class="field-arrow">›</text></view>
+    </view>
+    <view class="form-item bio-form-item">
+      <text class="label">{{i18n.t("个性签名", locale)}}</text>
+      <textarea class="bio-input" value="{{form.bio}}" bindinput="onField" data-key="bio" maxlength="160" placeholder="{{i18n.t('写一句话介绍自己', locale)}}" auto-height />
     </view>
     <view class="form-item">
-      <text class="label">个性签名</text>
-      <textarea class="bio-input" value="{{form.bio}}" bindinput="onField" data-key="bio" maxlength="160" placeholder="写一句话介绍自己" auto-height />
+      <text class="label">{{i18n.t("身高(cm)", locale)}}</text>
+      <input class="input" type="number" value="{{form.height}}" bindinput="onField" data-key="height" placeholder="{{i18n.t('如 170', locale)}}" />
     </view>
     <view class="form-item">
-      <text class="label">身高(cm)</text>
-      <input class="input" type="number" value="{{form.height}}" bindinput="onField" data-key="height" placeholder="如 170" />
+      <text class="label">{{i18n.t("体重(kg)", locale)}}</text>
+      <input class="input" type="digit" value="{{form.weight}}" bindinput="onField" data-key="weight" placeholder="{{i18n.t('如 65.5', locale)}}" />
     </view>
     <view class="form-item">
-      <text class="label">体重(kg)</text>
-      <input class="input" type="digit" value="{{form.weight}}" bindinput="onField" data-key="weight" placeholder="如 65.5" />
-    </view>
-    <view class="form-item">
-      <text class="label">糖尿病类型</text>
+      <text class="label">{{i18n.t("糖尿病类型", locale)}}</text>
       <picker
         class="input"
         mode="selector"
-        range="{{diabetesOptions}}"
+        range="{{i18n.list(diabetesOptions, locale)}}"
         value="{{diabetesIndex}}"
         bindchange="onDiabetesChange"
       >
-        <view class="picker-value">{{diabetesOptions[diabetesIndex]}}</view>
+        <view class="picker-value">{{i18n.t((diabetesOptions[diabetesIndex]), locale)}}</view>
       </picker>
     </view>
     <view class="form-item">
-      <text class="label">确诊时间</text>
-      <input class="input" value="{{form.confirmDate}}" bindinput="onField" data-key="confirmDate" placeholder="如 2021-06" />
+      <text class="label">{{i18n.t("确诊时间", locale)}}</text>
+      <picker class="input" mode="date" fields="month" start="1900-01" end="{{maxDiagnosisMonth}}" value="{{diagnosisPickerValue}}" bindchange="onDiagnosisChange" disabled="{{saving}}">
+        <view class="date-picker-value"><text>{{form.confirmDate || i18n.t('选择确诊年月', locale)}}</text><view class="calendar-icon"></view></view>
+      </picker>
+      <text wx:if="{{form.confirmDate}}" class="field-clear" catchtap="onClearDiagnosis">{{i18n.t('清除', locale)}}</text>
     </view>
-    <view class="form-item">
-      <text class="label">用药</text>
-      <input class="input" value="{{form.medication}}" bindinput="onField" data-key="medication" />
+    <view class="medication-field">
+      <text class="label">{{i18n.t("用药", locale)}}</text>
+      <text class="medication-hint">{{i18n.t('选择正在使用的药物，可多选', locale)}}</text>
+      <view wx:for="{{medicationGroups}}" wx:for-item="group" wx:key="label" class="medication-group">
+        <text class="medication-group-title">{{i18n.t(group.label, locale)}}</text>
+        <view class="medication-options">
+          <view wx:for="{{group.options}}" wx:key="name" class="medication-option {{item.selected ? 'selected' : ''}} ui-interactive" data-name="{{item.name}}" bindtap="onMedicationTap" aria-role="button" aria-label="{{i18n.t(item.name, locale)}}" hover-class="ui-pressed"><text wx:if="{{item.selected}}">✓ </text>{{i18n.t(item.name, locale)}}</view>
+        </view>
+      </view>
+      <view class="medication-options"><view class="medication-option {{otherMedicationEnabled ? 'selected' : ''}} ui-interactive" bindtap="onOtherMedication" aria-role="button" hover-class="ui-pressed"><text wx:if="{{otherMedicationEnabled}}">✓ </text>{{i18n.t('其他用药', locale)}}</view></view>
+      <textarea wx:if="{{otherMedicationEnabled}}" class="other-medication" value="{{otherMedication}}" bindinput="onOtherMedicationInput" maxlength="256" placeholder="{{i18n.t('填写其他药物名称或保留原用药记录', locale)}}" auto-height disabled="{{saving}}" />
     </view>
     <view class="form-item last">
-      <text class="label">运动习惯</text>
+      <text class="label">{{i18n.t("运动习惯", locale)}}</text>
       <input class="input" value="{{form.exercise}}" bindinput="onField" data-key="exercise" />
     </view>
   </view>
 
   <view class="card">
-    <button class="btn-primary btn-block btn-sm" bindtap="onSave" disabled="{{saving || uploadingAvatar || loading}}" loading="{{saving}}">保存资料</button>
+    <button class="btn-primary btn-block btn-sm ui-interactive" bindtap="onSave" disabled="{{saving || uploadingAvatar || loading}}" loading="{{saving}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("保存资料", locale)}}</button>
   </view>
 </view>

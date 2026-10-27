@@ -1,8 +1,10 @@
 const { fetchGlucoseSummary, fetchGlucoseRecords, fetchDayMeals } = require('../../services/api')
 const { GLUCOSE_NODES } = require('../../utils/constants')
+const { t } = require('../../utils/locales/en')
 const { applyDisplayToCurrentPage, getTheme, getDisplaySettings } = require('../../utils/display')
 const { parseLocalDate, getNaturalWeek, getWeekRangeText, getMonthWeeks } = require('../../utils/stats-week')
 const { buildMealDetails } = require('../../utils/meal-details')
+const { drawPredictionSeries } = require('../../utils/glucose-chart')
 
 /** 同时拉取六个血糖节点和三个正餐节点，供“日”视图拼成完整九时段。 */
 function recordsOfDay(year, month, day) {
@@ -18,12 +20,14 @@ function recordsOfDay(year, month, day) {
   }))
 }
 
-/** 根据实际周数据扩展 Y 轴，避免低于 4 或高于 10 的点画到坐标区外。 */
+/** 两条曲线共用纵轴，低/高预测值也必须完整显示。 */
 function getWeekYAxis(points) {
-  const values = (points || [])
-    .filter((point) => point.value != null && point.value !== '')
-    .map((point) => Number(point.value))
-    .filter((value) => Number.isFinite(value))
+  const values = []
+  ;(points || []).forEach((point) => {
+    ;[point.value, point.predictedValue].forEach((value) => {
+      if (value != null && value !== '' && Number.isFinite(Number(value))) values.push(Number(value))
+    })
+  })
   const dataMin = values.length ? Math.min(...values) : 4
   const dataMax = values.length ? Math.max(...values) : 10
   const min = Math.max(0, Math.min(4, Math.floor(dataMin)))
@@ -42,7 +46,7 @@ Page({
     year: 2026,
     month: 9,
     activeView: 'calendar',
-    viewMode: 'month',
+    viewMode: 'day',
     selectedDay: 4,
     selectedCount: 0,
     months: Array.from({ length: 12 }, (_, index) => ({ month: index + 1 })),
@@ -265,28 +269,20 @@ Page({
     this.setData({ expandedMealId: this.data.expandedMealId === id ? '' : id })
   },
 
-  onPreviewMealPhoto(e) {
-    const record = this.data.dayRecords.find((item) => item.id === e.currentTarget.dataset.id)
-    if (this.data.activeView !== 'calendar' || this.data.viewMode !== 'day' || this.data.dayLoading
-      || !record || record.id !== this.data.expandedMealId || !record.detail || !record.detail.mediaUrl) return
-    wx.previewImage({ current: record.detail.mediaUrl, urls: [record.detail.mediaUrl] })
-  },
-
   onSwitchView(e) {
     const view = e.currentTarget.dataset.view
-    this.setData({ activeView: view, showWeekPicker: false, expandedMealId: '' }, () => {
-      if (view === 'glucose') this.scheduleWeekChart()
-      else this.cancelWeekChartDraw()
-    })
+    if (view === 'calendar') return this.onSwitchToCalendar()
+    if (view === 'glucose') return this.onSwitchToGlucose()
   },
 
   onSwitchToCalendar() {
-    this.setData({ activeView: 'calendar', viewMode: 'month', showWeekPicker: false, expandedMealId: '' })
+    this.setData({ activeView: 'calendar', viewMode: 'day', showWeekPicker: false, expandedMealId: '' })
     this.cancelWeekChartDraw()
+    return this.buildDayRecords(this.data.selectedDay)
   },
 
   onSwitchToGlucose() {
-    this.setData({ activeView: 'glucose', expandedMealId: '' }, () => this.scheduleWeekChart())
+    this.setData({ activeView: 'glucose', showWeekPicker: false, expandedMealId: '' }, () => this.scheduleWeekChart())
   },
 
   onPrevMonth() {
@@ -425,7 +421,9 @@ Page({
 
     const points = (this.data.weekPoints || []).map((point) => {
       const value = point.value == null || point.value === '' ? null : Number(point.value)
-      return { ...point, value: Number.isFinite(value) ? value : null }
+      const predicted = point.predictedValue == null || point.predictedValue === '' ? null : Number(point.predictedValue)
+      return { ...point, value: Number.isFinite(value) ? value : null,
+        predictedValue: Number.isFinite(predicted) && predicted > 0 && predicted < 40 ? predicted : null }
     })
     const labels = points.map((p) => p.label)
     const brand = getTheme(getDisplaySettings().theme).brand
@@ -493,13 +491,19 @@ Page({
       if (yAxis.values.length === 0) {
         ctx.fillStyle = '#aaa'
         ctx.textAlign = 'center'
-        ctx.fillText('本周暂无记录', pad.l + cw / 2, pad.t + ch / 2)
+        ctx.fillText(t('本周暂无记录', this.data.locale), pad.l + cw / 2, pad.t + ch / 2)
       } else {
         // 裁剪到坐标区域，异常值也不会覆盖横轴标签或相邻布局。
         ctx.save()
         ctx.beginPath()
-        ctx.rect(pad.l, pad.t, cw, ch)
+        ctx.rect(pad.l - 6, pad.t - 6, cw + 12, ch + 12)
         ctx.clip()
+
+        const predictions = []
+        points.forEach((point, i) => {
+          if (point.predictedValue != null) predictions.push(toPoint(point.predictedValue, i))
+        })
+        drawPredictionSeries(ctx, predictions)
 
         // 跳过无记录日，按日期顺序连接已有值；稀疏数据也能形成可见趋势。
         ctx.strokeStyle = brand
@@ -531,7 +535,7 @@ Page({
       ctx.textAlign = 'center'
       ctx.textBaseline = 'alphabetic'
       labels.forEach((label, i) => {
-        ctx.fillText(label, pad.l + i * stepX, height - 8)
+        ctx.fillText(t(label, this.data.locale), pad.l + i * stepX, height - 8)
       })
     })
   },

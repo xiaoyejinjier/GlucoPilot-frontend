@@ -1,27 +1,29 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="page-intro">
-    <text class="page-intro-text">二级列表 · 每 100g 参考值</text>
+    <text class="page-intro-text">{{i18n.t("二级列表 · 每 100g 参考值", locale)}}</text>
   </view>
 
   <view class="card">
-    <view wx:if="{{list.length === 0}}" class="empty">该类暂无示例数据</view>
+    <view wx:if="{{list.length === 0}}" class="empty">{{i18n.t("该类暂无示例数据", locale)}}</view>
     <view
       wx:for="{{list}}"
       wx:key="index"
-      class="food-row"
+      class="food-row ui-interactive"
       data-index="{{index}}"
       bindtap="onFoodTap"
-    >
+     hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <image
         class="food-thumb"
         src="{{item.image}}"
         mode="aspectFill"
         data-index="{{index}}"
+        data-src="{{item.image}}"
         binderror="onImageError"
       />
       <view class="food-main">
-        <text class="food-name">{{item.name}}</text>
-        <text class="food-val">{{item.carbs}}克碳水/100g</text>
+        <text class="food-name">{{i18n.t((item.name), locale)}}</text>
+        <text class="food-val">{{i18n.t((item.carbs) + "克碳水/100g", locale)}}</text>
       </view>
     </view>
   </view>

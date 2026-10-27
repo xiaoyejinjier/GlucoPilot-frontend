@@ -1,36 +1,37 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab stats-page" style="{{displayStyle}}">
   <view class="view-nav">
     <view
-      class="view-nav-btn {{activeView === 'calendar' ? 'on' : ''}}"
+      class="view-nav-btn {{activeView === 'calendar' ? 'on' : ''}} ui-interactive"
       data-view="calendar"
       bindtap="onSwitchView"
-    >
-      <text class="view-nav-text">日历视图</text>
+     hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <text class="view-nav-text">{{i18n.t("日历视图", locale)}}</text>
     </view>
     <view
-      class="view-nav-btn {{activeView === 'glucose' ? 'on' : ''}}"
+      class="view-nav-btn {{activeView === 'glucose' ? 'on' : ''}} ui-interactive"
       data-view="glucose"
       bindtap="onSwitchView"
-    >
-      <text class="view-nav-text">血糖视图</text>
+     hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <text class="view-nav-text">{{i18n.t("血糖视图", locale)}}</text>
     </view>
   </view>
 
   <!-- 血糖视图保留所选月份指标；日历视图按“月份 → 日期 → 明细”展示。 -->
   <view wx:if="{{activeView === 'glucose'}}" class="card">
-      <view class="section-title">{{year}}年{{month}}月指标</view>
+      <view class="section-title">{{i18n.t((year) + "年" + (month) + "月指标", locale)}}</view>
       <view class="metric-row">
         <view class="metric-box">
-          <text class="metric-val">{{monthRecordDays}}</text>
-          <text class="metric-label">打卡天数</text>
+          <text class="metric-val">{{i18n.t((monthRecordDays), locale)}}</text>
+          <text class="metric-label">{{i18n.t("打卡天数", locale)}}</text>
         </view>
         <view class="metric-box">
-          <text class="metric-val">{{monthTotal}}</text>
-          <text class="metric-label">记录次数</text>
+          <text class="metric-val">{{i18n.t((monthTotal), locale)}}</text>
+          <text class="metric-label">{{i18n.t("记录次数", locale)}}</text>
         </view>
         <view class="metric-box">
-          <text class="metric-val">{{compliance}}%</text>
-          <text class="metric-label">记录率</text>
+          <text class="metric-val">{{i18n.t((compliance) + "%", locale)}}</text>
+          <text class="metric-label">{{i18n.t("记录率", locale)}}</text>
         </view>
       </view>
   </view>
@@ -38,225 +39,224 @@
   <view wx:if="{{activeView === 'calendar'}}" class="card">
     <view class="section-title calendar-heading">
       <view wx:if="{{viewMode === 'month'}}" class="month-nav">
-        <text class="month-btn" bindtap="onPrevYear">‹</text>
-        <text>{{year}} 年</text>
-        <text class="month-btn" bindtap="onNextYear">›</text>
+        <text class="month-btn ui-interactive" bindtap="onPrevYear" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">‹</text>
+        <text>{{i18n.t((year) + " 年", locale)}}</text>
+        <text class="month-btn ui-interactive" bindtap="onNextYear" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">›</text>
       </view>
       <view wx:else class="month-nav">
-        <text class="month-btn" bindtap="onPrevMonth">‹</text>
-        <text>{{year}} 年 {{month}} 月</text>
-        <text class="month-btn" bindtap="onNextMonth">›</text>
+        <text class="month-btn ui-interactive" bindtap="onPrevMonth" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">‹</text>
+        <text>{{i18n.t((year) + " 年 " + (month) + " 月", locale)}}</text>
+        <text class="month-btn ui-interactive" bindtap="onNextMonth" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">›</text>
       </view>
       <view class="calendar-tools">
-        <text class="tool-item {{viewMode === 'month' ? 'on' : ''}}" data-mode="month" bindtap="onViewMode">月视图</text>
-        <text class="tool-item {{viewMode === 'day' ? 'on' : ''}}" data-mode="day" bindtap="onViewMode">日视图</text>
-        <text class="tool-item export" bindtap="onExport">导出</text>
+        <text class="tool-item {{viewMode === 'month' ? 'on' : ''}} ui-interactive" data-mode="month" bindtap="onViewMode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("月视图", locale)}}</text>
+        <text class="tool-item {{viewMode === 'day' ? 'on' : ''}} ui-interactive" data-mode="day" bindtap="onViewMode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("日视图", locale)}}</text>
+        <text class="tool-item export ui-interactive" bindtap="onExport" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("导出", locale)}}</text>
       </view>
     </view>
 
     <block wx:if="{{viewMode === 'month'}}">
       <view class="month-grid">
-        <view wx:for="{{months}}" wx:key="month" class="month-tile {{month === item.month ? 'selected' : ''}}" data-month="{{item.month}}" bindtap="onMonthTap">
-          <text class="month-tile-title">{{item.month}}月</text>
-          <text class="month-tile-hint">查看日期</text>
+        <view wx:for="{{months}}" wx:key="month" class="month-tile {{month === item.month ? 'selected' : ''}} ui-interactive" data-month="{{item.month}}" bindtap="onMonthTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+          <text class="month-tile-title">{{i18n.t((item.month) + "月", locale)}}</text>
+          <text class="month-tile-hint">{{i18n.t("查看日期", locale)}}</text>
         </view>
       </view>
-      <view class="calendar-tip">点击月份进入日视图，查看日期和记录明细</view>
+      <view class="calendar-tip">{{i18n.t("点击月份进入日视图，查看日期和记录明细", locale)}}</view>
     </block>
 
     <block wx:else>
-      <view wx:if="{{loading && !calendarDays.length}}" class="empty-tip">正在加载日期日历…</view>
+      <view wx:if="{{loading && !calendarDays.length}}" class="empty-tip">{{i18n.t("正在加载日期日历…", locale)}}</view>
       <view wx:elif="{{weekLoadFailed && !calendarDays.length}}" class="empty-tip">
-        <text>日期日历加载失败</text>
-        <button class="btn-ghost btn-sm calendar-retry" bindtap="onRetryCalendar">重新加载</button>
+        <text>{{i18n.t("日期日历加载失败", locale)}}</text>
+        <button class="btn-ghost btn-sm calendar-retry ui-interactive" bindtap="onRetryCalendar" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新加载", locale)}}</button>
       </view>
       <block wx:else>
       <view class="weekdays">
-        <text wx:for="{{weekdays}}" wx:key="*this">{{item}}</text>
+        <text wx:for="{{weekdays}}" wx:key="*this">{{i18n.t((item), locale)}}</text>
       </view>
 
       <view class="calendar">
         <view wx:for="{{calendarDays}}" wx:key="index" class="cal-cell">
           <view
             wx:if="{{item.day}}"
-            class="cal-day {{item.level}} {{selectedDay === item.day ? 'selected' : ''}}"
+            class="cal-day {{item.level}} {{selectedDay === item.day ? 'selected' : ''}} ui-interactive"
             data-day="{{item.day}}"
             bindtap="onDayTap"
-          >
-            <text class="cal-num">{{item.day}}</text>
-            <text wx:if="{{item.count}}" class="cal-count">{{item.count}}/9</text>
+           hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+            <text class="cal-num">{{i18n.t((item.day), locale)}}</text>
+            <text wx:if="{{item.count}}" class="cal-count">{{i18n.t((item.count) + "/9", locale)}}</text>
           </view>
         </view>
       </view>
 
       <view class="legend">
-        <text class="legend-item"><text class="legend-dot c"></text>1–3 时段</text>
-        <text class="legend-item"><text class="legend-dot b"></text>4–6 时段</text>
-        <text class="legend-item"><text class="legend-dot a"></text>7–9 时段</text>
+        <text class="legend-item"><text class="legend-dot c"></text>{{i18n.t("1–3 时段", locale)}}</text>
+        <text class="legend-item"><text class="legend-dot b"></text>{{i18n.t("4–6 时段", locale)}}</text>
+        <text class="legend-item"><text class="legend-dot a"></text>{{i18n.t("7–9 时段", locale)}}</text>
       </view>
-      <view class="calendar-tip">点击日期，下方显示当天的九时段记录</view>
+      <view class="calendar-tip">{{i18n.t("点击日期，下方显示当天的九时段记录", locale)}}</view>
       </block>
     </block>
   </view>
 
   <view wx:if="{{activeView === 'calendar' && viewMode === 'day'}}" class="card day-details-card">
-      <view class="section-title">当日记录明细</view>
+      <view class="section-title">{{i18n.t("当日记录明细", locale)}}</view>
       <view class="day-detail-nav">
-        <text class="month-btn" bindtap="onPrevDay">‹</text>
-        <text class="day-detail-date">{{year}}年{{month}}月{{selectedDay}}日</text>
-        <text class="month-btn" bindtap="onNextDay">›</text>
+        <text class="month-btn ui-interactive" bindtap="onPrevDay" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">‹</text>
+        <text class="day-detail-date">{{i18n.t((year) + "年" + (month) + "月" + (selectedDay) + "日", locale)}}</text>
+        <text class="month-btn ui-interactive" bindtap="onNextDay" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">›</text>
       </view>
       <view class="metric-row day-detail-metrics">
         <view class="metric-box">
-          <text class="metric-val">{{dayLoading || dayLoadFailed ? '—' : dayCompleted + '/9'}}</text>
-          <text class="metric-label">完成时段</text>
+          <text class="metric-val">{{i18n.t((dayLoading || dayLoadFailed ? '—' : dayCompleted + '/9'), locale)}}</text>
+          <text class="metric-label">{{i18n.t("完成时段", locale)}}</text>
         </view>
         <view class="metric-box">
-          <text class="metric-val">{{dayGlucoseAvg}}</text>
-          <text class="metric-label">实测均糖</text>
+          <text class="metric-val">{{i18n.t((dayGlucoseAvg), locale)}}</text>
+          <text class="metric-label">{{i18n.t("实测均糖", locale)}}</text>
         </view>
         <view class="metric-box">
-          <text class="metric-val">{{dayLoading || dayLoadFailed ? '—' : dayCompletion + '%'}}</text>
-          <text class="metric-label">完成率</text>
+          <text class="metric-val">{{i18n.t((dayLoading || dayLoadFailed ? '—' : dayCompletion + '%'), locale)}}</text>
+          <text class="metric-label">{{i18n.t("完成率", locale)}}</text>
         </view>
       </view>
-      <view wx:if="{{dayLoading}}" class="empty-tip">正在加载当日记录…</view>
+      <view wx:if="{{dayLoading}}" class="empty-tip">{{i18n.t("正在加载当日记录…", locale)}}</view>
       <view wx:elif="{{dayLoadFailed}}" class="empty-tip">
-        <text>当日记录加载失败</text>
-        <button class="btn-ghost btn-sm calendar-retry" bindtap="onRetryDay">重新加载明细</button>
+        <text>{{i18n.t("当日记录加载失败", locale)}}</text>
+        <button class="btn-ghost btn-sm calendar-retry ui-interactive" bindtap="onRetryDay" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新加载明细", locale)}}</button>
       </view>
       <view wx:else class="day-node-list">
         <block wx:for="{{dayRecords}}" wx:key="id">
-        <view class="day-row day-row-{{item.kind}} {{item.recorded ? 'recorded' : 'missing'}} {{item.kind === 'meal' && item.recorded ? 'meal-clickable' : ''}}" data-id="{{item.id}}" bindtap="onMealDetailTap">
+        <view class="day-row day-row-{{item.kind}} {{item.recorded ? 'recorded' : 'missing'}} {{item.kind === 'meal' && item.recorded ? 'meal-clickable' : ''}} ui-interactive" data-id="{{item.id}}" bindtap="onMealDetailTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
           <view class="day-name-wrap">
             <text class="day-status-dot"></text>
-            <text class="day-name">{{item.name}}</text>
-            <text class="day-kind">{{item.kind === 'meal' ? '正餐' : '血糖'}}</text>
+            <text class="day-name">{{i18n.t((item.name), locale)}}</text>
+            <text class="day-kind">{{i18n.t((item.kind === 'meal' ? '正餐' : '血糖'), locale)}}</text>
           </view>
           <view class="day-value-wrap">
-            <text class="day-val">{{item.text}}</text>
-            <text wx:if="{{item.kind === 'meal' && item.recorded}}" class="meal-detail-toggle">{{expandedMealId === item.id ? '收起 ⌃' : '详情 ›'}}</text>
+            <text class="day-val">{{i18n.t((item.text), locale)}}</text>
+            <text wx:if="{{item.kind === 'meal' && item.recorded}}" class="meal-detail-toggle">{{i18n.t((expandedMealId === item.id ? '收起 ⌃' : '详情 ›'), locale)}}</text>
           </view>
         </view>
         <view wx:if="{{expandedMealId === item.id && item.detail}}" class="meal-detail-panel">
-          <view class="meal-detail-heading">{{item.name}}详情 · {{item.detail.recordDate}}</view>
-          <text class="meal-detail-label">完整食物内容</text>
-          <text class="meal-detail-full-text">{{item.detail.foodsText}}</text>
+          <view class="meal-detail-heading">{{i18n.t((item.name) + "详情 · " + (item.detail.recordDate), locale)}}</view>
+          <text class="meal-detail-label">{{i18n.t("完整食物内容", locale)}}</text>
+          <text class="meal-detail-full-text">{{i18n.t((item.detail.foodsText), locale)}}</text>
           <view wx:if="{{item.detail.items.length}}" class="meal-food-list">
             <view wx:for="{{item.detail.items}}" wx:for-item="food" wx:key="key" class="meal-food-item">
               <view class="meal-food-heading">
-                <text class="meal-food-name">{{food.name}}</text>
-                <text class="meal-food-weight">份量 {{food.weightText}}</text>
+                <text class="meal-food-name">{{i18n.t((food.name), locale)}}</text>
+                <text class="meal-food-weight">{{i18n.t("份量 " + (food.weightText), locale)}}</text>
               </view>
-              <text class="meal-food-nutrients">碳水 {{food.carbsText}} · 热量 {{food.caloriesText}}</text>
+              <text class="meal-food-nutrients">{{i18n.t("碳水 " + (food.carbsText) + " · 热量 " + (food.caloriesText), locale)}}</text>
             </view>
           </view>
           <view class="meal-detail-meta">
-            <text>总碳水：{{item.detail.carbsText}}</text>
-            <text>总热量：{{item.detail.caloriesText}}</text>
-            <text>饱腹感：{{item.detail.hungerText}}</text>
-            <text>记录时间：{{item.detail.recordedAt}}</text>
+            <text>{{i18n.t("总碳水：" + (item.detail.carbsText), locale)}}</text>
+            <text>{{i18n.t("总热量：" + (item.detail.caloriesText), locale)}}</text>
+            <text>{{i18n.t("饱腹感：" + (item.detail.hungerText), locale)}}</text>
+            <text>{{i18n.t("记录时间：" + (item.detail.recordedAt), locale)}}</text>
           </view>
-          <text class="meal-detail-label">补充 / 备注</text>
-          <text class="meal-detail-full-text">{{item.detail.supplementText}}</text>
-          <view wx:if="{{item.detail.mediaUrl}}" class="meal-photo-wrap" data-id="{{item.id}}" bindtap="onPreviewMealPhoto">
-            <image src="{{item.detail.mediaUrl}}" mode="aspectFit" class="meal-detail-photo"></image>
-            <text class="meal-photo-tip">点击查看原图</text>
-          </view>
+          <text class="meal-detail-label">{{i18n.t("补充 / 备注", locale)}}</text>
+          <text class="meal-detail-full-text">{{i18n.t((item.detail.supplementText), locale)}}</text>
+          <meal-photo wx:if="{{item.detail.mediaId}}" media-id="{{item.detail.mediaId}}"></meal-photo>
         </view>
         </block>
       </view>
       <view class="actions-row" style="margin-top: 20rpx;">
-        <button class="btn-ghost btn-sm" bindtap="onGoAi">去记录</button>
-        <button class="btn-primary btn-sm" bindtap="onSwitchToGlucose">血糖趋势</button>
+        <button class="btn-ghost btn-sm ui-interactive" bindtap="onGoAi" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("去记录", locale)}}</button>
+        <button class="btn-primary btn-sm ui-interactive" bindtap="onSwitchToGlucose" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("血糖趋势", locale)}}</button>
       </view>
   </view>
 
   <block wx:if="{{activeView === 'glucose'}}">
     <view class="card">
       <view class="section-title">
-        <text>血糖一周曲线</text>
-        <text class="chart-label">日均值 · mmol/L</text>
+        <text>{{i18n.t("血糖一周曲线", locale)}}</text>
+        <text class="chart-label">{{i18n.t("日均值 · mmol/L", locale)}}</text>
       </view>
-      <view class="week-selector" bindtap="onOpenWeekPicker">
+      <view class="week-selector ui-interactive" bindtap="onOpenWeekPicker" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
         <view class="week-selector-main">
-          <text class="week-selector-title">{{weekRangeText || '选择查看的周'}}</text>
-          <text class="week-selector-hint">{{weekAnchorDate ? '已手动选周' : '跟随日历选中日期'}} · 点击切换</text>
+          <text class="week-selector-title">{{i18n.t((weekRangeText || '选择查看的周'), locale)}}</text>
+          <text class="week-selector-hint">{{i18n.t((weekAnchorDate ? '已手动选周' : '跟随日历选中日期') + " · 点击切换", locale)}}</text>
         </view>
         <text class="week-selector-arrow">⌄</text>
       </view>
-      <view wx:if="{{loading}}" class="empty-tip week-chart-status">正在加载所选周…</view>
+      <view wx:if="{{loading}}" class="empty-tip week-chart-status">{{i18n.t("正在加载所选周…", locale)}}</view>
       <view wx:elif="{{weekLoadFailed}}" class="empty-tip week-chart-status">
-        <text>该周数据加载失败</text>
-        <button class="btn-ghost btn-sm week-retry" bindtap="onRetryWeek">重新加载</button>
+        <text>{{i18n.t("该周数据加载失败", locale)}}</text>
+        <button class="btn-ghost btn-sm week-retry ui-interactive" bindtap="onRetryWeek" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新加载", locale)}}</button>
       </view>
       <block wx:else>
         <!-- 弹窗期间移除 Canvas 原生渲染层，等高占位避免页面跳动。 -->
         <view wx:if="{{showWeekPicker}}" class="chart-canvas"></view>
         <canvas wx:else type="2d" id="weekChart" class="chart-canvas"></canvas>
-        <view wx:if="{{weekChartError && !showWeekPicker}}" class="empty-tip">图表暂未绘制，请切换页面后重试</view>
+        <view wx:if="{{weekChartError && !showWeekPicker}}" class="empty-tip">{{i18n.t("图表暂未绘制，请切换页面后重试", locale)}}</view>
       </block>
-      <view class="legend">
-        <text class="legend-item"><text class="legend-dot a"></text>日均血糖（连接有记录日期）</text>
+      <view class="glucose-series-legend">
+        <view class="glucose-series-item"><view class="glucose-series-line"></view><text>{{i18n.t("实测日均值", locale)}}</text></view>
+        <view class="glucose-series-item"><view class="glucose-series-line predicted"></view><text>{{i18n.t("推荐吃法预测日均值", locale)}}</text></view>
       </view>
+      <view class="glucose-prediction-note">{{i18n.t("预测按当天已保存的三餐推荐值取平均；不足三餐按已有值计算，不计入实测统计。", locale)}}</view>
     </view>
 
     <view class="card">
-      <view class="section-title">所选周摘要</view>
+      <view class="section-title">{{i18n.t("所选周摘要", locale)}}</view>
       <view class="metric-row">
         <view class="metric-box">
-          <text class="metric-val">{{weekAvg}}</text>
-          <text class="metric-label">平均血糖</text>
+          <text class="metric-val">{{i18n.t((weekAvg), locale)}}</text>
+          <text class="metric-label">{{i18n.t("平均血糖", locale)}}</text>
         </view>
         <view class="metric-box">
-          <text class="metric-val">{{weekMax}}</text>
-          <text class="metric-label">最高值</text>
+          <text class="metric-val">{{i18n.t((weekMax), locale)}}</text>
+          <text class="metric-label">{{i18n.t("最高值", locale)}}</text>
         </view>
         <view class="metric-box">
-          <text class="metric-val">{{weekMin}}</text>
-          <text class="metric-label">最低值</text>
+          <text class="metric-val">{{i18n.t((weekMin), locale)}}</text>
+          <text class="metric-label">{{i18n.t("最低值", locale)}}</text>
         </view>
       </view>
     </view>
 
     <view class="card">
-      <view class="section-title">{{year}}年{{month}}月时段分布</view>
+      <view class="section-title">{{i18n.t((year) + "年" + (month) + "月时段分布", locale)}}</view>
       <view class="dist-row" wx:for="{{slotStats}}" wx:key="name">
-        <text class="dist-name">{{item.name}}</text>
+        <text class="dist-name">{{i18n.t((item.name), locale)}}</text>
         <view class="dist-bar-bg">
           <view class="dist-bar" style="width: {{item.pct}}%;"></view>
         </view>
-        <text class="dist-num">{{item.count}}</text>
+        <text class="dist-num">{{i18n.t((item.count), locale)}}</text>
       </view>
       <view class="actions-row" style="margin-top: 20rpx;">
-        <button class="btn-ghost btn-sm" bindtap="onExport">导出</button>
-        <button class="btn-primary btn-sm" bindtap="onSwitchToCalendar">看日历</button>
+        <button class="btn-ghost btn-sm ui-interactive" bindtap="onExport" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("导出", locale)}}</button>
+        <button class="btn-primary btn-sm ui-interactive" bindtap="onSwitchToCalendar" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("看日历", locale)}}</button>
       </view>
     </view>
   </block>
 
   <view wx:if="{{showWeekPicker}}" class="week-picker-mask" bindtap="onCloseWeekPicker" catchtouchmove="onWeekPickerContentTap">
-    <view class="week-picker-sheet" catchtap="onWeekPickerContentTap">
+    <view class="week-picker-sheet ui-interactive" catchtap="onWeekPickerContentTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <view class="section-title">
-        <text>选择查看的周</text>
-        <text class="week-picker-close" bindtap="onCloseWeekPicker">关闭</text>
+        <text>{{i18n.t("选择查看的周", locale)}}</text>
+        <text class="week-picker-close ui-interactive" bindtap="onCloseWeekPicker" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("关闭", locale)}}</text>
       </view>
       <view class="week-picker-month-nav">
-        <text class="month-btn" bindtap="onPrevWeekPickerMonth">‹</text>
+        <text class="month-btn ui-interactive" bindtap="onPrevWeekPickerMonth" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">‹</text>
         <picker mode="date" fields="month" value="{{weekPickerMonthValue}}" start="1970-01-01" end="2099-12-31" bindchange="onWeekPickerMonthChange" class="week-picker-month">
-          <view>{{weekPickerYear}} 年 {{weekPickerMonth}} 月 <text class="week-picker-month-hint">⌄</text></view>
+          <view>{{i18n.t((weekPickerYear) + " 年 " + (weekPickerMonth) + " 月", locale)}} <text class="week-picker-month-hint">⌄</text></view>
         </picker>
-        <text class="month-btn" bindtap="onNextWeekPickerMonth">›</text>
+        <text class="month-btn ui-interactive" bindtap="onNextWeekPickerMonth" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">›</text>
       </view>
-      <text class="week-picker-tip">周一至周日，跨月的周也会完整显示</text>
+      <text class="week-picker-tip">{{i18n.t("周一至周日，跨月的周也会完整显示", locale)}}</text>
       <scroll-view scroll-y class="week-picker-options">
-        <view wx:for="{{weekPickerOptions}}" wx:key="startDate" class="week-picker-option {{item.selected ? 'selected' : ''}}" data-start="{{item.startDate}}" bindtap="onSelectWeek">
-          <text>{{item.label}}</text>
-          <text class="week-picker-check">{{item.selected ? '已选择' : '选择'}}</text>
+        <view wx:for="{{weekPickerOptions}}" wx:key="startDate" class="week-picker-option {{item.selected ? 'selected' : ''}} ui-interactive" data-start="{{item.startDate}}" bindtap="onSelectWeek" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+          <text>{{i18n.t((item.label), locale)}}</text>
+          <text class="week-picker-check">{{i18n.t((item.selected ? '已选择' : '选择'), locale)}}</text>
         </view>
       </scroll-view>
-      <button class="btn-ghost btn-block btn-sm week-follow-button" bindtap="onFollowCalendarWeek">跟随日历选中日期所在周</button>
-      <text class="week-picker-tip">仅切换周曲线与周摘要，不改变日历选中的日期</text>
+      <button class="btn-ghost btn-block btn-sm week-follow-button ui-interactive" bindtap="onFollowCalendarWeek" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("跟随日历选中日期所在周", locale)}}</button>
+      <text class="week-picker-tip">{{i18n.t("仅切换周曲线与周摘要，不改变日历选中的日期", locale)}}</text>
     </view>
   </view>
 </view>

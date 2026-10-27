@@ -1,88 +1,102 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="page-intro">
-    <text class="page-intro-text">按所选日期生成真实血糖与饮食记录文件</text>
+    <text class="page-intro-text">{{i18n.t("按所选日期生成真实血糖与饮食记录文件", locale)}}</text>
   </view>
 
   <view class="card">
-    <view class="section-title">导出范围</view>
+    <view class="section-title">{{i18n.t("导出范围", locale)}}</view>
     <view class="range-row">
       <view
         wx:for="{{ranges}}"
         wx:key="id"
-        class="range-item {{activeRange === item.id ? 'on' : ''}}"
+        class="range-item {{activeRange === item.id ? 'on' : ''}} ui-interactive"
         data-id="{{item.id}}"
         bindtap="onRange"
-      >{{item.label}}</view>
+       hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((item.label), locale)}}</view>
     </view>
 
     <view wx:if="{{activeRange === 'custom' && customStart && customEnd}}" class="custom-range">
-      <view class="custom-chip" bindtap="onReopenStart">
-        <text class="custom-chip-label">开始</text>
-        <text class="custom-chip-val">{{customStart}}</text>
+      <view class="custom-chip ui-interactive" bindtap="onReopenStart" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+        <text class="custom-chip-label">{{i18n.t("开始", locale)}}</text>
+        <text class="custom-chip-val">{{i18n.t((customStart), locale)}}</text>
       </view>
-      <text class="custom-sep">至</text>
-      <view class="custom-chip" bindtap="onReopenEnd">
-        <text class="custom-chip-label">结束</text>
-        <text class="custom-chip-val">{{customEnd}}</text>
+      <text class="custom-sep">{{i18n.t("至", locale)}}</text>
+      <view class="custom-chip ui-interactive" bindtap="onReopenEnd" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+        <text class="custom-chip-label">{{i18n.t("结束", locale)}}</text>
+        <text class="custom-chip-val">{{i18n.t((customEnd), locale)}}</text>
       </view>
     </view>
   </view>
 
   <view class="card">
-    <view class="section-title">导出内容预览</view>
+    <view class="section-title">{{i18n.t("导出内容预览", locale)}}</view>
     <view class="preview-box">
       <view class="kv-item">
-        <text class="kv-item-label">范围</text>
-        <text class="kv-item-value">{{rangeLabel}}</text>
+        <text class="kv-item-label">{{i18n.t("范围", locale)}}</text>
+        <text class="kv-item-value">{{i18n.t((rangeLabel), locale)}}</text>
       </view>
       <view class="kv-item">
-        <text class="kv-item-label">记录条数</text>
-        <text class="kv-item-value">{{previewCount == null ? '生成时统计' : previewCount + ' 条'}}</text>
+        <text class="kv-item-label">{{i18n.t("记录条数", locale)}}</text>
+        <text class="kv-item-value">{{i18n.t((previewCount == null ? '生成时统计' : previewCount + ' 条'), locale)}}</text>
       </view>
       <view class="kv-item">
-        <text class="kv-item-label">格式</text>
-        <text class="kv-item-value">Excel（XLSX）</text>
+        <text class="kv-item-label">{{i18n.t("格式", locale)}}</text>
+        <text class="kv-item-value">PDF</text>
       </view>
     </view>
     <view class="actions-row">
-      <button class="btn-ghost btn-sm" bindtap="onBack" disabled="{{exporting}}">取消</button>
-      <button class="btn-primary btn-sm" bindtap="onConfirm" disabled="{{exporting}}">生成 XLSX</button>
+      <button class="btn-ghost btn-sm ui-interactive" bindtap="onBack" disabled="{{exporting}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("取消", locale)}}</button>
+      <button class="btn-primary btn-sm ui-interactive" bindtap="onConfirm" disabled="{{exporting}}" loading="{{exporting}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("生成 PDF", locale)}}</button>
     </view>
   </view>
 
   <view wx:if="{{exportText}}" class="card">
-    <view class="section-title">导出结果</view>
-    <text class="file-path">XLSX 文件已就绪，可在下方下载</text>
+    <view class="section-title">{{i18n.t("导出结果", locale)}}</view>
+    <text class="file-path">{{i18n.t("PDF 文件已就绪，可在下方下载", locale)}}</text>
     <view class="export-box">
-      <text class="export-text">{{exportText}}</text>
+      <text class="export-text">{{i18n.t((exportText), locale)}}</text>
     </view>
-    <button class="btn-ghost btn-block btn-sm copy-btn" bindtap="onCopy">复制摘要</button>
+    <button class="btn-ghost btn-block btn-sm copy-btn ui-interactive" bindtap="onCopy" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("复制摘要", locale)}}</button>
   </view>
 
-  <view class="card"><view class="section-title">我的导出任务</view><view wx:if="{{tasksLoading}}" class="export-task-state">正在加载…</view><view wx:if="{{tasksError}}" class="export-task-state" bindtap="loadTasks">{{tasksError}} · 点击重试</view><view wx:for="{{tasks}}" wx:key="id" class="export-task-row"><view><text class="export-task-dates">{{item.startDate}} 至 {{item.endDate}}</text><text class="export-task-state">{{item.statusLabel}}{{item.status === 'done' ? ' · 血糖 ' + item.glucoseCount + ' 条 / 饮食 ' + item.mealCount + ' 条' : ''}}</text><text wx:if="{{item.error}}" class="export-task-state">{{item.error}}</text></view><button wx:if="{{item.status === 'done'}}" data-id="{{item.id}}" bindtap="onDownload" disabled="{{!!downloading}}" loading="{{downloading === item.id}}">下载</button><button wx:else data-id="{{item.id}}" bindtap="onRetryTask" disabled="{{exporting}}">{{item.status === 'failed' ? '重试' : '生成'}}</button></view><text wx:if="{{!tasks.length && !tasksLoading && !tasksError}}" class="export-task-state">暂无导出任务</text></view>
+  <view class="card">
+    <view class="section-title">{{i18n.t("我的导出任务", locale)}}</view>
+    <view wx:if="{{tasksLoading}}" class="export-task-state">{{i18n.t("正在加载…", locale)}}</view>
+    <view wx:if="{{tasksError}}" class="export-task-state ui-interactive" bindtap="loadTasks">{{i18n.t(tasksError + " · 点击重试", locale)}}</view>
+    <view wx:for="{{tasks}}" wx:key="id" class="export-task-row">
+      <view class="export-task-copy"><text class="export-task-dates">{{i18n.t(item.startDate + " 至 " + item.endDate, locale)}}</text><text class="export-task-state">{{i18n.t(item.statusLabel + (item.status === 'done' ? ' · 血糖 ' + item.glucoseCount + ' 条 / 饮食 ' + item.mealCount + ' 条' : ''), locale)}}</text><text wx:if="{{item.error}}" class="export-task-state">{{i18n.t(item.error, locale)}}</text></view>
+      <view class="export-task-actions">
+        <button class="ui-interactive" wx:if="{{item.status === 'done'}}" data-id="{{item.id}}" bindtap="onDownload" disabled="{{!!downloading || !!deleting || exporting}}" loading="{{downloading === item.id}}">{{i18n.t("下载", locale)}}</button>
+        <button class="ui-interactive" wx:else data-id="{{item.id}}" bindtap="onRetryTask" disabled="{{exporting || !!deleting}}">{{i18n.t(item.status === 'failed' ? '重试' : '生成', locale)}}</button>
+        <button class="export-task-delete ui-interactive" data-id="{{item.id}}" bindtap="onDeleteTask" disabled="{{!!deleting || exporting || !!downloading}}" loading="{{deleting === item.id}}">{{i18n.t("删除", locale)}}</button>
+      </view>
+    </view>
+    <text wx:if="{{!tasks.length && !tasksLoading && !tasksError}}" class="export-task-state">{{i18n.t("暂无导出任务", locale)}}</text>
+  </view>
   <view class="card tip-card">
-    <text class="tip-line">文件包含所选日期内的真实血糖与饮食记录，没有记录时保留空表头。</text>
-    <text class="tip-line">生成后可下载 Excel 文件，并在历史任务中再次查看。</text>
+    <text class="tip-line">{{i18n.t("文件包含所选日期内的真实血糖与饮食记录，没有记录时明确显示暂无记录。", locale)}}</text>
+    <text class="tip-line">{{i18n.t("生成后可下载 PDF 文件，并在历史任务中再次查看。", locale)}}</text>
   </view>
 
   <!-- 自定义日期弹窗：‹ 年 › + 左月右日滚动 -->
   <view wx:if="{{showDateSheet}}" class="sheet-mask" bindtap="onCloseSheet">
-    <view class="sheet" catchtap="noop">
+    <view class="sheet ui-interactive" catchtap="noop" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <view class="sheet-head">
-        <text class="sheet-cancel" bindtap="onCloseSheet">取消</text>
-        <text class="sheet-title">{{dateStep === 'start' ? '选择开始日期' : '选择结束日期'}}</text>
-        <text class="sheet-ok" bindtap="onConfirmDate">确定</text>
+        <text class="sheet-cancel ui-interactive" bindtap="onCloseSheet" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("取消", locale)}}</text>
+        <text class="sheet-title">{{i18n.t((dateStep === 'start' ? '选择开始日期' : '选择结束日期'), locale)}}</text>
+        <text class="sheet-ok ui-interactive" bindtap="onConfirmDate" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("确定", locale)}}</text>
       </view>
 
       <view class="year-nav">
-        <text class="year-btn" bindtap="onPrevYear">‹</text>
-        <text class="year-text">{{pickYear}}年</text>
-        <text class="year-btn" bindtap="onNextYear">›</text>
+        <text class="year-btn ui-interactive" bindtap="onPrevYear" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">‹</text>
+        <text class="year-text">{{i18n.t((pickYear) + "年", locale)}}</text>
+        <text class="year-btn ui-interactive" bindtap="onNextYear" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">›</text>
       </view>
 
       <view class="picker-labels">
-        <text class="picker-label">月</text>
-        <text class="picker-label">日</text>
+        <text class="picker-label">{{i18n.t("月", locale)}}</text>
+        <text class="picker-label">{{i18n.t("日", locale)}}</text>
       </view>
 
       <view class="roller-box">
@@ -100,7 +114,7 @@
             wx:for="{{months}}"
             wx:key="*this"
             class="roller-item {{monthIndex === index ? 'on' : ''}}"
-          >{{item}}月</view>
+          >{{i18n.t((item) + "月", locale)}}</view>
           <view class="roller-pad"></view>
         </scroll-view>
         <scroll-view
@@ -116,7 +130,7 @@
             wx:for="{{days}}"
             wx:key="*this"
             class="roller-item {{dayIndex === index ? 'on' : ''}}"
-          >{{item}}日</view>
+          >{{i18n.t((item) + "日", locale)}}</view>
           <view class="roller-pad"></view>
         </scroll-view>
       </view>

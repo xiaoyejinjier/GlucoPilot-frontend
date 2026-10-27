@@ -1,9 +1,10 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab disclaimer-page" style="{{displayStyle}}">
   <view class="disclaimer-head">
     <view class="disclaimer-mark">!</view>
     <view class="disclaimer-head-copy">
-      <text class="disclaimer-title">请认真阅读免责声明</text>
-      <text class="disclaimer-subtitle">{{forced ? '同意后才能继续使用，请阅读至底部' : '了解服务边界与健康信息使用说明'}}</text>
+      <text class="disclaimer-title">{{i18n.t("请认真阅读免责声明", locale)}}</text>
+      <text class="disclaimer-subtitle">{{i18n.t((forced ? '同意后才能继续使用，请阅读至底部' : '了解服务边界与健康信息使用说明'), locale)}}</text>
     </view>
   </view>
 
@@ -18,12 +19,12 @@
     >
       <view class="disclaimer-text">
         <view wx:for="{{paragraphs}}" wx:key="*this" class="disclaimer-para">
-          <view class="para-index">{{index + 1}}</view>
-          <text class="para-content">{{item}}</text>
+          <view class="para-index">{{i18n.t((index + 1), locale)}}</view>
+          <text class="para-content">{{i18n.t((item), locale)}}</text>
         </view>
         <view class="disclaimer-end">
           <view class="end-line"></view>
-          <text>您已阅读至内容底部</text>
+          <text>{{i18n.t("您已阅读至内容底部", locale)}}</text>
           <view class="end-line"></view>
         </view>
       </view>
@@ -31,12 +32,12 @@
   </view>
 
   <view class="disclaimer-footer">
-    <text class="scroll-hint">{{canAgree ? '内容已阅读完成' : '请向上滑动并阅读至底部'}}</text>
+    <text class="scroll-hint">{{i18n.t((canAgree ? '内容已阅读完成' : '请向上滑动并阅读至底部'), locale)}}</text>
     <button
-      class="btn-primary btn-block agree-button {{canAgree ? '' : 'disabled'}}"
+      class="btn-primary btn-block agree-button {{canAgree ? '' : 'disabled'}} ui-interactive"
       disabled="{{!canAgree || submitting}}"
       loading="{{submitting}}"
       bindtap="onAgree"
-    >{{submitting ? '正在提交' : canAgree ? '我已阅读并同意' : '请先滑到底部'}}</button>
+     hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((submitting ? '正在提交' : canAgree ? '我已阅读并同意' : '请先滑到底部'), locale)}}</button>
   </view>
 </view>

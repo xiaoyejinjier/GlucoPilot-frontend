@@ -24,9 +24,11 @@ function harness(name, options = {}) {
     fetchDirectMessages: async () => ({ records: [], hasMore: false, nextBeforeId: null }),
     readDirectMessages: async () => ({}), sendDirectMessage: async () => message(5, true),
     fetchInteractionNotices:async()=>({records:[],pages:0}),readInteractionNotices:async()=>({}),
+    fetchMyComments:async()=>({records:[],pages:0}),
     fetchNewsDetail: async () => ({ id: '10', title: '真实文章', liked: false, collected: false, likeCount: 0, collectCount: 0, commentCount: 0 }),
     fetchNewsComments: async () => ({ records: [], pages: 0 }), addNewsComment: async () => ({}), deleteNewsComment: async () => ({}),
     fetchCommentReplies: async () => ({ records: [], hasMore:false, nextAfterId:null }),
+    fetchCommentContext: async () => { throw Object.assign(new Error('missing'),{code:40400}) },
     updateNewsAction: async (id, payload) => ({ liked: !!payload.liked, collected: !!payload.collected, likeCount: payload.liked ? 1 : 0, collectCount: payload.collected ? 1 : 0 }),
     ...options.api
   }
@@ -69,11 +71,29 @@ test('私信表情插入光标位置，语音先按住再确认，超过上限�
 
 test('信息中心包含私信点赞收藏评论新关注，按当前类别标记已读并跳到真实目标',async()=>{
   const {page:p,state}=harness('information',{route:{tab:'likes'},api:{fetchInteractionNotices:async kind=>({records:[{id:'90',kind,actor:{key:'u2',nickname:'糖友'},newsId:'10',newsTitle:'我的文章',createdAt:'2026-10-20T12:00:00',read:false}],pages:1})}})
-  await flush();assert.equal(p.data.tabs.map(t=>t.label).join(','),'私信,点赞,收藏,收到的评论,新关注我的');assert.equal(p.data.list[0].action,'赞了你的文章')
+  await flush();assert.equal(p.data.tabs.map(t=>t.label).join(','),'私信,点赞,收藏,收到的评论,新关注我的,我的评论');assert.equal(p.data.list[0].action,'赞了你的文章')
   assert.deepEqual(state.calls.find(c=>c.name==='readInteractionNotices').args,['LIKE','90'])
   p.onOpen({currentTarget:{dataset:{id:'90'}}});assert.match(state.navs[0].url,/news-detail.*id=10/)
   p.onTab({currentTarget:{dataset:{key:'follows'}}});await flush();p.onOpen({currentTarget:{dataset:{id:'90'}}});assert.match(state.navs[1].url,/community-profile.*key=u2/)
   assert.equal(state.intervals.size,1);p.onHide();assert.equal(state.intervals.size,0)
+})
+
+test('我的评论只取自己的、标出被隐藏的，并跳到文章定位该评论',async()=>{
+  const rows=[
+    {id:'501',newsId:'10',articleTitle:'控糖早餐怎么吃',articleAvailable:true,content:'我的公开评论',createdAt:'2026-10-20T12:00:00',hidden:false,replyCount:2,likeCount:1},
+    {id:'502',newsId:'11',articleTitle:'被删掉的文章',articleAvailable:false,content:'被机器隐藏的评论',createdAt:'2026-10-21T08:00:00',hidden:true,replyCount:0,likeCount:0}
+  ]
+  const {page:p,state}=harness('information',{route:{tab:'myComments'},api:{fetchMyComments:async()=>({records:rows,pages:1})}})
+  await flush()
+  assert.equal(p.data.activeTab,'myComments')
+  // 跨 vm 上下文的对象原型不同，deepEqual 会因原型不等而失败，这里按字段比较
+  const call = state.calls.find(c=>c.name==='fetchMyComments').args[0]
+  assert.equal(call.pageNum,1);assert.equal(call.pageSize,20)
+  assert.equal(p.data.list[0].rowKey,'501')
+  assert.equal(p.data.list[1].hidden,true,'被 AI 隐藏的评论作者自己也要看得到')
+  p.onOpen({currentTarget:{dataset:{id:'501'}}});assert.match(state.navs[0].url,/news-detail\?id=10&comments=1&commentId=501$/)
+  p.onOpen({currentTarget:{dataset:{id:'502'}}});assert.equal(state.navs.length,1,'文章已不可查看时只提示不跳转')
+  p.onUnload()
 })
 
 test('切换信息分类时丢弃旧请求，离页后的提醒不能回填',async()=>{
@@ -216,6 +236,41 @@ test('关注列表分页只读本人数据，搜索使用提交时的昵称且�
   page.onOpen({ currentTarget: { dataset: { key: 'u2' } } })
   assert.match(state.navs[0].url, /community-profile.*key=u2/)
 })
+test('我的点赞读取真实列表，搜索分页后打开对应文章，重新进入更新取消的点赞',async()=>{
+  let liked=true
+  const {page,state}=harness('community',{route:{mode:'likes'},api:{fetchCommunityList:async(mode,q)=>({records:liked?[{id:String(q.pageNum),title:'控糖文章'}]:[],pages:liked?2:0})}});await flush()
+  assert.equal(page.data.mode,'likes');assert.equal(state.calls[0].args[0],'likes')
+  page.onInput({detail:{value:' 控糖 '}});await page.onSearch()
+  page.onInput({detail:{value:'未提交'}});await page.onMore()
+  assert.equal(state.calls.at(-1).args[1].keyword,'控糖');assert.equal(page.data.list.length,2)
+  page.onOpen({currentTarget:{dataset:{key:'2'}}});assert.match(state.navs[0].url,/news-detail.*id=2/)
+  liked=false;page.onHide();page.onShow();await flush();assert.equal(page.data.list.length,0)
+  await page.onClearSearch();assert.equal(state.calls.at(-1).args[1].keyword,undefined);page.onUnload()
+})
+
+test('点赞列表迟到结果不会填入新账号',async()=>{
+  const old=deferred();let count=0
+  const {page,state}=harness('community',{route:{mode:'likes'},api:{fetchCommunityList:async()=>++count===1?old.promise:{records:[{id:'2',title:'新账号文章'}],pages:1}}})
+  page.onHide();state.token='account-two';page.onShow();await flush()
+  old.resolve({records:[{id:'1',title:'旧账号文章'}],pages:1});await flush()
+  assert.equal(page.data.list.map(row=>row.id).join(','),'2');page.onUnload()
+})
+
+test('我的关注支持单字服务端搜索，翻页沿用已提交条件，清空恢复全部',async()=>{
+  const {page,state}=harness('community',{route:{mode:'following'},api:{fetchCommunityList:async(_mode,q)=>({records:[{key:'u'+q.pageNum,nickname:'小林'}],pages:2})}});await flush()
+  page.onInput({detail:{value:' 林 '}});await page.onSearch()
+  assert.equal(state.calls.at(-1).args[1].keyword,'林');assert.equal(page.data.searchQuery,'林')
+  page.onInput({detail:{value:'未提交'}});await page.onMore();assert.equal(state.calls.at(-1).args[1].keyword,'林');assert.equal(page.data.list.length,2)
+  await page.onClearSearch();assert.equal(page.data.keyword,'');assert.equal(page.data.searchQuery,'');assert.equal(state.calls.at(-1).args[1].keyword,undefined)
+})
+test('我的收藏新搜索覆盖进行中的旧请求，迟到结果不能回填；清空找用户不发空条件请求',async()=>{
+  const old=deferred();const env=harness('community',{route:{mode:'collections'},api:{fetchCommunityList:async(_mode,q)=>q.keyword==='旧'?old.promise:{records:[{id:q.keyword||'all',title:'文章'}],pages:1}}});await flush()
+  env.page.onInput({detail:{value:'旧'}});const pending=env.page.onSearch()
+  env.page.onInput({detail:{value:'新'}});await env.page.onSearch();assert.equal(env.page.data.list[0].id,'新')
+  old.resolve({records:[{id:'old',title:'旧文章'}],pages:1});await pending;assert.equal(env.page.data.list[0].id,'新');assert.equal(env.page.data.loading,false)
+  const profiles=harness('community',{route:{mode:'profiles'}});profiles.page.onInput({detail:{value:'用户'}});await profiles.page.onSearch()
+  const calls=profiles.state.calls.length;await profiles.page.onClearSearch();assert.equal(profiles.state.calls.length,calls);assert.equal(profiles.page.data.list.length,0)
+})
 test('公开资料可以关注取消及给用户发私信，未关联用户的发布者不显示假私信', async () => {
   const { page, state } = harness('community-profile'); await flush()
   await page.onFollow(); assert.equal(page.data.profile.followed, true)
@@ -335,6 +390,38 @@ test('仅在消息底部向上拉出现阻尼，松手或取消回弹，不请�
   p.onElasticStart(touch(10,200));p.onElasticMove(touch(100,180));assert.equal(p.data.bottomPull,0)
   p.onElasticMove(touch(10,100));assert.equal(p.data.bottomPull,32);p.onHide();assert.equal(p.data.bottomPull,0)
   assert.equal(state.calls.length,calls);assert.equal(JSON.stringify(p.data.messages),rows)
+})
+
+const focusComment=(id,rootId=id,content='对应评论')=>({id:String(id),content,createdAt:'2026-10-23T12:00:00',author:{key:'u2',nickname:'糖友'},rootCommentId:String(rootId),replyToCommentId:String(rootId)===String(id)?null:String(rootId),replies:[],replyCount:0,replyHasMore:false,replyNextAfterId:null})
+
+test('收到的评论通知带目标编号跳转，点赞通知仍打开文章',async()=>{
+  const {page:p,state}=harness('information',{route:{tab:'comments'},api:{fetchInteractionNotices:async()=>({records:[{id:'1',kind:'COMMENT',newsId:'10',commentId:'9007199254740993',actor:{key:'u2'},createdAt:'2026-10-23T12:00:00'}],pages:1})}});await flush()
+  p.onOpen({currentTarget:{dataset:{id:'1'}}});assert.equal(state.navs.at(-1).url,'/pages/news-detail/news-detail?id=10&comments=1&commentId=9007199254740993')
+  p.setData({activeTab:'likes',list:[{rowKey:'2',kind:'LIKE',newsId:'10'}]});p.onOpen({currentTarget:{dataset:{id:'2'}}});assert.equal(state.navs.at(-1).url,'/pages/news-detail/news-detail?id=10');p.onUnload()
+})
+test('评论通知定位分页外根评论和折叠回复，不等待封面且继续回复分页不丢目标',async()=>{
+  const cover=deferred(),target=focusComment('90','1'),root={...focusComment('1'),replies:[focusComment('2','1'),focusComment('3','1'),focusComment('4','1'),target],replyCount:90,replyHasMore:true,replyNextAfterId:'4'}
+  const {page:p,state}=harness('news-detail',{route:{id:'10',commentId:'90',comments:'1'},cover:()=>cover.promise,api:{fetchNewsComments:async(id,q)=>({records:q.pageNum===1?[focusComment('200')]:[{...root,replies:root.replies.slice(0,3)}],pages:2}),fetchCommentContext:async()=>({commentId:'90',root}),fetchCommentReplies:async()=>({records:[focusComment('5','1')],hasMore:true,nextAfterId:'5'})}})
+  await flush();assert.equal(state.scrolls.at(-1).selector,'#comment-90');assert.equal(p.data.highlightedCommentId,'90');assert.equal(p.findComment('90').rootCommentId,'1');assert.equal(p.data.commentFocus,false);assert.equal(p.data.comments[0].id,'1')
+  await p.onMoreComments();assert.equal(p.data.comments.filter(c=>c.id==='1').length,1);assert.ok(p.findComment('90'))
+  await p.onMoreReplies({currentTarget:{dataset:{id:'1'}}});assert.equal(state.calls.find(c=>c.name==='fetchCommentReplies').args[2].afterId,'4');assert.equal(p.data.comments.find(c=>c.id==='1').replies.filter(r=>r.id==='90').length,1)
+  const count=state.scrolls.length;p.loadDetail();await flush();assert.equal(state.scrolls.length,count);p.onUnload();cover.resolve('cover')
+})
+test('评论先返回时等文章节点就绪再精确滚动，隐藏页面后排队滚动失效',async()=>{
+  const detail=deferred(),{page:p,state}=harness('news-detail',{manualNextTick:true,route:{id:'10',commentId:'90'},api:{fetchNewsDetail:()=>detail.promise,fetchCommentContext:async()=>({commentId:'90',root:focusComment('90')})}})
+  await flush();assert.equal(state.scrolls.length,0);assert.equal(p.data.highlightedCommentId,'90');detail.resolve({id:'10',title:'文章',commentCount:1});await flush();assert.equal(state.scrolls.length,0);assert.ok(state.ticks.length)
+  p.onHide();state.ticks.forEach(fn=>fn());assert.equal(state.scrolls.length,0);p.onUnload()
+})
+test('目标删除有明确提示，网络失败可重试成功定位，不误跳其他评论',async()=>{
+  const {page:p,state,api}=harness('news-detail',{route:{id:'10',commentId:'90'}});await flush();assert.equal(p.data.commentTargetError,'该评论已删除或暂不可见');assert.ok(state.scrolls.some(s=>s.selector==='#article-comments'));assert.ok(!state.scrolls.some(s=>s.selector==='#comment-90'))
+  api.fetchCommentContext=async()=>{throw new Error('offline')};await p.onRetryCommentTarget();assert.equal(p.data.commentTargetError,'评论定位失败，点击重试')
+  api.fetchCommentContext=async()=>({commentId:'90',root:focusComment('90')});await p.onRetryCommentTarget();assert.equal(p.data.commentTargetError,'');assert.equal(state.scrolls.at(-1).selector,'#comment-90');p.onUnload()
+})
+test('换账号后迟到的评论上下文不能回填或重新滚动',async()=>{
+  const old=deferred();let requests=0
+  const {page:p,state}=harness('news-detail',{route:{id:'10',commentId:'90'},api:{fetchCommentContext:()=>++requests===1?old.promise:Promise.resolve({commentId:'90',root:focusComment('90','90','当前账号可见')})}})
+  await flush();p.onHide();state.token='two';p.onShow();await flush();assert.equal(p.findComment('90').content,'当前账号可见')
+  const count=state.scrolls.length;old.resolve({commentId:'90',root:focusComment('90','90','旧账号内容')});await flush();assert.equal(p.findComment('90').content,'当前账号可见');assert.equal(state.scrolls.length,count);p.onUnload()
 })
 
 test('从评论入口加载后定位评论区，不等待封面，不弹键盘，后续刷新不重复定位',async()=>{

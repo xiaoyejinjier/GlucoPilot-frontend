@@ -28,7 +28,7 @@ Component({
     arrowStyle: '',
     guideSteps: [
       { target: '#nav-item-0', title: '记录', description: '在这里记录血糖、饮食，查看每日记录和统计。' },
-      { target: '#nav-item-1', title: '设备管理', description: '以后在这里管理健康设备，功能即将上线。' },
+      { target: '#nav-item-1', title: '设备管理', description: '添加和绑定设备，查看设备详情与同步状态。' },
       { target: '#nav-item-2', title: '社区', description: '在这里浏览健康资讯和社区内容。' },
       { target: '#nav-item-3', title: '我的', description: '在这里管理个人资料、健康档案和设置。' },
       { target: '#nav-assistant', title: '小语', description: '和小语打字或语音交流，帮你记录、分析和答疑。' }
@@ -83,12 +83,17 @@ Component({
       this.finishGuide(true)
     },
 
-    finishGuide(skipped) {
+    tryAssistant() {
+      if (!this.data.guideReady || this.data.guideIndex !== this.data.guideSteps.length - 1) return
+      this.finishGuide(false, true)
+    },
+
+    finishGuide(skipped, tryAssistant) {
       if (!this.data.guideActive || this._guideFinished) return
       this._guideFinished = true
       this._measureVersion = (this._measureVersion || 0) + 1
       this.setData({ guideReady: false })
-      this.triggerEvent('guidecomplete', { skipped })
+      this.triggerEvent('guidecomplete', { skipped, ...(tryAssistant ? { tryAssistant:true } : {}) })
     },
 
     stopGuideTouch() {},

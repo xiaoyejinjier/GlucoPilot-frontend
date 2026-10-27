@@ -1,17 +1,18 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="bottom-navigation" style="--brand: {{brandColor}};">
   <view id="nav-assistant" class="assistant-entry" bindtap="openAssistant"
-    hover-class="navigation-pressed" aria-role="button" aria-label="小语，语音助手">
+    hover-class="navigation-pressed" aria-role="button" aria-label="{{i18n.t('小语，语音助手', locale)}}">
     <assistant-mascot variant="nav"></assistant-mascot>
-    <text class="assistant-name">{{assistant.text}}</text>
+    <text class="assistant-name">{{i18n.t((assistant.text), locale)}}</text>
   </view>
   <view class="navigation-pill">
     <view wx:for="{{items}}" wx:key="pagePath"
       id="nav-item-{{item.index}}" class="navigation-item {{selected === item.index ? 'navigation-active' : ''}}"
       data-path="{{item.pagePath}}" data-index="{{item.index}}" bindtap="switchTab"
-      hover-class="navigation-pressed" aria-role="button" aria-label="{{item.text}}">
+      hover-class="navigation-pressed" aria-role="button" aria-label="{{i18n.t((item.text), locale)}}">
       <app-icon name="{{item.icon}}" active="{{selected === item.index}}"
         color="{{selected === item.index ? brandColor : '#647970'}}" size="lg"></app-icon>
-      <text class="navigation-label">{{item.text}}</text>
+      <text class="navigation-label">{{i18n.t((item.text), locale)}}</text>
       <view wx:if="{{item.index === 2 && unreadCount > 0}}" class="navigation-unread"></view>
     </view>
   </view>
@@ -19,20 +20,22 @@
 <view wx:if="{{guideActive}}" class="navigation-guide {{guideReady ? '' : 'guide-measuring'}}"
   catchtap="stopGuideTouch" catchtouchmove="stopGuideTouch">
   <view wx:if="{{guideReady}}" class="guide-focus" style="{{focusStyle}}"></view>
-  <view class="guide-card" aria-role="dialog" aria-label="新手引导">
+  <view class="guide-card" aria-role="dialog" aria-label="{{i18n.t('新手引导', locale)}}">
     <view class="guide-heading">
-      <text class="guide-title">{{guideSteps[guideIndex].title}}</text>
-      <text class="guide-count">{{guideIndex + 1}} / {{guideSteps.length}}</text>
+      <text class="guide-title">{{i18n.t((guideSteps[guideIndex].title), locale)}}</text>
+      <text class="guide-count">{{i18n.t((guideIndex + 1) + " / " + (guideSteps.length), locale)}}</text>
     </view>
-    <text class="guide-description">{{guideSteps[guideIndex].description}}</text>
+    <text class="guide-description">{{i18n.t((guideSteps[guideIndex].description), locale)}}</text>
     <view class="guide-footer">
       <view class="guide-dots">
         <view wx:for="{{guideSteps}}" wx:key="target" class="guide-dot {{guideIndex === index ? 'guide-dot-active' : ''}}"></view>
       </view>
       <view class="guide-actions">
-        <button class="guide-skip" bindtap="skipGuide" hover-class="navigation-pressed">跳过</button>
+        <button wx:if="{{guideIndex === guideSteps.length - 1}}" class="guide-try" bindtap="tryAssistant" disabled="{{!guideReady}}"
+          hover-class="navigation-pressed">{{i18n.t("现在试试", locale)}}</button>
+        <button class="guide-skip" bindtap="skipGuide" hover-class="navigation-pressed">{{i18n.t("跳过", locale)}}</button>
         <button class="guide-next" bindtap="nextGuide" disabled="{{!guideReady}}"
-          hover-class="navigation-pressed">{{guideIndex === guideSteps.length - 1 ? '开始使用' : '下一步'}}</button>
+          hover-class="navigation-pressed">{{i18n.t("下一步", locale)}}</button>
       </view>
     </view>
     <view wx:if="{{guideReady}}" class="guide-arrow" style="{{arrowStyle}}"></view>

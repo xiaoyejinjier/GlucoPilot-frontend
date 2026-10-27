@@ -172,19 +172,22 @@ function updateNewsAction(id, payload) {
 }
 
 function fetchCommunityProfile(key) { return get(`/community/profiles/${encodeURIComponent(key)}`, null, { auth: true }) }
+function fetchEnglishLocalizations(items,retry=false) { return post('/localizations/en',{items,retry},{auth:true,timeout:15000}) }
 function fetchMyReports(params) { return get('/community/reports/mine',params,{auth:true}) }
 function fetchReportFeedback(id) { return get(`/community/reports/${encodeURIComponent(id)}`,null,{auth:true}) }
 function readReportFeedback(id) { return put(`/community/reports/${encodeURIComponent(id)}/read`,null,{auth:true}) }
 function setCommunityFollowing(key, following) { return put(`/community/profiles/${encodeURIComponent(key)}/following`, { following }, { auth: true }) }
 function fetchCommunityList(mode, params) {
-  if (!['following', 'collections', 'messages', 'profiles'].includes(mode)) return Promise.reject(new Error('列表类型不正确'))
-  return get(`/community/${mode}`, params, { auth: true }).then(page => mode === 'collections'
+  if (!['following', 'likes', 'collections', 'messages', 'profiles'].includes(mode)) return Promise.reject(new Error('列表类型不正确'))
+  return get(`/community/${mode}`, params, { auth: true }).then(page => (mode === 'collections' || mode === 'likes')
     ? { ...page, records: (page.records || []).map(mapNewsItem) } : page)
 }
 function fetchNewsComments(id, params) { return get(`/news/${id}/comments`, params, { auth: true }) }
+function fetchCommentContext(id, commentId) { return get(`/news/${id}/comments/${encodeURIComponent(commentId)}/context`, null, { auth: true }) }
 function fetchCommentReplies(id, rootId, params) { return get(`/news/${id}/comments/${rootId}/replies`, params, { auth: true }) }
 function addNewsComment(id, payload) { const path = payload.replyToCommentId ? `/news/${id}/comments/${encodeURIComponent(payload.replyToCommentId)}/replies` : `/news/${id}/comments`; return post(path, payload, { auth: true }) }
 function deleteNewsComment(id, commentId) { return del(`/news/${id}/comments/${commentId}`, null, { auth: true }) }
+function fetchMyComments(params) { return get('/community/comments/mine', params, { auth: true }) }
 function fetchDirectMessages(peer, params) { return get(`/community/messages/${encodeURIComponent(peer)}`, params, { auth: true }) }
 function fetchUnreadMessages() { return get('/community/messages/unread', null, { auth:true }) }
 function fetchInformationSummary() { return get('/community/information/summary', null, { auth:true }) }
@@ -198,11 +201,12 @@ function deleteDraft(id,revision) { return del(`/community/drafts/${encodeURICom
 function publishDraft(id,payload) { return post(`/community/drafts/${encodeURIComponent(id)}/publish`,payload,{auth:true}) }
 function createExportTask(payload) { return post('/data-export-tasks',payload,{auth:true}) }
 function fetchExportTasks(params) { return get('/data-export-tasks',params,{auth:true}) }
+function deleteExportTask(id) { return del(`/data-export-tasks/${encodeURIComponent(id)}`,null,{auth:true}) }
 function generateExportTask(id) { return post(`/data-export-tasks/${encodeURIComponent(id)}/generate`,null,{auth:true,timeout:60000}) }
 function sendDirectMessage(peer, payload) { return post(`/community/messages/${encodeURIComponent(peer)}`, payload, { auth: true, timeout: 15000 }) }
 function readDirectMessages(peer, throughId) { return put(`/community/messages/${encodeURIComponent(peer)}/read`, { throughId }, { auth: true }) }
 
-function fetchMyCommunityTags() { return get('/community/tags/mine',null,{auth:true}) }
+function fetchMyCommunityTags(includeDisabled=false) { return get('/community/tags/mine',{includeDisabled},{auth:true}) }
 function fetchProfileArticles(key,params) { return get(`/community/profiles/${encodeURIComponent(key)}/articles`,params,{auth:true}).then(page=>({...page,records:(page.records || []).map(mapCommunityArticle)})) }
 function fetchCommunityTags() { return get('/community/tags', null, { auth: true }) }
 function mapCommunityArticle(item) {
@@ -409,17 +413,72 @@ function unbindDevice(id) {
 }
 
 /**
+ * 本人设备近 N 次同步流水（默认 10）。
+ * @param {string|number} deviceId
+ * @param {number} [limit=10]
+ */
+function fetchDeviceSyncLogs(deviceId, limit) {
+  const size = limit == null ? 10 : Number(limit)
+  return get(`/devices/${deviceId}/sync-logs`, { limit: size }, { auth: true }).then((list) =>
+    (list || []).map((row) => ({
+      id: String(row.id),
+      provider: String(row.provider || '').toUpperCase(),
+      sampleCount: row.sampleCount == null ? 0 : Number(row.sampleCount),
+      createdCount: row.createdCount == null ? 0 : Number(row.createdCount),
+      remark: row.remark || '',
+      syncedAt: row.syncedAt || ''
+    }))
+  )
+}
+
+/**
+ * 设备同步总线：上传厂商/入口 raw payload。
+ * @param {{ provider: string, deviceSn?: string, payload: object|array }} opts
+ */
+function syncDeviceGlucose(opts) {
+  const body = {
+    provider: String(opts.provider || '').toUpperCase(),
+    payload: opts.payload
+  }
+  if (opts.deviceSn) body.deviceSn = opts.deviceSn
+  return post('/device/glucose-sync', body, { auth: true })
+}
+
+/**
+ * 选厂商 → 自动绑定模拟设备 → 随机 payload 同步。
+ * @param {string} provider
+ */
+function createSimDeviceAndSync(provider) {
+  const {
+    buildRandomPayload,
+    providerLabel,
+    generateSimDeviceSn
+  } = require('./device-sim-generator')
+  const code = String(provider || '').toUpperCase()
+  const deviceSn = generateSimDeviceSn(code)
+  const deviceName = providerLabel(code)
+  const payload = buildRandomPayload(code)
+  return bindDevice({ deviceSn, provider: code, deviceName }).then((device) =>
+    syncDeviceGlucose({ provider: code, deviceSn, payload }).then((syncResult) => ({
+      device,
+      syncResult,
+      deviceSn,
+      provider: code
+    }))
+  )
+}
+
+/**
  * MOCK 同步演示读数。可附带 deviceSn 以刷新 last_sync_at。
  * @param {Array|undefined} readings
  * @param {string|undefined} deviceSn
  */
 function syncMockGlucose(readings, deviceSn) {
-  const body = {
+  return syncDeviceGlucose({
     provider: 'MOCK',
+    deviceSn,
     payload: { readings: readings || defaultMockReadings() }
-  }
-  if (deviceSn) body.deviceSn = deviceSn
-  return post('/device/glucose-sync', body, { auth: true })
+  })
 }
 
 function defaultMockReadings() {
@@ -564,14 +623,15 @@ function fetchGlucoseSummary(params) {
 }
 
 module.exports = {
+  fetchEnglishLocalizations,
   fetchMutualFriends,setArticleVisibility,hideCommunityArticle,recordArticleView,
   fetchInformationSummary, fetchInteractionNotices, readInteractionNotices,
   fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
-  createExportTask, fetchExportTasks, generateExportTask,
+  createExportTask, fetchExportTasks, generateExportTask, deleteExportTask,
   fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
   submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
   fetchCommunityProfile, setCommunityFollowing, fetchCommunityList, fetchMyReports, fetchReportFeedback, readReportFeedback,
-  fetchNewsComments, fetchCommentReplies, addNewsComment, deleteNewsComment,
+  fetchNewsComments, fetchCommentContext, fetchCommentReplies, addNewsComment, deleteNewsComment, fetchMyComments,
   fetchDirectMessages, sendDirectMessage, readDirectMessages, fetchUnreadMessages,
   channelName,
   channelCode,
@@ -608,6 +668,9 @@ module.exports = {
   fetchMyDevices,
   bindDevice,
   unbindDevice,
+  fetchDeviceSyncLogs,
+  syncDeviceGlucose,
+  createSimDeviceAndSync,
   syncMockGlucose,
   defaultMockReadings,
   fetchMe,

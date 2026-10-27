@@ -15,6 +15,7 @@ function createPage() {
     nextTick: (callback) => state.nextTicks.push(callback)
   }
   const dependencies = {
+    '../../utils/locales/en': require('../../utils/locales/en'),
     '../../utils/display': { applyDisplayToCurrentPage() {} },
     '../../services/api': { getOrCreateChatSession: async () => ({ id: 1 }) },
     '../../utils/media': {},

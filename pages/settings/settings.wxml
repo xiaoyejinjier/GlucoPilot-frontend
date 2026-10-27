@@ -1,19 +1,28 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
+  <view class="card language-card">
+    <view class="language-heading"><text>{{i18n.t("语言", locale)}}</text><text wx:if="{{locale !== 'en'}}" class="language-caption">Language</text></view>
+    <view class="language-options">
+      <button class="language-option {{locale !== 'en' ? 'selected' : ''}} ui-interactive" data-locale="zh-CN" bindtap="onLanguage" aria-role="radio" aria-checked="{{locale !== 'en'}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text data-i18n-raw="true">简体中文</text><text class="language-check">{{i18n.t((locale !== 'en' ? '✓' : ''), locale)}}</text></button>
+      <button class="language-option {{locale === 'en' ? 'selected' : ''}} ui-interactive" data-locale="en" bindtap="onLanguage" aria-role="radio" aria-checked="{{locale === 'en'}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text>English</text><text class="language-check">{{i18n.t((locale === 'en' ? '✓' : ''), locale)}}</text></button>
+    </view>
+    <text class="language-note">{{i18n.t("切换后立即生效，并记住你的选择。", locale)}}</text>
+  </view>
   <view class="card menu-list">
-    <view class="menu-item" data-url="/pages/profile-edit/profile-edit" bindtap="onNav">
-      <text>个人资料</text><text class="menu-arrow">›</text>
+    <view class="menu-item ui-interactive" data-url="/pages/profile-edit/profile-edit" bindtap="onNav" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <text>{{i18n.t("个人资料", locale)}}</text><text class="menu-arrow">›</text>
     </view>
-    <view class="menu-item" data-url="/pages/account-security/account-security" bindtap="onNav">
-      <text>账号安全</text><text class="menu-arrow">›</text>
+    <view class="menu-item ui-interactive" data-url="/pages/account-security/account-security" bindtap="onNav" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <text>{{i18n.t("账号安全", locale)}}</text><text class="menu-arrow">›</text>
     </view>
-    <view class="menu-item" data-url="/pages/notifications/notifications" bindtap="onNav">
-      <text>通知</text><text class="menu-arrow">›</text>
+    <view class="menu-item ui-interactive" data-url="/pages/notifications/notifications" bindtap="onNav" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <text>{{i18n.t("通知", locale)}}</text><text class="menu-arrow">›</text>
     </view>
-    <view class="menu-item" data-url="/pages/display-settings/display-settings" bindtap="onNav">
-      <text>界面展示</text><text class="menu-arrow">›</text>
+    <view class="menu-item ui-interactive" data-url="/pages/display-settings/display-settings" bindtap="onNav" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <text>{{i18n.t("界面展示", locale)}}</text><text class="menu-arrow">›</text>
     </view>
-    <view class="menu-item" data-url="/pages/about/about" bindtap="onNav">
-      <text>关于我们</text><text class="menu-arrow">›</text>
+    <view class="menu-item ui-interactive" data-url="/pages/about/about" bindtap="onNav" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <text>{{i18n.t("关于我们", locale)}}</text><text class="menu-arrow">›</text>
     </view>
   </view>
 </view>

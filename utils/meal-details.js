@@ -32,6 +32,7 @@ function buildMealDetails(meal, recordDate) {
     hungerText: ({ 1: '饱腹', 2: '一般', 3: '微饿' })[meal.hungerLevel] || '未填写',
     supplementText: typeof meal.supplementText === 'string' && meal.supplementText.trim() ? meal.supplementText : '无',
     mediaUrl: typeof meal.mediaUrl === 'string' ? meal.mediaUrl : '',
+    mediaId: /^[1-9]\d{0,18}$/.test(String(meal.mediaId || '')) ? String(meal.mediaId) : '',
     items: items.map((item, index) => ({
       key: index,
       name: item.foodName || '未命名食物',

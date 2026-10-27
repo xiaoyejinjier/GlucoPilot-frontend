@@ -1,0 +1,104 @@
+var han = pattern('[一-龥]');
+var whitespace = pattern('^\\s+|\\s+$', 'g');
+function t(value, locale) {
+  if (locale !== 'en' || typeof value !== 'string') return value;
+  var key = value.replace(whitespace, '');
+  var translated = messages[key];
+  if (typeof translated === 'string') return value.replace(key, translated);
+  if (!han.test(value)) return value;
+  var match;
+  // Structured UI metadata only. Article bodies, names and messages never call t().
+  var separators = [' · ', ' — ', ' 至 ', ' / '];
+  for (var s = 0; s < separators.length; s++) {
+    if (key.indexOf(separators[s]) >= 0) {
+      var parts = key.split(separators[s]);
+      for (var p = 0; p < parts.length; p++) parts[p] = t(parts[p], locale);
+      return parts.join(separators[s] === ' 至 ' ? ' to ' : separators[s]);
+    }
+  }
+  if (key.slice(-2) === ' ›') return t(key.slice(0, -2), locale) + ' ›';
+  if (key.slice(0, 2) === '# ' || key.slice(0, 2) === '✓ ') return key.slice(0, 2) + t(key.slice(2), locale);
+  match = pattern('^(\\d+)\\s*(分钟|小时|天|周|个月|年)前$').exec(key);
+  if (match) {
+    var units = {'分钟':'minute','小时':'hour','天':'day','周':'week','个月':'month','年':'year'};
+    return match[1] + ' ' + units[match[2]] + (match[1] === '1' ? '' : 's') + ' ago';
+  }
+  match = pattern('^(\\d+)\\s*(分钟|小时|天)$').exec(key);
+  if (match) return match[1] + ' ' + ({'分钟':'min','小时':'h','天':'days'})[match[2]];
+  match = pattern('^(\\d+)\\s*年\\s*(\\d+)\\s*月(?:\\s*(\\d+)\\s*日)?(.*)$').exec(key);
+  if (match) return match[1] + '-' + (match[2].length === 1 ? '0' : '') + match[2] + (match[3] ? '-' + (match[3].length === 1 ? '0' : '') + match[3] : '') + (match[4] === '指标' ? ' summary' : match[4] === '时段分布' ? ' time slots' : t(match[4], locale));
+  match = pattern('^(\\d+)月(\\d+)日(.*)$').exec(key);
+  if (match) return match[1] + '/' + match[2] + t(match[3], locale);
+  match = pattern('^(\\d+)月$').exec(key);
+  if (match) return ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][match[1] * 1] || key;
+  match = pattern('^(\\d+)\\s*年$').exec(key);
+  if (match) return match[1];
+  match = pattern('^(\\d+)\\s*日$').exec(key);
+  if (match) return match[1];
+  match = pattern('^第\\s*(\\d+)\\s*版$').exec(key);
+  if (match) return 'Revision ' + match[1];
+  match = pattern('^([\\d.]+)\\s*次浏览$').exec(key);
+  if (match) return match[1] + ' views';
+  match = pattern('^已选\\s*(.*)$').exec(key);
+  if (match) return 'Selected ' + t(match[1], locale);
+  match = pattern('^已记\\s*(.*)$').exec(key);
+  if (match) return 'Logged ' + match[1];
+  match = pattern('^今日\\s*(\\d+)\\s*条$').exec(key);
+  if (match) return match[1] + ' today';
+  match = pattern('^正在录音…\\s*(.*)$').exec(key);
+  if (match) return 'Recording… ' + match[1];
+  match = pattern('^建议吃\\s*(.*)$').exec(key);
+  if (match) return 'Suggested portion: ' + match[1];
+  match = pattern('^识别置信度\\s*(.*)$').exec(key);
+  if (match) return 'Confidence ' + match[1];
+  match = pattern('^(.*)位好友$').exec(key);
+  if (match) return match[1] + ' friends';
+  match = pattern('^(.*)\\s*台$').exec(key);
+  if (match) return match[1] + ' devices';
+  match = pattern('^(.*)\\s*(条|次|天)$').exec(key);
+  if (match) return t(match[1], locale) + ({'条':' records','次':' times','天':' days'})[match[2]];
+  match = pattern('^确定解绑「(.*)」？已有测量记录会保留。$').exec(key);
+  if (match) return 'Unlink "' + match[1] + '"? Existing readings will be kept.';
+  match = pattern('^当前已是最新版本 v(.*)$').exec(key);
+  if (match) return 'Already up to date: v' + match[1];
+  match = pattern('^本月平均血糖 ([\\d.]+) mmol/L(?:，波动区间 ([\\d.~]+))?，已打卡 (\\d+) 天。$').exec(key);
+  if (match) return 'Monthly mean: ' + match[1] + ' mmol/L' + (match[2] ? '; range: ' + match[2] : '') + '; logged on ' + match[3] + ' days.';
+  match = pattern('^这条(.*)有什么问题？$').exec(key);
+  if (match) return 'What is wrong with this ' + t(match[1], locale).toLowerCase() + '?';
+  if (key.slice(-2) === '举报') return t(key.slice(0, -2), locale) + ' report';
+  var prefixes = ['当前节点：','当前：字号','主题','版本','提交于','举报编号 #','SN：','新信息','血糖提醒','血糖','饮食','回复','测量时间：','推荐碳水','碳水','食品库匹配','新增待审核','展开查看全部（','查看文章：','编辑文章：','识别置信度','图片原文：','序列号：','来源：','最近同步：'];
+  for (var i = 0; i < prefixes.length; i++) {
+    var prefix = prefixes[i];
+    if (key.indexOf(prefix) === 0 && key.length > prefix.length) return (messages[prefix] || prefix) + ' ' + t(key.slice(prefix.length).replace(whitespace, ''), locale);
+  }
+  match = pattern('^(.*)\\s*项$').exec(key);
+  if (match) return match[1] + ' items';
+  match = pattern('^([\\d.]+)克碳水/100g$').exec(key);
+  if (match) return match[1] + ' g carbs / 100 g';
+  return value;
+}
+
+// Translate built-in category names, preserving user-created tags with other codes.
+function tag(value, locale) {
+  if (!value) return '';
+  if (['diet','type1','type2','medication','exercise','daily','other'].indexOf(value.code) >= 0) return t(value.name, locale);
+  return value.name;
+}
+function list(values, locale) {
+  var result = [];
+  if (!values) return result;
+  for (var i = 0; i < values.length; i++) result.push(t(values[i], locale));
+  return result;
+}
+function content(table, kind, id, field, original, locale, fallback) {
+  var raw = typeof fallback === 'undefined' ? original : fallback;
+  if (locale !== 'en' || !table || !id) return raw;
+  var entry = table[kind + ':' + id];
+  if (!entry || entry.status !== 'READY' || !entry.source || !entry.translated || entry.source[field] !== original) return raw;
+  return typeof entry.translated[field] === 'string' ? entry.translated[field] : raw;
+}
+function name(table, profile, locale) {
+  if (!profile) return '';
+  var id = profile.key || profile.communityKey || (profile.userId ? 'u' + profile.userId : '');
+  return content(table, 'PROFILE_NAME', id, 'nickname', profile.nickname || '', locale);
+}

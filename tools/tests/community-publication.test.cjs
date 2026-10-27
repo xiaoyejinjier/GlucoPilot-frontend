@@ -49,6 +49,17 @@ test('减少此类内容在保存后移除当前文章，失败保留，举报�
   const failed=page('index',{hideCommunityArticle:async()=>{throw Error('暂时不可用')}});await flush();failed.page.setData({posts:[{id:'21'}]});await failed.page.onHideArticle('21');assert.equal(failed.page.data.posts.length,1);failed.page.onUnload()
 })
 
+test('社区快捷入口按关注点赞收藏排序，实际入口均能打开对应列表或信息页',async()=>{
+  const {page:p,state}=page('index');await flush()
+  const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+  const shortcuts=template.slice(template.indexOf('<view class="community-shortcuts">'),template.indexOf('<view class="feed-heading">'))
+  const modes=Array.from(shortcuts.matchAll(/data-mode="([^"]+)"/g),match=>match[1])
+  assert.deepEqual(modes,['following','likes','collections','messages','profiles'])
+  for(const mode of modes)p.onCommunityEntry({currentTarget:{dataset:{mode}}})
+  assert.deepEqual(state.navs.map(row=>row.url),['/pages/community/community?mode=following','/pages/community/community?mode=likes','/pages/community/community?mode=collections','/pages/information/information','/pages/community/community?mode=profiles'])
+  const count=state.navs.length;p.onCommunityEntry({currentTarget:{dataset:{mode:'invalid'}}});assert.equal(state.navs.length,count);p.onUnload()
+})
+
 test('社区评论按钮带定位参数，正文入口保持原行为，非法文章ID不会导航',async()=>{
   const {page:p,state}=page('index');await flush()
   const event={currentTarget:{dataset:{id:'10'}}};p.onComments(event);p.onOpen(event)
@@ -106,7 +117,7 @@ test('配图上传阻止提前提交，成功带媒体ID，失败保留已上传
 
 test('短内容可存草稿，继续编辑保存版本后发布，发布重试不重复保存或创建文章',async()=>{
   let attempt=0
-  const {page:p,state}=page('community-compose',{publishDraft:async()=>{if(!attempt++)throw new Error('网络超时');return{id:'8',state:'AI_PENDING'}}})
+  const {page:p,state}=page('community-compose',{publishDraft:async()=>{if(!attempt++)throw new Error('网络超时');return{id:'8',state:'AI_PENDING'}}});await flush()
   p.setData({title:'草稿计划',body:'还没写完'});await p.onSaveDraft();assert.equal(p._draftId,'101');assert.equal(p._loaded,true)
   assert.equal(state.calls.filter(c=>c.key==='createDraft').length,1);assert.equal(state.calls.filter(c=>c.key==='submitCommunityArticle').length,0)
   p.onBody({detail:{value:'今天认真记录了一餐的搭配，也想听听大家日常记录的经验。'}});p.setTags(['diet']);await p.onSubmit();assert.equal(p.data.submitted,null)
@@ -136,7 +147,7 @@ test('配图携带当前身份下载，换账号后迟到文件被清理，预�
 })
 
 test('发文限制标签数量，校验通过后提交审核而不宣称公开发布',async()=>{
-  const {page:p,state}=page('community-compose')
+  const {page:p,state}=page('community-compose');await flush()
   await p.onSubmit();assert.equal(state.calls.filter(c=>c.key==='submitCommunityArticle').length,0)
   p.setData({title:'分享我的一餐',body:'今天认真记录了一餐的搭配，也想听听大家日常记录的经验。'})
   for(const code of ['diet','type1','daily','exercise']) p.onTag({currentTarget:{dataset:{code}}})
@@ -148,7 +159,7 @@ test('发文限制标签数量，校验通过后提交审核而不宣称公开�
 
 test('投稿失败保留草稿和请求标识，重试不重复创建意图',async()=>{
   let attempt=0
-  const {page:p,state}=page('community-compose',{submitCommunityArticle:async()=>{if(!attempt++)throw new Error('offline');return {id:'8',state:'PENDING_ADMIN'}}})
+  const {page:p,state}=page('community-compose',{submitCommunityArticle:async()=>{if(!attempt++)throw new Error('offline');return {id:'8',state:'PENDING_ADMIN'}}});await flush()
   p.setData({title:'我的记录经验',body:'今天坚持认真记录了一餐的搭配，也想听听大家日常记录的经验。'});p.setTags(['daily'])
   await p.onSubmit();assert.equal(p.data.submitted,null);assert.ok(p.data.body)
   await p.onSubmit();const calls=state.calls.filter(c=>c.key==='submitCommunityArticle')
@@ -157,7 +168,7 @@ test('投稿失败保留草稿和请求标识，重试不重复创建意图',asy
 })
 
 test('自定义标签可添加移除与预置去重，提交时带上文字并限制总数',async()=>{
-  const {page:p,state}=page('community-compose')
+  const {page:p,state}=page('community-compose');await flush()
   p.onCustomTagInput({detail:{value:' #我的早餐 '}});p.onAddCustomTag();assert.deepEqual(Array.from(p.data.customTags),['我的早餐'])
   p.onCustomTagInput({detail:{value:'我的早餐'}});p.onAddCustomTag();assert.equal(p.data.tagCount,1)
   p.onCustomTagInput({detail:{value:'饮食控糖'}});p.onAddCustomTag();assert.equal(p.data.tagCount,2);assert.equal(p.data.tagCodes[0],'diet')
@@ -296,4 +307,29 @@ test('打开草稿箱先关闭返回保护，返回编辑器后仍保留未保�
  p.onDraftBox();assert.equal(state.navs.length,0);p.onGuardBeforeLeave();p.onGuardAfterLeave()
  assert.match(state.navs[0].url,/mode=drafts$/);assert.equal(state.modals.length,0)
  p.onHide();p.onShow();await flush();assert.equal(p.data.body,'写了一半的内容');assert.equal(p.hasUnsavedContent(),true);assert.equal(p.data.leaveGuardActive,true);p.onUnload()
+})
+
+test('后台新增分类立即成为社区和发文选项，用户标签只在其他分区并能筛选',async()=>{
+ const tags=[{code:'topic_new',name:'控糖早餐',type:'OFFICIAL'},{code:'other',name:'其他',type:'OFFICIAL'},{code:'custom_breakfast',name:'早餐搭配',type:'USER'}]
+ const feed=page('index',{fetchCommunityTags:async()=>tags});await flush();assert.deepEqual(Array.from(feed.page.data.tags,t=>t.code),['topic_new','other']);assert.equal(feed.page.data.otherTags[0].code,'custom_breakfast')
+ feed.page.onTag({currentTarget:{dataset:{code:'other'}}});await flush();assert.equal(feed.page.data.otherSelected,true);assert.equal(feed.state.calls.filter(c=>c.key==='fetchCommunityArticles').at(-1).args[0].tag,'other')
+ feed.page.onOtherTag({currentTarget:{dataset:{code:'custom_breakfast'}}});await flush();assert.equal(feed.state.calls.filter(c=>c.key==='fetchCommunityArticles').at(-1).args[0].tag,'custom_breakfast');feed.page.onUnload()
+ const editor=page('community-compose',{fetchCommunityTags:async()=>tags});await flush();editor.page.onTag({currentTarget:{dataset:{code:'topic_new'}}});assert.equal(editor.page.data.tagCodes[0],'topic_new');assert.equal(editor.page.data.tags.some(t=>t.code==='custom_breakfast'),false);assert.equal(editor.page.data.otherTags.length,1);editor.page.onUnload()
+})
+
+test('删除后的官方和常用标签不可再选，草稿正文保留且服务器刷新清理选择',async()=>{
+ let removed=false;const tags=[{code:'diet',name:'饮食控糖',type:'OFFICIAL'}]
+ const {page:p,state}=page('community-compose',{fetchCommunityTags:async()=>removed?[]:tags,fetchMyCommunityTags:async()=>removed?[{code:'custom_old',name:'旧标签',type:'USER',enabled:0}]:[]});await flush()
+ p.onTitle({detail:{value:'我的早餐'}});p.onBody({detail:{value:'未保存的正文'}});p.onTag({currentTarget:{dataset:{code:'diet'}}})
+ p.onCustomTagInput({detail:{value:'旧标签'}});p.onAddCustomTag();assert.equal(p.data.tagCount,2)
+ removed=true;await p.loadTagOptions();assert.equal(p.data.tagCount,0);assert.equal(p.data.body,'未保存的正文');assert.equal(p.data.title,'我的早餐');assert.match(p.data.tagNotice,/已删除/)
+ p.onTag({currentTarget:{dataset:{code:'diet'}}});assert.equal(p.data.tagCodes.length,0)
+ p.onCustomTagInput({detail:{value:'旧标签'}});p.onAddCustomTag();assert.equal(p.data.customTags.length,0);assert.match(state.toasts.at(-1).title,/已删除/);p.onUnload()
+})
+
+test('标签失败不回落写死分类，重试后恢复，离页或新账号不接受旧目录',async()=>{
+ let failed=true;const editor=page('community-compose',{fetchCommunityTags:async()=>{if(failed)throw Error('offline');return[{code:'topic_new',name:'新标签'}]}});await flush();assert.equal(editor.page.data.tags.length,0);assert.ok(editor.page.data.tagsError)
+ editor.page.onTag({currentTarget:{dataset:{code:'diet'}}});assert.equal(editor.page.data.tagCodes.length,0)
+ failed=false;await editor.page.loadTagOptions();assert.equal(editor.page.data.tags[0].code,'topic_new');editor.page.onUnload()
+ const late=deferred(),feed=page('index',{fetchCommunityTags:()=>late.promise});feed.page.onHide();feed.state.token='two';late.resolve([{code:'topic_old',name:'旧账号标签'}]);await flush();assert.equal(feed.page.data.tags.length,0);feed.page.onUnload()
 })

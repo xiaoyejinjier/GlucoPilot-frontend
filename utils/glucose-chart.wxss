@@ -1,0 +1,7 @@
+.glucose-series-legend { display:flex; flex-wrap:wrap; gap:12rpx 24rpx; margin-top:10rpx; color:#59636e; font-size:var(--fs-small); line-height:1.5; }
+.glucose-series-item { display:flex; align-items:center; gap:10rpx; }
+.glucose-series-line { position:relative; width:44rpx; height:0; border-top:5rpx solid var(--brand); }
+.glucose-series-line::after { position:absolute; content:''; left:16rpx; top:-8rpx; width:11rpx; height:11rpx; border-radius:50%; background:var(--brand); }
+.glucose-series-line.predicted { border-top:3rpx dashed #47976d; }
+.glucose-series-line.predicted::after { top:-7rpx; box-sizing:border-box; width:12rpx; height:12rpx; background:#fff; border:3rpx solid #47976d; }
+.glucose-prediction-note { margin-top:12rpx; color:#818b98; font-size:var(--fs-small); line-height:1.6; }

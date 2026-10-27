@@ -5,11 +5,11 @@ function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve
 const person={communityKey:'u1',nickname:'糖友',avatarUrl:'https://example.invalid/old.png',avatarText:'糖',diabetesType:'2型糖尿病',age:30,height:170,weight:65,targetFasting:6,targetPostprandial:8}
 function harness(overrides={}) {
  const state={token:'one',calls:[],toasts:[],saved:[],timers:[],navs:[]}
- const wx={chooseMedia:o=>o.success({tempFiles:[{tempFilePath:'wxfile://new-avatar.jpg',size:100}]}),showToast:o=>state.toasts.push(o),navigateBack:()=>state.navs.push('back')}
+ const wx={chooseMedia:o=>o.success({tempFiles:[{tempFilePath:'wxfile://new-avatar.jpg',size:100}]}),showToast:o=>state.toasts.push(o),navigateBack:()=>state.navs.push('back'),navigateTo:o=>{state.navs.push(o);if(o.complete)o.complete()}}
  const api={fetchMe:async()=>({...person}),updateProfile:async()=>({updated:true}),saveHealthProfile:async()=>({updated:true}),...overrides}
  const calls=Object.fromEntries(Object.entries(api).map(([key,fn])=>[key,(...args)=>{state.calls.push({key,args});return fn(...args)}]))
  const media={BIZ_TYPE:{AVATAR:1},MAX_IMAGE_BYTES:5242880,uploadMediaFile:async(...args)=>{state.calls.push({key:'upload',args});return overrides.upload?overrides.upload(...args):{id:'101',fileUrl:'https://example.invalid/registered.png'}}}
- const deps={'../../services/api':calls,'../../utils/storage':{getUserInfo:()=>({...person}),saveUserInfo:me=>state.saved.push(me)},'../../utils/display':{applyDisplayToCurrentPage(){}},'../../utils/media':media,'../../utils/request':{getToken:()=>state.token},'../../utils/mappers':{DIABETES_TYPE_TEXT:['未填写','1型糖尿病','2型糖尿病'],diabetesCode:value=>value==='2型糖尿病'?2:0}}
+ const deps={'../../utils/profile-medications':require('../../utils/profile-medications'),'../../services/api':calls,'../../utils/storage':{getUserInfo:()=>({...person}),saveUserInfo:me=>state.saved.push(me)},'../../utils/display':{applyDisplayToCurrentPage(){}},'../../utils/media':media,'../../utils/request':{getToken:()=>state.token},'../../utils/mappers':{DIABETES_TYPE_TEXT:['未填写','1型糖尿病','2型糖尿病'],diabetesCode:value=>value==='2型糖尿病'?2:0}}
  let def;vm.runInNewContext(fs.readFileSync(path.join(root,'pages/profile-edit/profile-edit.js'),'utf8'),{Page:x=>def=x,wx,require:key=>{assert.ok(deps[key],key);return deps[key]},setTimeout:fn=>{state.timers.push(fn);return state.timers.length},clearTimeout(){}})
  const p={...def,data:JSON.parse(JSON.stringify(def.data)),setData:patch=>Object.assign(p.data,patch)};p.onLoad();p.onShow()
  return{p,state,wx}
@@ -22,6 +22,54 @@ test('头像走AVATAR上传登记，阻止提前保存，资料只提交登记�
  assert.equal(p.data.uploadingAvatar,false);assert.equal(p.data.avatarPreview,'');assert.equal(state.calls.find(c=>c.key==='upload').args[0],1)
  await p.onSave();assert.equal(state.calls.find(c=>c.key==='updateProfile').args[0].avatarUrl,'https://example.invalid/registered.png')
  assert.equal(state.calls.find(c=>c.key==='saveHealthProfile').args[0].targetFasting,6);p.onUnload()
+})
+
+test('手机号行进入绑定面板，返回只刷新号码且保留未保存资料',async()=>{
+ let phone='';const {p,state}=harness({fetchMe:async()=>({...person,phone})});await flush()
+ p.onField({currentTarget:{dataset:{key:'nickname'}},detail:{value:'未保存昵称'}})
+ p.onBindPhone();assert.match(state.navs[0].url,/account-security.*bind=phone/)
+ p.onHide();phone='13800000000';p.onShow();await flush()
+ assert.equal(p.data.form.phone,phone);assert.equal(p.data.form.nickname,'未保存昵称');p.onUnload()
+})
+
+test('绑定页面仅在显式phone入口自动展开，不自动发送验证码',()=>{
+ let page
+ vm.runInNewContext(fs.readFileSync(path.join(root,'pages/account-security/account-security.js'),'utf8'),{Page:value=>page=value,require:()=>({})})
+ const instance={...page,data:{...page.data},setData(values){Object.assign(this.data,values)}}
+ instance.onLoad({});assert.equal(instance.data.panel,false)
+ instance.onLoad({bind:'phone'});assert.equal(instance.data.panel,true);assert.equal(instance.data.emailPanel,false)
+ assert.equal(instance.data.smsCooldown,0);assert.equal(instance.data.newPhone,'')
+ const template=fs.readFileSync(path.join(root,'pages/profile-edit/profile-edit.wxml'),'utf8')
+ assert.match(template,/class="form-item profile-link" bindtap="onBindPhone"/)
+})
+
+test('确诊年月使用日期选择并保存YYYY-MM，未来月份无效且可清空',async()=>{
+ const {p,state}=harness();await flush()
+ p.onDiagnosisChange({detail:{value:'2021-06'}});assert.equal(p.data.form.confirmDate,'2021-06')
+ p.onDiagnosisChange({detail:{value:'2999-01'}});assert.equal(p.data.form.confirmDate,'2021-06')
+ await p.onSave();assert.equal(state.calls.find(c=>c.key==='saveHealthProfile').args[0].diagnosedYm,'2021-06')
+ p.onClearDiagnosis();assert.equal(p.data.form.confirmDate,'');p.onUnload()
+ const template=fs.readFileSync(path.join(root,'pages/profile-edit/profile-edit.wxml'),'utf8')
+ assert.match(template,/mode="date" fields="month"/);assert.match(template,/class="calendar-icon"/)
+})
+
+test('常见用药多选加其他按原字段保存，切换类型不清空药物',async()=>{
+ const {p,state}=harness();await flush()
+ const choose=name=>p.onMedicationTap({currentTarget:{dataset:{name}}})
+ choose('二甲双胍');choose('甘精胰岛素');p.onOtherMedication();p.onOtherMedicationInput({detail:{value:'自填药物'}})
+ p.onDiabetesChange({detail:{value:'1'}})
+ await p.onSave();const text=state.calls.find(c=>c.key==='saveHealthProfile').args[0].medication
+ assert.ok(text.includes('二甲双胍'));assert.ok(text.includes('甘精胰岛素'));assert.ok(text.includes('自填药物'))
+ choose('二甲双胍');assert.ok(!p.data.form.medication.includes('二甲双胍'));p.onUnload()
+})
+
+test('旧用药自由文本及剂量不改写，初始请求迟到不覆盖已选药或其他输入状态',async()=>{
+ const original='二甲双胍 每日2次；自定义记录',existing=harness({fetchMe:async()=>({...person,medication:original})});await flush()
+ assert.equal(existing.p.data.otherMedicationEnabled,true);await existing.p.onSave()
+ assert.equal(existing.state.calls.find(c=>c.key==='saveHealthProfile').args[0].medication,original);existing.p.onUnload()
+ const slow=deferred(),{p}=harness({fetchMe:()=>slow.promise})
+ p.onOtherMedication();slow.resolve({...person,medication:'二甲双胍'});await flush()
+ assert.equal(p.data.otherMedicationEnabled,true);assert.equal(p.data.selectedMedications.length,0);p.onUnload()
 })
 test('未修改头像不重提旧URL，清空头像明确提交空串',async()=>{
  const {p,state}=harness();await flush();await p.onSave()

@@ -20,6 +20,7 @@ function createPage(fetch, wxOverrides = {}) {
   let definition
   const calls = { queries: [], draw: 0, updates: 0, dayQueries: [] }
   const dependencies = {
+    '../../utils/locales/en': require('../../utils/locales/en'),
     '../../services/api': {
       fetchGlucoseSummary: async (query) => {
         calls.queries.push({ ...query })
@@ -31,6 +32,7 @@ function createPage(fetch, wxOverrides = {}) {
     '../../utils/constants': { GLUCOSE_NODES },
     '../../utils/stats-week': dates,
     '../../utils/meal-details': require('../../utils/meal-details'),
+    '../../utils/glucose-chart': require('../../utils/glucose-chart'),
     '../../utils/display': { applyDisplayToCurrentPage() {}, getTheme: () => ({ brand: '#07c160' }), getDisplaySettings: () => ({}) }
   }
   vm.runInNewContext(source, {
@@ -324,4 +326,67 @@ test('弹窗打开前发出的Canvas查询，晚回调时不得重试或操作�
 test('弹窗期间用等高普通view替代Canvas，不仅依赖CSS层级遮盖', () => {
   const template = fs.readFileSync(path.join(directory, 'stats.wxml'), 'utf8')
   assert.match(template, /<view wx:if="\{\{showWeekPicker\}\}" class="chart-canvas"><\/view>\s*<canvas wx:else type="2d" id="weekChart" class="chart-canvas">/)
+})
+
+function renderWeek(points) {
+  const operations = []
+  const context = new Proxy({}, {
+    get: (_, method) => (...args) => operations.push({ method, args }),
+    set: (_, name, value) => { operations.push({ method: 'style', args: [name, value] }); return true }
+  })
+  const { page, rawDrawWeekChart } = createPage(undefined, {
+    getWindowInfo: () => ({ pixelRatio: 2 }),
+    createSelectorQuery: () => ({
+      select() { return this }, fields() { return this },
+      exec(callback) { callback([{ node: { getContext: () => context }, width: 320, height: 150 }]) }
+    })
+  })
+  page._chartDrawVersion = 1
+  page.setData({ weekPoints: points, loading: false, weekLoadFailed: false })
+  rawDrawWeekChart.call(page, 1, 0)
+  return operations
+}
+
+test('周图分别连接预测和实测并保留缺日横轴，预测先画虚线白点、实测最后画实线', () => {
+  const points = Array.from({ length: 7 }, (_, index) => ({ label: String(index), value: null, predictedValue: null }))
+  points[0] = { ...points[0], value: 6, predictedValue: 14 }
+  points[6] = { ...points[6], value: 8, predictedValue: 7 }
+  const operations = renderWeek(points)
+  const dashed = operations.findIndex((op) => op.method === 'setLineDash' && op.args[0].length)
+  const solid = operations.findIndex((op, i) => i > dashed && op.method === 'setLineDash' && !op.args[0].length)
+  assert.ok(dashed > 0 && solid > dashed)
+  const arcs = operations.filter((op) => op.method === 'arc')
+  assert.equal(arcs.length, 4)
+  assert.deepEqual(arcs.map((op) => op.args[2]), [4, 4, 5, 5])
+  assert.equal(arcs[0].args[0], 40)
+  assert.equal(arcs[1].args[0], 308)
+  assert.ok(arcs.every((op) => op.args[1] >= 16 && op.args[1] <= 122))
+  assert.ok(operations.some((op) => op.method === 'fillText' && op.args[0] === '14'))
+  assert.ok(operations.slice(solid).some((op) => op.method === 'style' && op.args[0] === 'fillStyle' && op.args[1] === '#fff'))
+})
+
+test('只有推荐预测也显示周曲线，不生成实测点；无预测也不填零', () => {
+  const predictionOnly = renderWeek([{ label: '一', value: null, predictedValue: 7.1 },
+    { label: '二', value: null, predictedValue: null }])
+  assert.deepEqual(predictionOnly.filter((op) => op.method === 'arc').map((op) => op.args[2]), [4])
+  assert.equal(predictionOnly.some((op) => op.method === 'fillText' && op.args[0] === '本周暂无记录'), false)
+  const noData = renderWeek([{ label: '一', value: null, predictedValue: null },
+    { label: '二', value: null, predictedValue: 0 }])
+  assert.equal(noData.some((op) => op.method === 'arc'), false)
+  assert.ok(noData.some((op) => op.method === 'fillText' && op.args[0] === '本周暂无记录'))
+})
+
+test('摘要映射保留预测日均值与有效餐数，不覆盖实测日均值和周摘要', () => {
+  const module = { exports: {} }
+  vm.runInNewContext(fs.readFileSync(path.resolve(directory, '../../utils/mappers.js'), 'utf8'), {
+    module, require: () => ({ getFoodImage: () => '' })
+  })
+  const result = module.exports.mapSummary({ week: { avg: 6.5, max: 8, min: 5,
+    points: [{ avg: 6, count: 2, predictedAvg: 9, predictionCount: 3 },
+      { avg: null, count: 0, predictedAvg: null, predictionCount: 0 }] } })
+  assert.equal(result.week.points[0].value, 6)
+  assert.equal(result.week.points[0].predictedValue, 9)
+  assert.equal(result.week.points[0].predictionCount, 3)
+  assert.equal(result.week.points[1].predictedValue, null)
+  assert.equal(result.week.avg, 6.5)
 })

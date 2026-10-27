@@ -1,61 +1,62 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="device-page" style="{{displayStyle}}">
   <view class="device-intro">
-    <text class="device-intro-kicker">设备连接</text>
-    <text class="device-intro-title">添加你的血糖设备</text>
-    <text class="device-intro-note">让每一次测量，都更好地被记录</text>
+    <text class="device-intro-kicker">{{i18n.t("设备连接", locale)}}</text>
+    <text class="device-intro-title">{{i18n.t("添加你的血糖设备", locale)}}</text>
+    <text class="device-intro-note">{{i18n.t("让每一次测量，都更好地被记录", locale)}}</text>
   </view>
 
   <view class="discovery-card">
-    <view class="discovery-heading"><text>附近设备</text><view class="search-status {{searching ? 'is-searching' : ''}}"><view class="status-dot"></view><text>{{searching ? '搜索中' : scanFinished ? '搜索已结束' : '等待搜索'}}</text></view></view>
+    <view class="discovery-heading"><text>{{i18n.t("附近设备", locale)}}</text><view class="search-status {{searching ? 'is-searching' : ''}}"><view class="status-dot"></view><text>{{i18n.t((searching ? '搜索中' : scanFinished ? '搜索已结束' : '等待搜索'), locale)}}</text></view></view>
     <view wx:if="{{!devices.length}}" class="device-empty">
       <assistant-mascot class="mascot-scene" searching="{{searching}}"></assistant-mascot>
-      <text class="empty-heading">{{searching ? '正在寻找附近的蓝牙设备' : '未搜索到附近蓝牙设备'}}</text>
-      <text class="empty-description">请确保设备已开机并打开蓝牙</text>
-      <text class="empty-subtitle">将设备靠近手机，并保持可被发现状态</text>
+      <text class="empty-heading">{{i18n.t((searching ? '正在寻找附近的蓝牙设备' : '未搜索到附近蓝牙设备'), locale)}}</text>
+      <text class="empty-description">{{i18n.t("请确保设备已开机并打开蓝牙", locale)}}</text>
+      <text class="empty-subtitle">{{i18n.t("将设备靠近手机，并保持可被发现状态", locale)}}</text>
     </view>
     <view wx:else class="nearby-list">
-      <text class="nearby-warning">以下为本次发现的蓝牙设备，尚未验证是否为支持的血糖仪。</text>
+      <text class="nearby-warning">{{i18n.t("以下为本次发现的蓝牙设备，尚未验证是否为支持的血糖仪。", locale)}}</text>
       <view wx:for="{{devices}}" wx:key="deviceId" class="nearby-item">
         <view class="nearby-device-icon"><view class="mini-device-screen"></view></view>
-        <view class="nearby-info"><text class="nearby-name">{{item.name}}</text><text class="nearby-signal">{{item.signalText}} · 型号待验证</text></view>
-        <button class="candidate-button" data-id="{{item.deviceId}}" bindtap="onChooseDevice">登记</button>
+        <view class="nearby-info"><text class="nearby-name">{{item.name}}</text><text class="nearby-signal">{{i18n.t((item.signalText) + " · 型号待验证", locale)}}</text></view>
+        <button class="candidate-button ui-interactive" data-id="{{item.deviceId}}" bindtap="onChooseDevice" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("登记", locale)}}</button>
       </view>
     </view>
-    <view wx:if="{{scanError}}" class="device-error"><text>{{scanError}}</text><text class="settings-link" bindtap="onOpenSettings" aria-role="button">权限设置</text></view>
-    <button class="search-button" bindtap="onSearch" hover-class="search-button-pressed">{{searching ? '停止搜索' : scanFinished ? '重新搜索附近设备' : '搜索附近设备'}}</button>
-    <text class="search-footnote">搜索约 12 秒，不会自动连接附近设备</text>
+    <view wx:if="{{scanError}}" class="device-error"><text>{{i18n.t((scanError), locale)}}</text><text class="settings-link ui-interactive" bindtap="onOpenSettings" aria-role="button" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("权限设置", locale)}}</text></view>
+    <button class="search-button" bindtap="onSearch" hover-class="search-button-pressed">{{i18n.t((searching ? '停止搜索' : scanFinished ? '重新搜索附近设备' : '搜索附近设备'), locale)}}</button>
+    <text class="search-footnote">{{i18n.t("搜索约 12 秒，不会自动连接附近设备", locale)}}</text>
   </view>
 
-  <view class="device-section-heading"><text>其他添加方式</text><text class="section-side-note">查看设备机身或包装</text></view>
+  <view class="device-section-heading"><text>{{i18n.t("其他添加方式", locale)}}</text><text class="section-side-note">{{i18n.t("查看设备机身或包装", locale)}}</text></view>
   <view class="add-methods">
-    <button class="add-method" bindtap="onScanAdd" disabled="{{qrBusy}}" hover-class="method-pressed"><view class="method-icon qr-icon"><view class="qr-corner corner-tl"></view><view class="qr-corner corner-tr"></view><view class="qr-corner corner-bl"></view><view class="qr-corner corner-br"></view><view class="qr-center"></view></view><text class="method-title">扫码添加</text><text class="method-description">扫描设备二维码 / 条码</text></button>
-    <button class="add-method" bindtap="onSnAdd" hover-class="method-pressed"><view class="method-icon sn-icon">SN</view><text class="method-title">SN 添加</text><text class="method-description">手动输入设备序列号</text></button>
+    <button class="add-method" bindtap="onScanAdd" disabled="{{qrBusy}}" hover-class="method-pressed"><view class="method-icon qr-icon"><view class="qr-corner corner-tl"></view><view class="qr-corner corner-tr"></view><view class="qr-corner corner-bl"></view><view class="qr-corner corner-br"></view><view class="qr-center"></view></view><text class="method-title">{{i18n.t("扫码添加", locale)}}</text><text class="method-description">{{i18n.t("扫描设备二维码 / 条码", locale)}}</text></button>
+    <button class="add-method" bindtap="onSnAdd" hover-class="method-pressed"><view class="method-icon sn-icon">SN</view><text class="method-title">{{i18n.t("SN 添加", locale)}}</text><text class="method-description">{{i18n.t("手动输入设备序列号", locale)}}</text></button>
   </view>
 
   <view wx:if="{{drafts.length}}" class="draft-section">
-    <view class="device-section-heading"><text>待适配设备</text><text class="section-side-note">{{drafts.length}} 台</text></view>
+    <view class="device-section-heading"><text>{{i18n.t("待适配设备", locale)}}</text><text class="section-side-note">{{i18n.t((drafts.length) + " 台", locale)}}</text></view>
     <view wx:for="{{drafts}}" wx:key="id" class="draft-item">
-      <view class="draft-item-heading"><text class="draft-name">{{item.name}}</text><text class="pending-badge">待适配 · 未绑定</text></view>
-      <text wx:if="{{item.sn}}" class="draft-serial">SN：{{item.sn}}</text>
-      <view class="draft-item-footer"><text>{{item.sourceText}} · 暂无设备读数</text><text class="remove-draft" data-id="{{item.id}}" bindtap="onRemoveDraft" aria-role="button">移除</text></view>
+      <view class="draft-item-heading"><text class="draft-name">{{item.name}}</text><text class="pending-badge">{{i18n.t("待适配 · 未绑定", locale)}}</text></view>
+      <text wx:if="{{item.sn}}" class="draft-serial">{{i18n.t("SN：" + (item.sn), locale)}}</text>
+      <view class="draft-item-footer"><text>{{i18n.t((item.sourceText) + " · 暂无设备读数", locale)}}</text><text class="remove-draft ui-interactive" data-id="{{item.id}}" bindtap="onRemoveDraft" aria-role="button" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("移除", locale)}}</text></view>
     </view>
   </view>
 
-  <view class="device-preparation-note"><text class="preparation-title">关于设备接入</text><text>当前尚未选定设备型号。扫码和 SN 仅临时登记，信息保留在本次登录会话，不代表绑定成功。待厂商协议适配后，再接入真实血糖读数；不会影响现有拍照和手动记录。</text></view>
-  <text class="back-to-record" bindtap="onBack" aria-role="button">返回记录</text>
+  <view class="device-preparation-note"><text class="preparation-title">{{i18n.t("关于设备接入", locale)}}</text><text>{{i18n.t("当前尚未选定设备型号。扫码和 SN 仅临时登记，信息保留在本次登录会话，不代表绑定成功。待厂商协议适配后，再接入真实血糖读数；不会影响现有拍照和手动记录。", locale)}}</text></view>
+  <text class="back-to-record ui-interactive" bindtap="onBack" aria-role="button" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("返回记录", locale)}}</text>
 
   <view wx:if="{{snVisible}}" class="serial-overlay">
     <view class="serial-mask" bindtap="onCloseSerial" catchtouchmove="onFormTap"></view>
-    <view class="serial-panel" catchtap="onFormTap">
-      <view class="serial-heading"><text>{{formSourceText}}</text><text class="serial-close" bindtap="onCloseSerial" aria-role="button">取消</text></view>
-      <text class="serial-note">填写机身或包装上的序列号，先加入待适配列表。</text>
-      <text class="input-label">设备 SN <text class="required-mark">*</text></text>
-      <input class="serial-input" value="{{snInput}}" maxlength="64" placeholder="请输入设备 SN 码" placeholder-class="serial-placeholder" bindinput="onSnInput" adjust-position="{{true}}" cursor-spacing="24" />
-      <text class="input-label">设备名称 <text class="optional-label">（选填）</text></text>
-      <input class="serial-input" value="{{nameInput}}" maxlength="40" placeholder="例如：我的血糖仪" placeholder-class="serial-placeholder" bindinput="onNameInput" adjust-position="{{true}}" cursor-spacing="24" />
-      <text wx:if="{{formError}}" class="serial-error">{{formError}}</text>
-      <button class="search-button serial-save" bindtap="onSaveSerial">登记设备信息</button>
-      <text class="serial-footnote">仅登记信息，不会连接设备或生成血糖记录</text>
+    <view class="serial-panel ui-interactive" catchtap="onFormTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <view class="serial-heading"><text>{{i18n.t((formSourceText), locale)}}</text><text class="serial-close ui-interactive" bindtap="onCloseSerial" aria-role="button" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("取消", locale)}}</text></view>
+      <text class="serial-note">{{i18n.t("填写机身或包装上的序列号，先加入待适配列表。", locale)}}</text>
+      <text class="input-label">{{i18n.t("设备 SN", locale)}} <text class="required-mark">*</text></text>
+      <input class="serial-input" value="{{snInput}}" maxlength="64" placeholder="{{i18n.t('请输入设备 SN 码', locale)}}" placeholder-class="serial-placeholder" bindinput="onSnInput" adjust-position="{{true}}" cursor-spacing="24" />
+      <text class="input-label">{{i18n.t("设备名称", locale)}} <text class="optional-label">{{i18n.t("（选填）", locale)}}</text></text>
+      <input class="serial-input" value="{{nameInput}}" maxlength="40" placeholder="{{i18n.t('例如：我的血糖仪', locale)}}" placeholder-class="serial-placeholder" bindinput="onNameInput" adjust-position="{{true}}" cursor-spacing="24" />
+      <text wx:if="{{formError}}" class="serial-error">{{i18n.t((formError), locale)}}</text>
+      <button class="search-button serial-save ui-interactive" bindtap="onSaveSerial" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("登记设备信息", locale)}}</button>
+      <text class="serial-footnote">{{i18n.t("仅登记信息，不会连接设备或生成血糖记录", locale)}}</text>
     </view>
   </view>
 </view>

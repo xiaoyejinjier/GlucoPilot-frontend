@@ -27,6 +27,39 @@ function createNavigation() {
   return { navigation, requests, pages, events, measurements, definition }
 }
 
+test('小语最后一步显示试用入口，布局就绪后只完成一次，不直接绕过父级登录状态导航',()=>{
+  const {navigation,definition,measurements,events,pages}=createNavigation()
+  navigation.data.guideActive=true
+  definition.properties.guideActive.observer.call(navigation,true)
+  navigation.tryAssistant();assert.equal(events.length,0)
+  navigation.data.guideIndex=4;navigation.tryAssistant();assert.equal(events.length,0)
+  definition.lifetimes.ready.call(navigation)
+  measurements.at(-1).callback([{left:10,top:650,width:60,height:60},{left:0,width:375}])
+  navigation.tryAssistant();navigation.tryAssistant()
+  assert.equal(events.length,1);assert.equal(events[0].detail.tryAssistant,true);assert.equal(events[0].detail.skipped,false)
+  assert.equal(pages.length,0)
+  assert.doesNotMatch(navigation.data.guideSteps[1].description,/即将上线/)
+  const template=fs.readFileSync(path.join(root,'components/bottom-navigation/bottom-navigation.wxml'),'utf8')
+  assert.ok(template.indexOf('bindtap="tryAssistant"')<template.indexOf('bindtap="skipGuide"'))
+  assert.ok(template.indexOf('bindtap="skipGuide"')<template.indexOf('bindtap="nextGuide"'))
+  assert.match(template,/<button class="guide-next" bindtap="nextGuide"/)
+})
+
+test('试用先完成当前账号指引并恢复图表，再打开小语；旧账号和缓存实例不能重复导航',()=>{
+  let definition,token='first',restored=0
+  const pages=[],app={getNavigationGuideToken:()=>token,completeNavigationGuide(value){if(!token||value!==token)return false;token='';return true}}
+  vm.runInNewContext(fs.readFileSync(path.join(root,'custom-tab-bar/index.js'),'utf8'),{
+    Component:d=>definition=d,getApp:()=>app,getCurrentPages:()=>[{onNavigationGuideComplete(){restored++}}],
+    wx:{navigateTo(o){assert.equal(token,'');assert.equal(restored,1);pages.push(o)}}
+  })
+  const bar={...definition.methods,data:{...definition.data},setData(d){Object.assign(this.data,d)}}
+  definition.lifetimes.attached.call(bar);token='second'
+  bar.onGuideComplete({detail:{tryAssistant:true}});assert.equal(pages.length,0)
+  bar.onGuideComplete({detail:{tryAssistant:true}});assert.equal(pages.length,1)
+  bar.onGuideComplete({detail:{tryAssistant:true}});assert.equal(pages.length,1)
+  assert.equal(bar.data.guideActive,false);assert.equal(pages[0].url,'/pages/voice/voice')
+})
+
 test('新手引导按五个入口逐步高亮，期间拦截导航并在最后一步完成', () => {
   const { navigation, definition, measurements, requests, pages, events } = createNavigation()
   navigation.data.guideActive = true

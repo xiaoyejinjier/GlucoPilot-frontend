@@ -1,8 +1,9 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="card">
     <input
       class="search-input"
-      placeholder="搜索食物，如：米饭、苹果"
+      placeholder="{{i18n.t('搜索食物，如：米饭、苹果', locale)}}"
       value="{{keyword}}"
       bindinput="onSearch"
       confirm-type="search"
@@ -10,41 +11,42 @@
   </view>
 
   <view class="card">
-    <view class="section-title">食物大类</view>
+    <view class="section-title">{{i18n.t("食物大类", locale)}}</view>
     <view class="cat-grid">
       <view
         wx:for="{{categories}}"
-        wx:key="name"
-        class="cat-item"
+        wx:key="id"
+        class="cat-item ui-interactive"
         data-cat="{{item.name}}"
         bindtap="onCategoryTap"
-      >
-        <image class="cat-icon" src="{{item.icon}}" mode="aspectFit" />
-        <text class="cat-name">{{item.name}}</text>
+       hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+        <image class="cat-icon" src="{{item.icon}}" mode="aspectFit" data-id="{{item.id}}" data-src="{{item.icon}}" binderror="onCategoryImageError" />
+        <text class="cat-name">{{i18n.t((item.name), locale)}}</text>
       </view>
     </view>
   </view>
 
   <view wx:if="{{keyword}}" class="card">
     <view class="section-title">{{keyword}}</view>
-    <view wx:if="{{searchResults.length === 0}}" class="empty-tip">未找到相关食物</view>
+    <view wx:if="{{searchResults.length === 0}}" class="empty-tip">{{i18n.t("未找到相关食物", locale)}}</view>
     <view
       wx:for="{{searchResults}}"
       wx:key="index"
-      class="food-item"
+      class="food-item ui-interactive"
       data-index="{{index}}"
       bindtap="onFoodTap"
-    >
+     hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <image
         class="food-thumb"
         src="{{item.image}}"
         mode="aspectFill"
         data-index="{{index}}"
+        data-src="{{item.image}}"
         binderror="onImageError"
       />
       <view class="food-meta">
-        <text class="food-name">{{item.name}}</text>
-        <text class="food-info">{{item.carbs}}克碳水/100g · {{item.cal}}kcal</text>
+        <text class="food-name">{{i18n.t((item.name), locale)}}</text>
+        <text class="food-info">{{i18n.t((item.carbs) + "克碳水/100g · " + (item.cal) + "kcal", locale)}}</text>
       </view>
     </view>
   </view>

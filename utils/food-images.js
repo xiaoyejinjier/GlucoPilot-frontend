@@ -4,7 +4,7 @@
  * 管理端内置图片地址只在管理站点中可用，因此小程序收到这类地址时，
  * 会按食物名称或文件名映射到 frontend/assets/foods 中随源码发布的图片。
  */
-const { baseUrl } = require('./config')
+const config = require('./config')
 
 const FOOD_IMAGE_BY_NAME = {
   米饭: '/assets/foods/rice.svg',
@@ -75,8 +75,8 @@ function getFoodImage(name, categoryName, imageUrl) {
   if (/^https?:\/\//i.test(source)) return source
 
   // 后台上传的配图使用稳定 API 路径，通过用户端统一配置解析。
-  if (/^\/api\/v1\/foods\/images\/\d+$/.test(source)) {
-    return `${baseUrl.replace(/\/+$/, '')}${source.slice('/api/v1'.length)}`
+  if (/^\/api\/v1\/foods\/(?:images\/\d+|\d+\/image)$/.test(source)) {
+    return `${config.baseUrl.replace(/\/+$/, '')}${source.slice('/api/v1'.length)}`
   }
 
   // 小程序自身的本地资源可以直接使用。
@@ -86,6 +86,13 @@ function getFoodImage(name, categoryName, imageUrl) {
   const fileMatch = source.match(/\/images\/foods\/([^/.]+)\.(?:svg|png|jpe?g)$/i)
   if (fileMatch && ADMIN_FILE_TO_MINI_IMAGE[fileMatch[1]]) {
     return ADMIN_FILE_TO_MINI_IMAGE[fileMatch[1]]
+  }
+
+  // 兼容管理端旧内置地址，分类选择了其他内置图时仍展示同款。
+  const legacyMatch = source.match(/^\/img\/food-([^/.]+)\.svg$/i)
+  if (legacyMatch) {
+    const name = legacyMatch[1] === 'bun' ? 'steamed-bun' : legacyMatch[1]
+    if (ADMIN_FILE_TO_MINI_IMAGE[name]) return ADMIN_FILE_TO_MINI_IMAGE[name]
   }
 
   return FOOD_IMAGE_BY_NAME[String(name || '').trim()] ||

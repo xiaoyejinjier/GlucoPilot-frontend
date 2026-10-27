@@ -77,8 +77,8 @@ Page({
 
   onShow() {
     if(!getApp().checkLogin())return
-    if(this._communityToken && this._communityToken!==getToken()) { this._exportAttempt=null;this.setData({exportText:'',filePath:'',previewCount:null}) }
-    social.begin(this);applyDisplayToCurrentPage();this.setData({exporting:false,downloading:'',tasks:[]});this.loadTasks()
+    if(this._communityToken && this._communityToken!==getToken()) { this._lastExportId='';this._exportAttempt=null;this.setData({exportText:'',filePath:'',previewCount:null}) }
+    social.begin(this);applyDisplayToCurrentPage();this.setData({exporting:false,downloading:'',deleting:'',tasks:[]});this.loadTasks()
   },
   onHide() {social.end(this);this._taskRun=(this._taskRun||0)+1}, onUnload(){this.onHide()},
 
@@ -267,18 +267,29 @@ Page({
 
   refreshPreview() { this.setData({previewCount:null,exportText:'',filePath:''}) },
   async loadTasks() {if(!social.active(this))return;const version=this._communityVersion,run=this._taskRun=(this._taskRun||0)+1;this.setData({tasksLoading:true,tasksError:''});try{const page=await api.fetchExportTasks({pageNum:1,pageSize:20});if(social.active(this,version)&&run===this._taskRun)this.setData({tasks:page.records.map(task=>({...task,statusLabel:{pending:'待生成',processing:'生成中',done:'已完成',failed:'失败'}[task.status]||'待更新'}))})}catch(error){if(social.active(this,version,error)&&run===this._taskRun)this.setData({tasksError:error.message||'导出记录读取失败'})}finally{if(social.active(this,version)&&run===this._taskRun)this.setData({tasksLoading:false})}},
+  onDeleteTask(e) {
+    const id=String(e.currentTarget.dataset.id||'')
+    if(!social.active(this)||this.data.deleting||this.data.exporting||this.data.downloading||!this.data.tasks.some(task=>String(task.id)===id))return
+    const version=this._communityVersion;this.setData({deleting:id})
+    wx.showModal({title:'删除导出任务',content:'确定从我的导出任务中删除这条记录？',success:async result=>{
+      if(!social.active(this,version))return
+      if(!result.confirm){this.setData({deleting:''});return}
+      try{await api.deleteExportTask(id);if(!social.active(this,version))return;this._taskRun=(this._taskRun||0)+1;this._exportAttempt=null;this.setData({tasks:this.data.tasks.filter(task=>String(task.id)!==id),...(this._lastExportId===id?{exportText:'',previewCount:null}:{} )});wx.showToast({title:'导出任务已删除',icon:'success'});this.loadTasks()}
+      catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({deleting:''})}
+    },fail:()=>{if(social.active(this,version))this.setData({deleting:''})}})
+  },
   async onConfirm() {
-    if(!social.active(this)||this.data.exporting)return
+    if(!social.active(this)||this.data.exporting||this.data.deleting)return
     const now=new Date(),end=this.data.activeRange==='custom'?this.data.customEnd:formatDate(now.getFullYear(),now.getMonth()+1,now.getDate())
     const startDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()-(this.data.activeRange==='30'?29:6))
     const start=this.data.activeRange==='custom'?this.data.customStart:formatDate(startDate.getFullYear(),startDate.getMonth()+1,startDate.getDate())
     if(!start||!end||start>end)return wx.showToast({title:'请选择有效日期范围',icon:'none'})
     const fingerprint=JSON.stringify([start,end]);if(!this._exportAttempt||this._exportAttempt.fingerprint!==fingerprint)this._exportAttempt={fingerprint,payload:{startDate:start,endDate:end,clientRequestId:social.requestId()}}
     const version=this._communityVersion;this.setData({exporting:true})
-    try{const created=await api.createExportTask(this._exportAttempt.payload);if(!social.active(this,version))return;const task=await api.generateExportTask(created.id);if(!social.active(this,version))return;if(task.status!=='done')throw new Error(task.error||'文件生成失败，可稍后重试');this._exportAttempt=null;this.setData({exportText:`${task.startDate} 至 ${task.endDate}\n血糖记录 ${task.glucoseCount} 条\n饮食记录 ${task.mealCount} 条`,previewCount:task.glucoseCount+task.mealCount});wx.showToast({title:'XLSX 文件已生成',icon:'success'});this.loadTasks()}catch(error){social.failure(this,error,version);if(social.active(this,version))this.loadTasks()}finally{if(social.active(this,version))this.setData({exporting:false})}
+    try{const created=await api.createExportTask(this._exportAttempt.payload);if(!social.active(this,version))return;const task=await api.generateExportTask(created.id);if(!social.active(this,version))return;if(task.status!=='done')throw new Error(task.error||'文件生成失败，可稍后重试');this._lastExportId=String(task.id);this._exportAttempt=null;this.setData({exportText:`${task.startDate} 至 ${task.endDate}\n血糖记录 ${task.glucoseCount} 条\n饮食记录 ${task.mealCount} 条`,previewCount:task.glucoseCount+task.mealCount});wx.showToast({title:'PDF 文件已生成',icon:'success'});this.loadTasks()}catch(error){if(social.active(this,version)&&error.code===40900)this._exportAttempt=null;social.failure(this,error,version);if(social.active(this,version))this.loadTasks()}finally{if(social.active(this,version))this.setData({exporting:false})}
   },
-  async onDownload(e) {const id=String(e.currentTarget.dataset.id);if(!social.active(this)||this.data.downloading)return;const version=this._communityVersion,token=getToken();this.setData({downloading:id});try{const path=await downloadExport(id);if(!social.active(this,version)||token!==getToken())return;wx.openDocument({filePath:path,fileType:'xlsx',showMenu:true,fail:()=>{if(social.active(this,version))wx.showToast({title:'文件已下载，暂时无法打开',icon:'none'})}})}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({downloading:''})}},
-  async onRetryTask(e) {if(!social.active(this)||this.data.exporting)return;const version=this._communityVersion;this.setData({exporting:true});try{const task=await api.generateExportTask(e.currentTarget.dataset.id);if(social.active(this,version)){if(task.status!=='done')throw new Error(task.error||'生成失败');this.loadTasks()}}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({exporting:false})}},
+  async onDownload(e) {const id=String(e.currentTarget.dataset.id);if(!social.active(this)||this.data.downloading||this.data.deleting)return;const version=this._communityVersion,token=getToken();this.setData({downloading:id});try{const path=await downloadExport(id);if(!social.active(this,version)||token!==getToken())return;wx.openDocument({filePath:path,fileType:'pdf',showMenu:true,fail:()=>{if(social.active(this,version))wx.showToast({title:'文件已下载，暂时无法打开',icon:'none'})}})}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({downloading:''})}},
+  async onRetryTask(e) {if(!social.active(this)||this.data.exporting||this.data.deleting)return;const version=this._communityVersion;this.setData({exporting:true});try{const task=await api.generateExportTask(e.currentTarget.dataset.id);if(social.active(this,version)){if(task.status!=='done')throw new Error(task.error||'生成失败');this.loadTasks()}}catch(error){social.failure(this,error,version)}finally{if(social.active(this,version))this.setData({exporting:false})}},
   onCopy(){if(this.data.exportText)wx.setClipboardData({data:this.data.exportText})},
   noop() {}
 })

@@ -3,6 +3,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "article-photo": "/components/article-photo/article-photo",
+    "article-video-cover": "/components/article-video-cover/article-video-cover",
     "article-visibility": "/components/article-visibility/article-visibility"
   }
 }

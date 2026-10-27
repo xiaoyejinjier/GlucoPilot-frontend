@@ -1,3 +1,4 @@
+@import "../../utils/motion.wxss";
 :host { display:block; }
 view, text, button, textarea { box-sizing:border-box; }
 .speech-mask { position:fixed; top:0; right:0; bottom:0; left:0; z-index:20000; display:flex; align-items:flex-end; background:rgba(33,43,61,.4); }

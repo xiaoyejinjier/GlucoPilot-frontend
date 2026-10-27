@@ -1,4 +1,5 @@
 {
   "navigationBarTitleText": "统计",
-  "navigationStyle": "default"
+  "navigationStyle": "default",
+  "usingComponents": { "meal-photo": "/components/meal-photo/meal-photo" }
 }

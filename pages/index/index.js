@@ -5,18 +5,30 @@ const { TAGS, reportUrl } = require('../../utils/publication')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 
 Page({
-  data: { displayStyle: '', tags: TAGS, activeTag: '', feedMode: 'recommend', keyword: '', posts: [],
+  data: { displayStyle: '', tags: [], otherTags:[],otherSelected:false,tagsError:'',activeTag: '', feedMode: 'recommend', keyword: '', posts: [],
     loading: false, error: '', pageNum: 0, hasMore: false },
   onShow() {
     if (!getApp().checkLogin()) return
     const tabBar = typeof this.getTabBar === 'function' && this.getTabBar()
     if (tabBar) { tabBar.setData({ selected: 2 }); if (tabBar.refreshGuide) tabBar.refreshGuide() }
     const token = this._communityToken; social.begin(this); applyDisplayToCurrentPage()
-    if (token && token !== this._communityToken) this.setData({ posts: [], keyword: '', activeTag: '', feedMode: 'recommend' })
+    if (token && token !== this._communityToken) this.setData({ posts: [], keyword: '', activeTag: '', feedMode: 'recommend',tags:[],otherTags:[],otherSelected:false })
     this._busy = new Set(); this.load(true)
-    const version = this._communityVersion
-    api.fetchCommunityTags().then(tags => { if (social.active(this, version) && tags.length) this.setData({ tags }) }).catch(() => {})
+    this.loadTags()
   },
+  async loadTags() {
+    const version=this._communityVersion,run=this._tagRun=(this._tagRun||0)+1
+    try {
+      const choices=await api.fetchCommunityTags()
+      if(!social.active(this,version)||run!==this._tagRun)return
+      const rows=Array.isArray(choices)?choices:[],isUser=t=>t.type==='USER'||String(t.code).startsWith('custom_')
+      const tags=rows.filter(t=>!isUser(t)),otherTags=rows.filter(isUser)
+      const removed=this.data.activeTag&&!rows.some(t=>t.code===this.data.activeTag)
+      this.setData({tags,otherTags,tagsError:'',...(removed?{activeTag:'',otherSelected:false}: {})})
+      if(removed)this.load(true)
+    }catch(error){if(social.active(this,version)&&run===this._tagRun)this.setData({tagsError:'标签加载失败，点击重试'})}
+  },
+  onOtherTag(e){const code=e.currentTarget.dataset.code||'other';if(code!=='other'&&!this.data.otherTags.some(t=>t.code===code))return;this.setData({activeTag:code,otherSelected:true,posts:[]});this.load(true)},
   onHide() { social.end(this); this._loadRun = (this._loadRun || 0) + 1 },
   onUnload() { this.onHide() },
   async load(reset) {
@@ -39,16 +51,16 @@ Page({
     }
   },
   onMode(e) { const mode = e.currentTarget.dataset.mode; if (!['recommend','following'].includes(mode) || mode === this.data.feedMode) return; this.setData({ feedMode: mode, posts: [] }); this.load(true) },
-  onTag(e) { const code = e.currentTarget.dataset.code || ''; if (code === this.data.activeTag) return; this.setData({ activeTag: code, posts: [] }); this.load(true) },
+  onTag(e) { const code = e.currentTarget.dataset.code || ''; if (code === this.data.activeTag) return; this.setData({ activeTag: code,otherSelected:code==='other', posts: [] }); this.load(true) },
   onSearchInput(e) { this.setData({ keyword: e.detail.value }) },
   onSearch() { this.load(true) }, onRetry() { this.load(true) }, onMore() { this.load(false) }, onReachBottom() { this.load(false) },
-  async onPullDownRefresh() { try { await this.load(true) } finally { wx.stopPullDownRefresh() } },
+  async onPullDownRefresh() { try { await Promise.all([this.loadTags(),this.load(true)]) } finally { wx.stopPullDownRefresh() } },
   onWrite() { wx.navigateTo({ url: '/pages/community-compose/community-compose' }) },
   onMyArticles() { wx.navigateTo({ url: '/pages/community-articles/community-articles' }) },
   onOpen(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}` }) },
   onComments(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}&comments=1` }) },
   onProfile(e) { const key = e.currentTarget.dataset.key; if (/^[ub][1-9]\d{0,18}$/.test(String(key || ''))) wx.navigateTo({ url: `/pages/community-profile/community-profile?key=${key}` }) },
-  onCommunityEntry(e) { if(e.currentTarget.dataset.mode === 'messages') { wx.navigateTo({url:'/pages/information/information'}); return } const mode = e.currentTarget.dataset.mode; if (['following','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` }) },
+  onCommunityEntry(e) { if(e.currentTarget.dataset.mode === 'messages') { wx.navigateTo({url:'/pages/information/information'}); return } const mode = e.currentTarget.dataset.mode; if (['following','likes','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` }) },
   onReport(e) {
     const id=String(e.currentTarget.dataset.id),post=this.data.posts.find(row=>String(row.id)===id)
     if(!post||!social.active(this))return

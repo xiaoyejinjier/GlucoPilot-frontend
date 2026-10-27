@@ -1,27 +1,29 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="dm-page" style="{{displayStyle}} {{viewportHeight ? 'height:' + viewportHeight + 'px;' : ''}}">
+  <view wx:if="{{locale === 'en' && (contentTranslationLoading || contentTranslationError)}}" class="content-translation-notice" bindtap="retryContentTranslations" aria-role="button"><text>{{i18n.t(contentTranslationLoading ? '正在准备英文内容…' : '暂时无法翻译，正在显示原文，点击重试', locale)}}</text></view>
   <view class="dm-scroll-shell">
   <scroll-view class="dm-list" scroll-y enhanced="{{true}}" bounces="{{false}}" lower-threshold="{{2}}" upper-threshold="{{2}}" refresher-enabled="{{true}}" refresher-threshold="{{52}}" refresher-default-style="none" refresher-background="transparent" refresher-triggered="{{refreshing}}" bindrefresherpulling="onRefresherPulling" bindrefresherrefresh="onRefresh" bindrefresherrestore="onRefresherRestore" bindrefresherabort="onRefresherRestore" bindscroll="onMessageScroll" bindscrolltolower="onMessageLower" bindscrolltoupper="onMessageUpper" bindtouchstart="onElasticStart" bindtouchmove="onElasticMove" bindtouchend="onElasticEnd" bindtouchcancel="onElasticEnd" scroll-into-view="{{scrollTarget}}">
-    <view slot="refresher" class="dm-refresh-indicator {{refreshing ? 'is-loading' : ''}}" aria-label="{{refreshing ? '正在刷新' : '下拉刷新'}}"><view></view><view></view><view></view></view>
+    <view slot="refresher" class="dm-refresh-indicator {{refreshing ? 'is-loading' : ''}}" aria-label="{{i18n.t((refreshing ? '正在刷新' : '下拉刷新'), locale)}}"><view></view><view></view><view></view></view>
     <view class="dm-content {{edgeReturning ? 'edge-returning' : ''}}" style="transform:translateY({{-bottomPull}}px);">
-    <view wx:if="{{hasMore}}" class="dm-state" bindtap="onOlder">{{loading ? '正在加载…' : '查看更早消息'}}</view>
-    <view wx:if="{{error}}" class="dm-state dm-error" bindtap="onRetry">{{error}} · 点击重试</view>
-    <view wx:if="{{!messages.length && !error}}" class="dm-state">{{loading ? '正在加载消息…' : '发条消息，打个招呼吧'}}</view>
+    <view wx:if="{{hasMore}}" class="dm-state ui-interactive" bindtap="onOlder" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((loading ? '正在加载…' : '查看更早消息'), locale)}}</view>
+    <view wx:if="{{error}}" class="dm-state dm-error ui-interactive" bindtap="onRetry" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((error) + " · 点击重试", locale)}}</view>
+    <view wx:if="{{!messages.length && !error}}" class="dm-state">{{i18n.t((loading ? '正在加载消息…' : '发条消息，打个招呼吧'), locale)}}</view>
     <view wx:for="{{messages}}" wx:key="id" id="dm-{{item.id}}" class="dm-item {{item.mine ? 'mine' : ''}}">
-      <text class="dm-time">{{item.timeLabel}}</text><view class="dm-message-row"><view class="dm-avatar" data-mine="{{item.mine}}" bindtap="onAvatar"><view wx:if="{{item.mine ? (me.avatarUrl && !me.avatarFailed) : (peer.avatarUrl && !peer.avatarFailed)}}" data-mine="{{item.mine}}" ><avatar-image src="{{item.mine ? me.avatarUrl : peer.avatarUrl}}" text="友"></avatar-image></view><text wx:else>{{item.mine ? '我' : '友'}}</text></view><view class="dm-bubble" data-id="{{item.id}}" bindlongpress="onReportMessage"><text selectable>{{item.content}}</text></view></view>
-      <text wx:if="{{item.mine}}" class="dm-read">{{item.readAt ? '已读' : '已发送'}}</text>
+      <text class="dm-time">{{i18n.t((item.timeLabel), locale)}}</text><view class="dm-message-row"><view class="dm-avatar ui-interactive" data-mine="{{item.mine}}" bindtap="onAvatar" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view wx:if="{{item.mine ? (me.avatarUrl && !me.avatarFailed) : (peer.avatarUrl && !peer.avatarFailed)}}" data-mine="{{item.mine}}" ><avatar-image src="{{item.mine ? me.avatarUrl : peer.avatarUrl}}" text="友"></avatar-image></view><text wx:else>{{i18n.t((item.mine ? '我' : '友'), locale)}}</text></view><view class="dm-bubble" data-id="{{item.id}}" bindlongpress="onReportMessage"><text selectable>{{item.content}}</text></view></view>
+      <text wx:if="{{item.mine}}" class="dm-read">{{i18n.t((item.readAt ? '已读' : '已发送'), locale)}}</text>
     </view>
     </view>
   </scroll-view>
   </view>
   <view class="dm-compose-area" style="{{keyboardHeight ? 'padding-bottom:0;' : ''}}">
     <view class="dm-composer">
-      <view class="dm-tool" bindtap="onToggleVoiceMode" aria-role="button" aria-label="{{voiceMode ? '切换文字输入' : '语音转文字'}}"><text wx:if="{{voiceMode}}" class="keyboard-symbol">⌨</text><view wx:else class="voice-symbol"><view></view><view></view><view></view><view></view></view></view>
-      <view wx:if="{{voiceMode}}" class="dm-hold {{holdingSpeech ? 'holding' : ''}}" bindtouchstart="onHoldStart" bindtouchend="onHoldEnd" bindtouchcancel="onHoldCancel">{{holdingSpeech ? '松开识别' : '按住说话'}}</view>
-      <input wx:else value="{{input}}" focus="{{inputFocus}}" adjust-position="{{false}}" maxlength="1000" placeholder="发送消息…" bindinput="onInput" bindblur="onInputBlur" bindfocus="onInputFocus" bindconfirm="onSend" confirm-type="send" disabled="{{sending}}" />
-      <view class="dm-tool {{emojiVisible ? 'active' : ''}}" bindtap="onToggleEmoji" aria-role="button" aria-label="选择表情"><view class="emoji-symbol"><view></view></view></view>
-      <button bindtap="onSend" disabled="{{sending || !ready || !input}}" loading="{{sending}}">发送</button>
+      <view class="dm-tool ui-interactive" bindtap="onToggleVoiceMode" aria-role="button" aria-label="{{i18n.t((voiceMode ? '切换文字输入' : '语音转文字'), locale)}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text wx:if="{{voiceMode}}" class="keyboard-symbol">⌨</text><view wx:else class="voice-symbol"><view></view><view></view><view></view><view></view></view></view>
+      <view wx:if="{{voiceMode}}" class="dm-hold {{holdingSpeech ? 'holding' : ''}}" bindtouchstart="onHoldStart" bindtouchend="onHoldEnd" bindtouchcancel="onHoldCancel">{{i18n.t((holdingSpeech ? '松开识别' : '按住说话'), locale)}}</view>
+      <input wx:else value="{{input}}" focus="{{inputFocus}}" adjust-position="{{false}}" maxlength="1000" placeholder="{{i18n.t('发送消息…', locale)}}" bindinput="onInput" bindblur="onInputBlur" bindfocus="onInputFocus" bindconfirm="onSend" confirm-type="send" disabled="{{sending}}" />
+      <view class="dm-tool {{emojiVisible ? 'active' : ''}} ui-interactive" bindtap="onToggleEmoji" aria-role="button" aria-label="{{i18n.t('选择表情', locale)}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view class="emoji-symbol"><view></view></view></view>
+      <button class="ui-interactive" bindtap="onSend" disabled="{{sending || !ready || !input}}" loading="{{sending}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("发送", locale)}}</button>
     </view>
-    <view wx:if="{{emojiVisible}}" class="emoji-panel"><text class="emoji-heading">选一个表情</text><view class="emoji-grid"><view wx:for="{{emojis}}" wx:key="*this" data-emoji="{{item}}" bindtap="onEmoji" aria-role="button">{{item}}</view></view></view>
+    <view wx:if="{{emojiVisible}}" class="emoji-panel"><text class="emoji-heading">{{i18n.t("选一个表情", locale)}}</text><view class="emoji-grid"><view class="ui-interactive" wx:for="{{emojis}}" wx:key="*this" data-emoji="{{item}}" bindtap="onEmoji" aria-role="button" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((item), locale)}}</view></view></view>
   </view>
   <speech-input id="speechInput" visible="{{speechVisible}}" draft="{{input}}" max-length="1000" viewport-height="{{viewportHeight}}" disabled="{{sending || !ready}}" bind:close="onCloseSpeechInput" bind:confirm="onConfirmSpeechInput"></speech-input>
 </view>

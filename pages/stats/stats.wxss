@@ -1,3 +1,5 @@
+@import "../../utils/glucose-chart.wxss";
+
 /* 视图导航：一排两个按钮铺满 */
 .view-nav {
   display: flex;
