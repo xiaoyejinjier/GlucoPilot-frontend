@@ -73,6 +73,23 @@ function logout() {
   wx.removeStorageSync('glucoseRecords')
 }
 
+/**
+ * 注销提交成功或放弃恢复后清空账号级缓存（见 API-CONTRACT 账号注销章节）。
+ * dataBackup 含血糖与资料副本、disclaimer* 为声明确认痕迹，均随账号清除；
+ * apiBaseUrl 等环境配置不属于账号数据，保留。
+ */
+function clearAccountCache() {
+  wx.removeStorageSync('isLoggedIn')
+  wx.removeStorageSync('accessToken')
+  wx.removeStorageSync('userInfo')
+  wx.removeStorageSync('glucoseRecords')
+  wx.removeStorageSync('dataBackup')
+  wx.removeStorageSync('lastBackupAt')
+  wx.removeStorageSync('displaySettings')
+  wx.removeStorageSync('disclaimerAgreed')
+  wx.removeStorageSync('disclaimerCurrentVersion')
+}
+
 module.exports = {
   GLUCOSE_NODES,
   getTodayKey,
@@ -85,5 +102,6 @@ module.exports = {
   getUserInfo,
   saveUserInfo,
   login,
-  logout
+  logout,
+  clearAccountCache
 }

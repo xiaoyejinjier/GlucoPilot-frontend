@@ -18,6 +18,14 @@
     <text class="tip-line">换绑手机号需短信验证码（开发环境见后端日志）；换绑邮箱需邮箱验证码（需配置 SMTP）。</text>
   </view>
 
+  <!-- 注销入口固定在页面最下方，点击进入独立说明页 -->
+  <view class="card menu-list cancel-entry">
+    <view class="menu-item" bindtap="onOpenCancel">
+      <text class="danger-text">注销账号</text>
+      <text class="menu-arrow danger-text">{{recoverable ? '申请处理中 ›' : '›'}}</text>
+    </view>
+  </view>
+
   <view class="phone-mask" wx:if="{{panel}}" bindtap="onClosePanel"></view>
   <view class="phone-panel" wx:if="{{panel}}">
     <text class="phone-title">绑定手机号</text>

@@ -32,6 +32,7 @@
     "pages/export-data/export-data",
     "pages/about/about",
     "pages/account-security/account-security",
+    "pages/account-cancellation/cancellation",
     "pages/notifications/notifications",
     "pages/display-settings/display-settings",
     "pages/feedback-list/feedback-list"

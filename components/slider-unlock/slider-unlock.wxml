@@ -1,0 +1,15 @@
+<movable-area class="slider-area">
+  <text class="slider-text">{{unlocked ? '验证完成' : hint}}</text>
+  <movable-view
+    class="slider-thumb {{unlocked ? 'unlocked' : ''}}"
+    direction="horizontal"
+    x="{{x}}"
+    inertia="{{false}}"
+    out-of-bounds="{{false}}"
+    disabled="{{unlocked}}"
+    bindchange="onChange"
+    bindtouchend="onTouchEnd"
+  >
+    <text class="slider-arrow">{{unlocked ? '✓' : '›'}}</text>
+  </movable-view>
+</movable-area>
