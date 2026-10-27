@@ -34,6 +34,8 @@ function createFlow(options = {}) {
     async sendSmsCode() {}
   }
   const wx = {
+    getWindowInfo: () => options.windowInfo || { statusBarHeight: 0 },
+    getMenuButtonBoundingClientRect: () => options.capsule || { bottom: 0 },
     getStorageSync: (key) => state.storage.get(key),
     setStorageSync: (key, value) => state.storage.set(key, value),
     showLoading() {}, hideLoading() {},
@@ -82,6 +84,18 @@ function createFlow(options = {}) {
 }
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+test('登录布局避开真机胶囊，返回或窗口改变后重读顶部边界',()=>{
+  const options={windowInfo:{statusBarHeight:44},capsule:{bottom:76}},flow=createFlow(options),login=flow.page('login')
+  login.onLoad();assert.equal(login.data.loginLayoutStyle,'--login-header-space:88px')
+  options.capsule.bottom=88;login.onResize();assert.equal(login.data.loginLayoutStyle,'--login-header-space:100px')
+  options.capsule.bottom=80;login.onShow();assert.equal(login.data.loginLayoutStyle,'--login-header-space:92px')
+  assert.equal(flow.state.logins.length,0);assert.equal(flow.state.routes.length,0)
+})
+test('旧客户端胶囊尺寸为空时仍预留状态栏和导航间距',()=>{
+  const flow=createFlow({windowInfo:{statusBarHeight:24},capsule:{bottom:0}}),login=flow.page('login')
+  login.onLoad();assert.equal(login.data.loginLayoutStyle,'--login-header-space:80px')
+})
 
 function loggedInDisclaimer(options) {
   const flow = createFlow(options)

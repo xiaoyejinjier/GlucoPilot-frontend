@@ -16,6 +16,11 @@
   </scroll-view>
   </view>
   <view class="dm-compose-area" style="{{keyboardHeight ? 'padding-bottom:0;' : ''}}">
+    <view wx:if="{{ready && (!sendPermission || sendPermission.state !== 'OPEN')}}" class="dm-permission">
+      <view class="dm-permission-copy"><text>{{i18n.t((!sendPermission ? permissionError : sendPermission.state === 'WAITING_REPLY' ? '等待对方回复或相互关注后可继续发信息' : '对方回复或互相关注前，只能发送一条消息'), locale)}}</text></view>
+      <button wx:if="{{sendPermission}}" class="dm-follow ui-interactive {{sendPermission.following ? 'is-followed' : ''}}" bindtap="onFollowPeer" disabled="{{followingPeer}}" loading="{{followingPeer}}" aria-label="{{i18n.t((sendPermission.following ? '取消关注' : '关注对方'), locale)}}" hover-class="ui-pressed">{{i18n.t((sendPermission.following ? '已关注' : '关注对方'), locale)}}</button>
+      <button wx:elif="{{!sendPermission}}" class="dm-follow ui-interactive" bindtap="onPermissionRetry" disabled="{{loading}}">{{i18n.t('重试', locale)}}</button>
+    </view>
     <view class="dm-composer">
       <view class="dm-tool ui-interactive" bindtap="onToggleVoiceMode" aria-role="button" aria-label="{{i18n.t((voiceMode ? '切换文字输入' : '语音转文字'), locale)}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text wx:if="{{voiceMode}}" class="keyboard-symbol">⌨</text><view wx:else class="voice-symbol"><view></view><view></view><view></view><view></view></view></view>
       <view wx:if="{{voiceMode}}" class="dm-hold {{holdingSpeech ? 'holding' : ''}}" bindtouchstart="onHoldStart" bindtouchend="onHoldEnd" bindtouchcancel="onHoldCancel">{{i18n.t((holdingSpeech ? '松开识别' : '按住说话'), locale)}}</view>
@@ -23,7 +28,7 @@
       <view class="dm-tool {{emojiVisible ? 'active' : ''}} ui-interactive" bindtap="onToggleEmoji" aria-role="button" aria-label="{{i18n.t('选择表情', locale)}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view class="emoji-symbol"><view></view></view></view>
       <button class="ui-interactive" bindtap="onSend" disabled="{{sending || !ready || !input}}" loading="{{sending}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("发送", locale)}}</button>
     </view>
-    <view wx:if="{{emojiVisible}}" class="emoji-panel"><text class="emoji-heading">{{i18n.t("选一个表情", locale)}}</text><view class="emoji-grid"><view class="ui-interactive" wx:for="{{emojis}}" wx:key="*this" data-emoji="{{item}}" bindtap="onEmoji" aria-role="button" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((item), locale)}}</view></view></view>
+    <view wx:if="{{emojiVisible && sendPermission}}" class="emoji-panel"><text class="emoji-heading">{{i18n.t("选一个表情", locale)}}</text><view class="emoji-grid"><view class="ui-interactive" wx:for="{{emojis}}" wx:key="*this" data-emoji="{{item}}" bindtap="onEmoji" aria-role="button" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((item), locale)}}</view></view></view>
   </view>
-  <speech-input id="speechInput" visible="{{speechVisible}}" draft="{{input}}" max-length="1000" viewport-height="{{viewportHeight}}" disabled="{{sending || !ready}}" bind:close="onCloseSpeechInput" bind:confirm="onConfirmSpeechInput"></speech-input>
+  <speech-input id="speechInput" visible="{{speechVisible}}" draft="{{input}}" max-length="1000" viewport-height="{{viewportHeight}}" disabled="{{sending || !ready || !sendPermission}}" bind:close="onCloseSpeechInput" bind:confirm="onConfirmSpeechInput"></speech-input>
 </view>

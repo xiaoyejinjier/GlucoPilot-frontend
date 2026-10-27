@@ -1,5 +1,7 @@
 # 接口契约来源
 
+2026-10-27 私信首条限制：未关注也可发第一条；对方回复或当前互关后可继续。GET /community/messages/{peer}增加sendPermission:{canSend,following,mutualFollowing,state}；等待状态POST返回40301。使用既有消息/关注表，后端串行校验首条额度并保留幂等；聊天页消费权限、显示等待与关注入口、轮询刷新，不自行放宽服务端限制。
+
 权威仓库：https://github.com/xiaoyejinjier/GlucoPilot-backend
 权威文件：docs/API-CONTRACT.md
 调用方发布前应在验收记录中登记对应后端提交 SHA 和镜像标签。

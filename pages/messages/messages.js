@@ -2,22 +2,30 @@ const api = require('../../services/api')
 const social = require('../../utils/community')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const notifications = require('../../utils/message-notifications')
+const { normalizePermission } = require('../../utils/dm-permission')
 const EMOJIS = ['😀','😊','🥰','😄','😂','😉','🤗','🤔','😮','🥺','😢','😅','👍','👏','🙌','💪','🙏','❤️','💙','🌹','🎉','☀️','🌙','🍎','🥗','🍚','🏃','✅']
 Page({
   data: { displayStyle: '', peer: null, me:null, refreshing:false, pulling:false, bottomPull:0, edgeReturning:false, messages: [], input: '', loading: false, sending: false,
-    error: '', ready: false, hasMore: false, beforeId: null, scrollTarget: '',
+    error: '', ready: false, sendPermission:null, permissionError:'', followingPeer:false, hasMore: false, beforeId: null, scrollTarget: '',
     voiceMode:false, speechVisible:false, holdingSpeech:false, emojiVisible:false, emojis:EMOJIS, inputFocus:false, viewportHeight:0, keyboardHeight:0 },
   onLoad(options) { this._peer = /^[1-9]\d{0,18}$/.test(String(options.peer || '')) ? String(options.peer) : '' },
   onShow() {
     if (!getApp().checkLogin()) return
     const previous = this._communityToken; social.begin(this); this.stopPolling(); this._loading = false
+    this._permissionEpoch=(this._permissionEpoch||0)+1;this._permissionReload=false
     this.clearRefreshFeedback(); this._refreshTask = this._messageReadTask = null; this._edgeTouch=null; this._atBottom=false; this._scrollTop=0; this._scrollHeight=0
     this.attachKeyboard()
     if (previous && previous !== this._communityToken) { this._attempt = null; this.setData({ messages: [], input: '', peer: null, me:null, beforeId: null, hasMore: false }) }
-    this.setData({ sending: false, loading: false, ready: false, refreshing:false, speechVisible:false, holdingSpeech:false, emojiVisible:false }); applyDisplayToCurrentPage()
+    this.setData({ sending: false, loading: false, ready: false, sendPermission:null, permissionError:'', followingPeer:false, refreshing:false, speechVisible:false, holdingSpeech:false, emojiVisible:false }); applyDisplayToCurrentPage()
     const version = this._communityVersion
     if (!this._peer) { this.setData({ error: '用户不存在' }); return }
-    api.fetchCommunityProfile(`u${this._peer}`).then(peer => { if (social.active(this, version)) { this.setData({ peer }); wx.setNavigationBarTitle({ title: peer.nickname }) } }).catch(error => social.failure(this, error, version))
+    const profileEpoch=this._permissionEpoch
+    api.fetchCommunityProfile(`u${this._peer}`).then(peer => {
+      if (!social.active(this, version)) return
+      const permission=this.data.sendPermission
+      const followed=permission?permission.following:profileEpoch===this._permissionEpoch?peer.followed:!!(this.data.peer&&this.data.peer.followed)
+      this.setData({peer:{...peer,followed}});wx.setNavigationBarTitle({title:peer.nickname})
+    }).catch(error => social.failure(this, error, version))
     api.fetchMe().then(me=>{if(social.active(this,version))this.setData({me:{...me,key:me.communityKey}})}).catch(error=>social.failure(this,error,version))
     this.loadLatest(); this._pollTimer = setInterval(() => this.loadLatest(true), 5000)
   },
@@ -49,27 +57,47 @@ Page({
   onInput(event) { this._cursor = event.detail.cursor; this.setData({ input: event.detail.value }) },
   onInputBlur(event) { this._cursor = event.detail.cursor; this.setData({ inputFocus:false }) },
   onInputFocus(event) { this.setData({ emojiVisible:false,inputFocus:true }); if (event.detail && event.detail.height) this.updateViewport(Number(event.detail.height)) },
+  canCompose(){return !!(this.data.sendPermission&&this.data.sendPermission.canSend)},
+  canUseInputTools(){return !!(this.data.ready&&this.data.sendPermission)},
+  applySendPermission(value,epoch){
+    if(epoch!==this._permissionEpoch)return
+    if(this.data.followingPeer)return
+    const permission=normalizePermission(value)
+    this.setData({sendPermission:permission,permissionError:permission?'':'无法确认私信权限，请重试',...(permission&&this.data.peer?{peer:{...this.data.peer,followed:permission.following}}:{})})
+    if(!permission){this.onCloseSpeechInput();this.setData({voiceMode:false,emojiVisible:false,inputFocus:false});if(wx.hideKeyboard)wx.hideKeyboard()}
+  },
+  refreshPermission(){if(this._loading){this._permissionReload=true;return}return this.loadLatest(true,true)},
+  onPermissionRetry(){return this.loadLatest()},
+  async onFollowPeer(){
+    const permission=this.data.sendPermission
+    if(!social.active(this)||!permission||this.data.followingPeer)return
+    const version=this._communityVersion,desired=!permission.following;this._permissionEpoch++;this.setData({followingPeer:true})
+    try{const peer=await api.setCommunityFollowing(`u${this._peer}`,desired);if(!social.active(this,version))return
+      const following=!!peer.followed
+      this._permissionEpoch++;this.setData({peer,followingPeer:false});this.applySendPermission({...this.data.sendPermission,following,mutualFollowing:following&&this.data.sendPermission.mutualFollowing},this._permissionEpoch);wx.showToast({title:following?'关注成功':'取消关注成功',icon:'success'})
+    }catch(error){social.failure(this,error,version)}finally{if(social.active(this,version)){this.setData({followingPeer:false});this._permissionReload=false;this.refreshPermission()}}
+  },
   onToggleEmoji() {
-    if (!social.active(this) || this.data.sending || this.data.speechVisible) return
+    if (!social.active(this) || !this.canUseInputTools() || this.data.sending || this.data.speechVisible) return
     this.setData({ emojiVisible:!this.data.emojiVisible, voiceMode:false, inputFocus:false })
     if (wx.hideKeyboard) wx.hideKeyboard()
   },
   onEmoji(event) {
     const emoji = event.currentTarget.dataset.emoji
-    if (!EMOJIS.includes(emoji) || this.data.sending || !social.active(this)) return
+    if (!EMOJIS.includes(emoji) || !this.canUseInputTools() || this.data.sending || !social.active(this)) return
     const input = this.data.input, cursor = Number.isInteger(this._cursor) && this._cursor >= 0 ? Math.min(this._cursor,input.length) : input.length
     const value = input.slice(0,cursor) + emoji + input.slice(cursor)
     if (value.length > 1000) return wx.showToast({ title:'消息最多1000字', icon:'none' })
     this._cursor = cursor + emoji.length; this.setData({ input:value })
   },
   onToggleVoiceMode() {
-    if (!social.active(this) || this.data.sending || !this.data.ready) return
+    if (!social.active(this) || !this.canUseInputTools() || this.data.sending || !this.data.ready) return
     this.onCloseSpeechInput()
     this.setData({ voiceMode:!this.data.voiceMode, emojiVisible:false, inputFocus:this.data.voiceMode })
     if (wx.hideKeyboard) wx.hideKeyboard()
   },
   onHoldStart(event) {
-    if (!social.active(this) || !this.data.voiceMode || this.data.speechVisible || this.data.sending || !this.data.ready) return
+    if (!social.active(this) || !this.canUseInputTools() || !this.data.voiceMode || this.data.speechVisible || this.data.sending || !this.data.ready) return
     if (event && event.touches && event.touches.length !== 1) return
     this._speechHeld = true; this._speechStarted = false
     this.setData({ speechVisible:true, holdingSpeech:true, inputFocus:false },() => {
@@ -89,7 +117,7 @@ Page({
   onCloseSpeechInput() { this._speechHeld = this._speechStarted = false; this.setData({ speechVisible:false, holdingSpeech:false }) },
   onConfirmSpeechInput(event) {
     const text = String(event.detail.text || '').trim()
-    if (!social.active(this) || !this.data.speechVisible || !this.data.voiceMode || this.data.sending || !text) return
+    if (!social.active(this) || !this.canUseInputTools() || !this.data.speechVisible || !this.data.voiceMode || this.data.sending || !text) return
     if (text.length > 1000) return wx.showToast({ title:'消息最多1000字，请修改', icon:'none' })
     this.onCloseSpeechInput(); this.setData({ input:text }); this.onSend()
   },
@@ -169,7 +197,7 @@ Page({
   },
   async readLatest(quiet = false, preservePosition = false) {
     if (!social.active(this) || !this._peer || this._loading) return
-    this._loading = true; const version = this._communityVersion
+    this._loading = true; const version = this._communityVersion,permissionEpoch=this._permissionEpoch
     if (!quiet) this.setData({ loading: true }); this.setData({ error: '' })
     try {
       const page = await api.fetchDirectMessages(this._peer, { pageSize: 50 })
@@ -182,26 +210,29 @@ Page({
       const last = messages[messages.length - 1], changed = last && (!oldLast || last.id !== oldLast.id)
       this.setData({ messages, ready: true, ...(empty || reset ? { hasMore: page.hasMore, beforeId: page.nextBeforeId } : {}),
         ...(changed && !preservePosition && !this.data.refreshing ? { scrollTarget: `dm-${last.id}` } : {}) },()=>this.measureList())
+      this.applySendPermission(page.sendPermission,permissionEpoch)
       if (page.records.length) api.readDirectMessages(this._peer, page.records[page.records.length - 1].id).then(() => { if (social.active(this,version)) notifications.refresh() }).catch(error => { if (error.code === 40100) social.failure(this, error, version) })
     } catch (error) { if (social.active(this, version, error)) { this.setData({ error: error.message || '消息加载失败，点击重试' }); if (!quiet || error.code === 40100) social.failure(this, error, version) } }
-    finally { if (social.active(this, version)) { this._loading = false; this.setData({ loading: false }) } }
+    finally { if (social.active(this, version)) { this._loading = false; this.setData({ loading: false });if(this._permissionReload){this._permissionReload=false;this.refreshPermission()} } }
   },
   onOlder(){if(this._loading)return this._messageReadTask||Promise.resolve();return this.trackMessageRead(this.readOlder())},
   async readOlder() {
     if (!social.active(this) || this._loading || !this.data.hasMore || !this.data.beforeId) return
-    this._loading = true; const version = this._communityVersion, anchor = this.data.messages[0]
+    this._loading = true; const version = this._communityVersion, anchor = this.data.messages[0],permissionEpoch=this._permissionEpoch
     this.setData({ loading: true })
     try {
       const page = await api.fetchDirectMessages(this._peer, { pageSize: 50, beforeId: this.data.beforeId })
       if (!social.active(this, version)) return
       this.setData({ messages: social.mergeMessages(this.data.messages, page.records), hasMore: page.hasMore,
         beforeId: page.nextBeforeId, ...(anchor ? { scrollTarget: `dm-${anchor.id}` } : {}) },()=>this.measureList())
+      this.applySendPermission(page.sendPermission,permissionEpoch)
     } catch (error) { social.failure(this, error, version) }
-    finally { if (social.active(this, version)) { this._loading = false; this.setData({ loading: false }) } }
+    finally { if (social.active(this, version)) { this._loading = false; this.setData({ loading: false });if(this._permissionReload){this._permissionReload=false;this.refreshPermission()} } }
   },
   async onSend() {
     const content = this.data.input.trim()
     if (!social.active(this) || !this._peer || !this.data.ready || this.data.sending || !content) return
+    if(!this.canCompose()){wx.showToast({title:this.data.permissionError||'等待对方回复或相互关注后可继续发信息',icon:'none'});return}
     if (content.length > 1000) { wx.showToast({ title: '消息最多1000字', icon: 'none' }); return }
     if (!this._attempt || this._attempt.content !== content) this._attempt = { content, clientRequestId: social.requestId() }
     const payload = this._attempt, version = this._communityVersion; this.setData({ sending: true })
@@ -210,9 +241,11 @@ Page({
       if (!social.active(this, version)) return
       this._attempt = null
       this._cursor = 0
+      this._permissionEpoch++
+      if(this.data.sendPermission&&this.data.sendPermission.state==='FIRST_MESSAGE')this.applySendPermission({...this.data.sendPermission,canSend:false,state:'WAITING_REPLY'},this._permissionEpoch)
       this.setData({ input: '', emojiVisible:false, messages: social.mergeMessages(this.data.messages, [message]), scrollTarget: `dm-${message.id}` })
-      this.loadLatest(true)
-    } catch (error) { social.failure(this, error, version) }
+      this.refreshPermission()
+    } catch (error) { if(social.active(this,version)&&error.code===40301){this._permissionEpoch++;this.applySendPermission({canSend:false,following:!!(this.data.sendPermission&&this.data.sendPermission.following),mutualFollowing:false,state:'WAITING_REPLY'},this._permissionEpoch);this.refreshPermission()}social.failure(this, error, version) }
     finally { if (social.active(this, version)) this.setData({ sending: false }) }
   }
 })

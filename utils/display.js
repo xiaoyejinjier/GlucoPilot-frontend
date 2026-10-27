@@ -37,14 +37,14 @@ const THEME_MAP = {
   green: {
     id: 'green',
     label: '经典蓝',
-    brand: '#0969da',
-    brandDark: '#0550ae',
-    brandSoft: '#ddf4ff',
-    brandLine: '#b6d7fb',
-    wxGreen: '#ddf4ff',
+    brand: '#2770cf',
+    brandDark: '#194f91',
+    brandSoft: '#e8f1fd',
+    brandLine: '#cadcf2',
+    wxGreen: '#e8f1fd',
     navBg: '#ffffff',
     navFront: '#000000',
-    tabSelected: '#0969da'
+    tabSelected: '#2770cf'
   },
   teal: {
     id: 'teal',
