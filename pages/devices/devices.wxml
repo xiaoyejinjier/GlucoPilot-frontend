@@ -43,9 +43,9 @@
       </view>
     </view>
     <view class="manage-actions">
-      <button class="action-btn" data-id="{{item.id}}" bindtap="onSync" disabled="{{loading}}" hover-class="method-pressed">{{i18n.t((item.syncActionText), locale)}}</button>
-      <button class="action-btn ghost" data-id="{{item.id}}" bindtap="onDetail" hover-class="method-pressed">{{i18n.t("详情", locale)}}</button>
-      <button class="action-btn danger" data-id="{{item.id}}" bindtap="onUnbind" disabled="{{unbinding}}" hover-class="method-pressed">{{i18n.t("解绑", locale)}}</button>
+      <button class="action-btn" data-id="{{item.id}}" catchtap="onSync" disabled="{{loading}}" hover-class="method-pressed">{{i18n.t((item.syncActionText), locale)}}</button>
+      <button class="action-btn ghost" data-id="{{item.id}}" catchtap="onDetail" hover-class="method-pressed">{{i18n.t("详情", locale)}}</button>
+      <button class="action-btn danger" data-id="{{item.id}}" catchtap="onUnbind" disabled="{{unbinding}}" hover-class="method-pressed">{{i18n.t("解绑", locale)}}</button>
     </view>
   </view>
 
@@ -87,11 +87,12 @@
     </view>
   </view>
 
+  <button class="search-button add-another" bindtap="onOpenSim" hover-class="search-button-pressed">{{i18n.t("生成模拟数据", locale)}}</button>
   <button class="search-button secondary add-another" bindtap="onAddDevice" hover-class="search-button-pressed">{{i18n.t("添加另一台设备", locale)}}</button>
 
   <view class="device-preparation-note">
     <text class="preparation-title">{{i18n.t("状态说明", locale)}}</text>
-    <text>{{i18n.t("绑定后可查看设备详情和最近同步时间。待适配设备仅临时登记；实际测量数据需完成对应设备接入后才能同步。", locale)}}</text>
+    <text>{{i18n.t("绑定后可查看设备详情、同步演示读数与近 10 次同步流水。待适配设备仅临时登记；「生成模拟数据」会按厂商自动绑定并写入随机血糖（演示用）。", locale)}}</text>
   </view>
 
   <view wx:if="{{detailVisible}}" class="serial-overlay">
@@ -106,6 +107,22 @@
       <text class="detail-line">{{i18n.t("设备来源：" + (detail.providerName), locale)}}</text>
       <text class="detail-line">{{i18n.t("状态：" + (detail.statusText), locale)}}</text>
       <text class="detail-line">{{i18n.t("最近同步：" + (detail.lastSyncDisplay), locale)}}</text>
+      <view class="sync-log-toggle" catchtap="onToggleSyncLogs">
+        <text>{{i18n.t("同步记录（近 10 次）", locale)}}</text>
+        <text wx:if="{{syncLogsExpanded}}" class="sync-log-arrow">{{i18n.t("收起", locale)}}</text>
+        <text wx:else class="sync-log-arrow">{{i18n.t("展开", locale)}}</text>
+      </view>
+      <view wx:if="{{syncLogsExpanded}}" class="sync-log-panel">
+        <text wx:if="{{syncLogsLoading}}" class="sync-log-empty">{{i18n.t("加载中…", locale)}}</text>
+        <block wx:elif="{{syncLogs.length}}">
+          <view wx:for="{{syncLogs}}" wx:key="id" class="sync-log-item">
+            <text class="sync-log-time">{{item.syncedAt}}</text>
+            <text class="sync-log-meta">{{item.provider}} · {{i18n.t("样本", locale)}} {{item.sampleCount}} · {{i18n.t("新建", locale)}} {{item.createdCount}}</text>
+            <text wx:if="{{item.remark}}" class="sync-log-remark">{{item.remark}}</text>
+          </view>
+        </block>
+        <text wx:else class="sync-log-empty">{{i18n.t("暂无同步记录（仅记录本功能上线后的同步）", locale)}}</text>
+      </view>
     </view>
   </view>
 
@@ -146,6 +163,30 @@
       </view>
       <button class="search-button serial-save ui-interactive" loading="{{binding}}" disabled="{{binding}}" bindtap="onSubmitBind" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("确认绑定到账号", locale)}}</button>
       <text class="serial-footnote">{{i18n.t("绑定成功后可查看详情、刷新状态或解绑", locale)}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{simVisible}}" class="serial-overlay">
+    <view class="serial-mask" bindtap="onCloseSim"></view>
+    <view class="serial-panel" catchtap="noop">
+      <view class="serial-heading">
+        <text>{{i18n.t("生成模拟数据", locale)}}</text>
+        <text wx:if="{{!simCreating}}" class="serial-close ui-interactive" bindtap="onCloseSim" aria-role="button" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("取消", locale)}}</text>
+      </view>
+      <text class="serial-note">{{i18n.t("将自动绑定一台该厂商模拟设备，并随机生成血糖演示数据写入账号。非真表、非厂家云。", locale)}}</text>
+      <text class="input-label">{{i18n.t("厂商", locale)}} <text class="required-mark">*</text></text>
+      <view class="provider-grid">
+        <view
+          wx:for="{{providers}}"
+          wx:key="code"
+          class="provider-chip {{simProvider === item.code ? 'on' : ''}} ui-interactive"
+          data-provider="{{item.code}}"
+          bindtap="onPickSimProvider"
+          hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"
+        >{{item.name}}</view>
+      </view>
+      <button class="search-button serial-save ui-interactive" loading="{{simCreating}}" disabled="{{simCreating}}" bindtap="onSubmitSim" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("生成并同步", locale)}}</button>
+      <text class="serial-footnote">{{i18n.t("每次生成新 SN，可多次创建多台模拟设备", locale)}}</text>
     </view>
   </view>
 </view>

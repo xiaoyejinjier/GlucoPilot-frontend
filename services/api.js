@@ -187,6 +187,7 @@ function fetchCommentContext(id, commentId) { return get(`/news/${id}/comments/$
 function fetchCommentReplies(id, rootId, params) { return get(`/news/${id}/comments/${rootId}/replies`, params, { auth: true }) }
 function addNewsComment(id, payload) { const path = payload.replyToCommentId ? `/news/${id}/comments/${encodeURIComponent(payload.replyToCommentId)}/replies` : `/news/${id}/comments`; return post(path, payload, { auth: true }) }
 function deleteNewsComment(id, commentId) { return del(`/news/${id}/comments/${commentId}`, null, { auth: true }) }
+function fetchMyComments(params) { return get('/community/comments/mine', params, { auth: true }) }
 function fetchDirectMessages(peer, params) { return get(`/community/messages/${encodeURIComponent(peer)}`, params, { auth: true }) }
 function fetchUnreadMessages() { return get('/community/messages/unread', null, { auth:true }) }
 function fetchInformationSummary() { return get('/community/information/summary', null, { auth:true }) }
@@ -407,17 +408,72 @@ function unbindDevice(id) {
 }
 
 /**
+ * 本人设备近 N 次同步流水（默认 10）。
+ * @param {string|number} deviceId
+ * @param {number} [limit=10]
+ */
+function fetchDeviceSyncLogs(deviceId, limit) {
+  const size = limit == null ? 10 : Number(limit)
+  return get(`/devices/${deviceId}/sync-logs`, { limit: size }, { auth: true }).then((list) =>
+    (list || []).map((row) => ({
+      id: String(row.id),
+      provider: String(row.provider || '').toUpperCase(),
+      sampleCount: row.sampleCount == null ? 0 : Number(row.sampleCount),
+      createdCount: row.createdCount == null ? 0 : Number(row.createdCount),
+      remark: row.remark || '',
+      syncedAt: row.syncedAt || ''
+    }))
+  )
+}
+
+/**
+ * 设备同步总线：上传厂商/入口 raw payload。
+ * @param {{ provider: string, deviceSn?: string, payload: object|array }} opts
+ */
+function syncDeviceGlucose(opts) {
+  const body = {
+    provider: String(opts.provider || '').toUpperCase(),
+    payload: opts.payload
+  }
+  if (opts.deviceSn) body.deviceSn = opts.deviceSn
+  return post('/device/glucose-sync', body, { auth: true })
+}
+
+/**
+ * 选厂商 → 自动绑定模拟设备 → 随机 payload 同步。
+ * @param {string} provider
+ */
+function createSimDeviceAndSync(provider) {
+  const {
+    buildRandomPayload,
+    providerLabel,
+    generateSimDeviceSn
+  } = require('./device-sim-generator')
+  const code = String(provider || '').toUpperCase()
+  const deviceSn = generateSimDeviceSn(code)
+  const deviceName = providerLabel(code)
+  const payload = buildRandomPayload(code)
+  return bindDevice({ deviceSn, provider: code, deviceName }).then((device) =>
+    syncDeviceGlucose({ provider: code, deviceSn, payload }).then((syncResult) => ({
+      device,
+      syncResult,
+      deviceSn,
+      provider: code
+    }))
+  )
+}
+
+/**
  * MOCK 同步演示读数。可附带 deviceSn 以刷新 last_sync_at。
  * @param {Array|undefined} readings
  * @param {string|undefined} deviceSn
  */
 function syncMockGlucose(readings, deviceSn) {
-  const body = {
+  return syncDeviceGlucose({
     provider: 'MOCK',
+    deviceSn,
     payload: { readings: readings || defaultMockReadings() }
-  }
-  if (deviceSn) body.deviceSn = deviceSn
-  return post('/device/glucose-sync', body, { auth: true })
+  })
 }
 
 function defaultMockReadings() {
@@ -542,7 +598,7 @@ module.exports = {
   fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
   submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
   fetchCommunityProfile, setCommunityFollowing, fetchCommunityList, fetchMyReports, fetchReportFeedback, readReportFeedback,
-  fetchNewsComments, fetchCommentContext, fetchCommentReplies, addNewsComment, deleteNewsComment,
+  fetchNewsComments, fetchCommentContext, fetchCommentReplies, addNewsComment, deleteNewsComment, fetchMyComments,
   fetchDirectMessages, sendDirectMessage, readDirectMessages, fetchUnreadMessages,
   channelName,
   channelCode,
@@ -578,6 +634,9 @@ module.exports = {
   fetchMyDevices,
   bindDevice,
   unbindDevice,
+  fetchDeviceSyncLogs,
+  syncDeviceGlucose,
+  createSimDeviceAndSync,
   syncMockGlucose,
   defaultMockReadings,
   fetchMe,

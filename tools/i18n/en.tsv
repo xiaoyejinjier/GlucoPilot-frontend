@@ -1320,3 +1320,22 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 我的点赞	My likes
 搜索点赞的文章标题	Search liked article titles
 还没有点赞，看到喜欢的文章点一下赞吧	No likes yet. Like an article to find it here.
+
+我的评论	My comments
+已被系统隐藏	Hidden by the system
+文章已不可查看	This post is no longer available
+还没有发表过评论，去文章下聊两句吧	No comments yet. Join the conversation on a post.
+条回复	replies
+个赞	likes
+生成模拟数据	Generate demo data
+绑定后可查看设备详情、同步演示读数与近 10 次同步流水。待适配设备仅临时登记；「生成模拟数据」会按厂商自动绑定并写入随机血糖（演示用）。	View device details, demo sync readings and the last 10 sync records. Unadapted devices are registered temporarily; Generate demo data links a matching demo device by vendor and writes random glucose readings (for demonstration).
+同步记录（近 10 次）	Sync records (last 10)
+展开	Expand
+加载中…	Loading…
+样本	Sample
+新建	New
+暂无同步记录（仅记录本功能上线后的同步）	No sync records yet (only syncs after this feature launched are recorded)
+将自动绑定一台该厂商模拟设备，并随机生成血糖演示数据写入账号。非真表、非厂家云。	A demo device from this vendor will be linked automatically and random glucose demo data will be written to your account. It is not a real meter and not a vendor cloud.
+厂商	Vendor
+生成并同步	Generate & sync
+每次生成新 SN，可多次创建多台模拟设备	A new serial number is generated each time, so you can create several demo devices

@@ -324,6 +324,58 @@ button::after { border: 0; }
   line-height: 1.7;
   word-break: break-all;
 }
+.sync-log-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20rpx;
+  padding: 20rpx 0;
+  border-top: 1rpx solid #eef2f8;
+  color: #344c6b;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.sync-log-arrow {
+  color: #8899af;
+  font-size: var(--fs-small);
+  font-weight: 400;
+}
+.sync-log-panel {
+  padding-bottom: 8rpx;
+}
+.sync-log-item {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f4fa;
+}
+.sync-log-item:last-child {
+  border-bottom: none;
+}
+.sync-log-time {
+  display: block;
+  color: #344c6b;
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+.sync-log-meta {
+  display: block;
+  margin-top: 6rpx;
+  color: #6484b0;
+  font-size: var(--fs-tiny);
+  line-height: 1.6;
+}
+.sync-log-remark {
+  display: block;
+  margin-top: 4rpx;
+  color: #98a4b5;
+  font-size: var(--fs-tiny);
+}
+.sync-log-empty {
+  display: block;
+  padding: 12rpx 0 8rpx;
+  color: #a0aaba;
+  font-size: var(--fs-small);
+  line-height: 1.7;
+}
 .input-label {
   display: block;
   margin: 24rpx 0 14rpx;
