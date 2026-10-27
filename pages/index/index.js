@@ -60,7 +60,7 @@ Page({
   onOpen(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}` }) },
   onComments(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}&comments=1` }) },
   onProfile(e) { const key = e.currentTarget.dataset.key; if (/^[ub][1-9]\d{0,18}$/.test(String(key || ''))) wx.navigateTo({ url: `/pages/community-profile/community-profile?key=${key}` }) },
-  onCommunityEntry(e) { if(e.currentTarget.dataset.mode === 'messages') { wx.navigateTo({url:'/pages/information/information'}); return } const mode = e.currentTarget.dataset.mode; if (['following','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` }) },
+  onCommunityEntry(e) { if(e.currentTarget.dataset.mode === 'messages') { wx.navigateTo({url:'/pages/information/information'}); return } const mode = e.currentTarget.dataset.mode; if (['following','likes','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` }) },
   onReport(e) {
     const id=String(e.currentTarget.dataset.id),post=this.data.posts.find(row=>String(row.id)===id)
     if(!post||!social.active(this))return

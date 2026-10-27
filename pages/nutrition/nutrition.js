@@ -1,8 +1,5 @@
-const { FOOD_CATEGORIES } = require('../../utils/constants')
-const { searchFoods, getFoodsByCategory } = require('../../utils/food-db')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { fetchFoodCategories, fetchFoods, fetchFoodDetail } = require('../../services/api')
-const config = require('../../utils/config')
 const { DEFAULT_FOOD_IMAGE, getFoodImage } = require('../../utils/food-images')
 
 function categoryItem(category) {
@@ -13,7 +10,7 @@ function categoryItem(category) {
 Page({
   data: {
     displayStyle: '',
-    categories: FOOD_CATEGORIES.map(categoryItem),
+    categories: [],
     categoryMeta: [],
     keyword: '',
     searchResults: [],
@@ -25,8 +22,11 @@ Page({
     this.loadCategories()
   },
 
-  onHide() { this._categoryRequest = (this._categoryRequest || 0) + 1 },
-  onUnload() { this._categoryRequest = (this._categoryRequest || 0) + 1 },
+  onHide() {
+    this._categoryRequest = (this._categoryRequest || 0) + 1
+    this._foodRequest = (this._foodRequest || 0) + 1
+  },
+  onUnload() { this.onHide() },
 
   onPullDownRefresh() {
     return this.loadCategories().finally(() => wx.stopPullDownRefresh())
@@ -43,12 +43,12 @@ Page({
           categoryMeta: rows,
           categories: rows.map(categoryItem)
         })
+        if (this.data.keyword) return this.reloadFoods()
       })
       .catch(() => {
         if (request !== this._categoryRequest) return
-        if (!config.fallbackLocal) {
-          this.setData({ categories: [], categoryMeta: [], usingRemote: false })
-        }
+        this.setData({ usingRemote: false })
+        wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
       })
   },
 
@@ -63,6 +63,8 @@ Page({
 
   onSearch(e) {
     const keyword = e.detail.value.trim()
+    this._selectedCategory = ''
+    this._foodRequest = (this._foodRequest || 0) + 1
     this.setData({ keyword })
     if (!keyword) {
       this.setData({ searchResults: [] })
@@ -74,29 +76,33 @@ Page({
   onCategoryTap(e) {
     const cat = e.currentTarget.dataset.cat
     const meta = (this.data.categoryMeta || []).find((c) => c.categoryName === cat)
+    this._selectedCategory = cat
     this.setData({ keyword: cat })
-    // 优先按分类主键过滤，未拉到分类时退回本地演示数据
-    this.query(meta && meta.id ? { categoryId: meta.id } : null, cat)
+    this.query(meta && meta.id ? { categoryId: meta.id } : null)
   },
 
-  query(params, fallbackCategory) {
+  reloadFoods() {
+    if (!this._selectedCategory) return this.query({ keyword: this.data.keyword })
+    const category = (this.data.categoryMeta || []).find(c => c.categoryName === this._selectedCategory)
+    return this.query(category ? { categoryId: category.id } : null)
+  },
+
+  query(params) {
+    const request = this._foodRequest = (this._foodRequest || 0) + 1
     if (!params) {
-      this.setData({ searchResults: getFoodsByCategory(fallbackCategory) })
-      return
+      this.setData({ searchResults: [] })
+      return Promise.resolve()
     }
-    fetchFoods({ ...params, pageNum: 1, pageSize: 100 })
+    return fetchFoods({ ...params, pageNum: 1, pageSize: 100 })
       .then((page) => {
+        if (request !== this._foodRequest) return
         const records = (page && page.records) || []
-        this.setData({
-          searchResults: records.length ? records : getFoodsByCategory(fallbackCategory)
-        })
+        this.setData({ searchResults: records })
       })
       .catch(() => {
-        this.setData({
-          searchResults: fallbackCategory
-            ? getFoodsByCategory(fallbackCategory)
-            : searchFoods(this.data.keyword)
-        })
+        if (request !== this._foodRequest) return
+        this.setData({ searchResults: [] })
+        wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
       })
   },
 
@@ -126,7 +132,9 @@ Page({
 
   onImageError(e) {
     const index = Number(e.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || !this.data.searchResults[index]) return
+    const item = this.data.searchResults[index]
+    if (!Number.isInteger(index) || !item || item.image !== e.currentTarget.dataset.src) return
+    if (item.image === DEFAULT_FOOD_IMAGE) return
     this.setData({ [`searchResults[${index}].image`]: DEFAULT_FOOD_IMAGE })
   }
 })

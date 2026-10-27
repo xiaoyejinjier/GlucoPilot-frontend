@@ -83,3 +83,18 @@
 .bio-form-item { align-items:flex-start; }
 .bio-form-item .label { line-height:1.6; }
 .bio-input { flex:1; min-width:0; width:0; min-height:48rpx; margin:0; padding:0; box-sizing:border-box; text-align:right; font-size:var(--fs-body); line-height:1.6; color:var(--ink); }
+.profile-link .input { color:var(--brand); }
+.field-arrow { margin-left:14rpx; font-size:36rpx; color:var(--brand); }
+.date-picker-value { display:flex; justify-content:flex-end; align-items:center; gap:16rpx; flex-wrap:wrap; color:var(--brand); }
+.calendar-icon { position:relative; flex:none; width:30rpx; height:30rpx; border:2rpx solid currentColor; border-radius:5rpx; box-sizing:border-box; }
+.calendar-icon::before { content:''; position:absolute; top:6rpx; left:0; right:0; border-top:2rpx solid currentColor; }
+.calendar-icon::after { content:''; position:absolute; top:12rpx; left:6rpx; width:5rpx; height:5rpx; background:currentColor; box-shadow:9rpx 0 currentColor,0 9rpx currentColor,9rpx 9rpx currentColor; }
+.field-clear { flex:none; margin-left:14rpx; color:var(--muted); font-size:var(--fs-small); }
+.medication-field { padding:24rpx 0; border-bottom:1rpx solid #eef2f1; }
+.medication-hint { display:block; margin-top:10rpx; color:var(--muted); font-size:var(--fs-small); line-height:1.6; }
+.medication-group { margin:20rpx 0; }
+.medication-group-title { display:block; margin-bottom:14rpx; color:var(--muted); font-size:var(--fs-small); line-height:1.5; }
+.medication-options { display:flex; flex-wrap:wrap; gap:14rpx; }
+.medication-option { padding:12rpx 18rpx; border-radius:14rpx; border:1rpx solid var(--line); background:#f6f8fa; color:var(--ink); font-size:var(--fs-small); line-height:1.5; max-width:100%; overflow-wrap:anywhere; }
+.medication-option.selected { color:var(--brand); background:var(--brand-soft); border-color:var(--brand-line); }
+.other-medication { box-sizing:border-box; width:100%; min-height:84rpx; margin-top:18rpx; padding:18rpx; border-radius:14rpx; background:#f6f8fa; font-size:var(--fs-body); line-height:1.6; }

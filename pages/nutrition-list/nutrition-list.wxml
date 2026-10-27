@@ -18,6 +18,7 @@
         src="{{item.image}}"
         mode="aspectFill"
         data-index="{{index}}"
+        data-src="{{item.image}}"
         binderror="onImageError"
       />
       <view class="food-main">

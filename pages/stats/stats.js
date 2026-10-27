@@ -46,7 +46,7 @@ Page({
     year: 2026,
     month: 9,
     activeView: 'calendar',
-    viewMode: 'month',
+    viewMode: 'day',
     selectedDay: 4,
     selectedCount: 0,
     months: Array.from({ length: 12 }, (_, index) => ({ month: index + 1 })),
@@ -269,28 +269,20 @@ Page({
     this.setData({ expandedMealId: this.data.expandedMealId === id ? '' : id })
   },
 
-  onPreviewMealPhoto(e) {
-    const record = this.data.dayRecords.find((item) => item.id === e.currentTarget.dataset.id)
-    if (this.data.activeView !== 'calendar' || this.data.viewMode !== 'day' || this.data.dayLoading
-      || !record || record.id !== this.data.expandedMealId || !record.detail || !record.detail.mediaUrl) return
-    wx.previewImage({ current: record.detail.mediaUrl, urls: [record.detail.mediaUrl] })
-  },
-
   onSwitchView(e) {
     const view = e.currentTarget.dataset.view
-    this.setData({ activeView: view, showWeekPicker: false, expandedMealId: '' }, () => {
-      if (view === 'glucose') this.scheduleWeekChart()
-      else this.cancelWeekChartDraw()
-    })
+    if (view === 'calendar') return this.onSwitchToCalendar()
+    if (view === 'glucose') return this.onSwitchToGlucose()
   },
 
   onSwitchToCalendar() {
-    this.setData({ activeView: 'calendar', viewMode: 'month', showWeekPicker: false, expandedMealId: '' })
+    this.setData({ activeView: 'calendar', viewMode: 'day', showWeekPicker: false, expandedMealId: '' })
     this.cancelWeekChartDraw()
+    return this.buildDayRecords(this.data.selectedDay)
   },
 
   onSwitchToGlucose() {
-    this.setData({ activeView: 'glucose', expandedMealId: '' }, () => this.scheduleWeekChart())
+    this.setData({ activeView: 'glucose', showWeekPicker: false, expandedMealId: '' }, () => this.scheduleWeekChart())
   },
 
   onPrevMonth() {

@@ -38,15 +38,18 @@ function getChartPointDetails(node) {
 }
 
 /** 先画预测，再画实测；虚线必须重置，避免影响后续实测和坐标轴。 */
-function drawPredictionSeries(ctx, points) {
+function drawPredictionSeries(ctx, points, segments = [points]) {
   ctx.strokeStyle = PREDICTION_COLOR
   ctx.lineWidth = 1.5
   ctx.setLineDash([5, 4])
-  if (points.length > 1) {
+  const lines = segments.filter((segment) => segment.length > 1)
+  if (lines.length) {
     ctx.beginPath()
-    points.forEach((point, index) => {
-      if (index === 0) ctx.moveTo(point.x, point.y)
-      else ctx.lineTo(point.x, point.y)
+    lines.forEach((segment) => {
+      segment.forEach((point, index) => {
+        if (index === 0) ctx.moveTo(point.x, point.y)
+        else ctx.lineTo(point.x, point.y)
+      })
     })
     ctx.stroke()
   }

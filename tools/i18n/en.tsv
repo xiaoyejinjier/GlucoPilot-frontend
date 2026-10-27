@@ -1292,3 +1292,31 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 早餐后预测	Post-breakfast prediction
 中餐后预测	Post-lunch prediction
 晚餐后预测	Post-dinner prediction
+正餐照片加载失败	Could not load meal photo
+正在加载照片…	Loading photo…
+未绑定，点击绑定	Not linked · tap to link
+选择确诊年月	Select diagnosis month
+选择正在使用的药物，可多选	Select your current medicines (multiple choices)
+胰岛素（1型及部分2型使用）	Insulin (type 1 and some type 2)
+2型常见用药	Common type 2 medicines
+胰岛素（未注明种类）	Insulin (type unspecified)
+门冬胰岛素	Insulin aspart
+赖脯胰岛素	Insulin lispro
+甘精胰岛素	Insulin glargine
+德谷胰岛素	Insulin degludec
+预混胰岛素	Premixed insulin
+二甲双胍	Metformin
+阿卡波糖	Acarbose
+格列齐特	Gliclazide
+格列美脲	Glimepiride
+西格列汀	Sitagliptin
+达格列净	Dapagliflozin
+恩格列净	Empagliflozin
+司美格鲁肽	Semaglutide
+其他用药	Other medicines
+填写其他药物名称或保留原用药记录	Enter other medicines or keep your existing medication notes
+用药信息不能超过256字	Medication notes must be 256 characters or fewer
+清除	Clear
+我的点赞	My likes
+搜索点赞的文章标题	Search liked article titles
+还没有点赞，看到喜欢的文章点一下赞吧	No likes yet. Like an article to find it here.

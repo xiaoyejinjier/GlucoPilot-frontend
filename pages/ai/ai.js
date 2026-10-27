@@ -26,8 +26,8 @@ Page({
     displayStyle: '',
     nodes: [],
     recordCount: 0,
-    /** 只统计三个餐前、三个餐后的实测节点。 */
-    glucoseTotalNodes: 6,
+    /** 六个实测和三个已保存正餐，共九时段。 */
+    glucoseTotalNodes: 9,
     timeRuleHint: '',
     selectedChartNodeId: '',
     chartSelection: null,
@@ -188,7 +188,7 @@ Page({
     const now = new Date()
     const nodes = GLUCOSE_NODES.map(n => {
       const rec = records[n.id]
-      // 三个正餐独立保存推荐预测，不进入六个实测节点的进度。
+      // 正餐计入九时段完成度，推荐预测与实测值仍分别绘制。
       const value = !n.isMeal && rec && rec.value != null ? rec.value : null
       return {
         ...n,
@@ -208,8 +208,8 @@ Page({
       nodes,
       chartSelection,
       selectedChartNodeId: chartSelection ? chartSelection.nodeId : '',
-      recordCount: nodes.filter(hasMeasuredGlucose).length,
-      glucoseTotalNodes: 6,
+      recordCount: nodes.filter((node) => node.isMeal ? node.hasRecord : hasMeasuredGlucose(node)).length,
+      glucoseTotalNodes: 9,
       timeRuleHint: getRecordWindowHint(now)
     })
     // 等 setData 与页面布局都稳定后再绘制，避免首次进入时 Canvas 尺寸错位。
@@ -361,7 +361,12 @@ Page({
           has: true, nodeId: node.id, value, isPrediction: true }
       }).filter(Boolean)
       this._chartGeometry = { width, height, points: allPoints, predictionPoints }
-      drawPredictionSeries(ctx, predictionPoints)
+      // 六时段连续参考线：餐前实测与餐后推荐预测交替，包含两处跨餐连接。
+      const referencePoints = predictionPoints.length ? allPoints.map((point) => {
+        if (point.nodeId.startsWith('before_')) return point.has ? point : null
+        return predictionPoints.find((prediction) => prediction.x === point.x) || null
+      }).filter(Boolean) : []
+      drawPredictionSeries(ctx, predictionPoints, [referencePoints])
 
       // 折线只连接有值点
       const valued = allPoints.filter(p => p.has)

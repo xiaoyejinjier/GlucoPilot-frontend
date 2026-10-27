@@ -20,6 +20,8 @@ Page({
     submitting: false
   },
 
+  onLoad(options){if(options&&options.bind==='phone')this.onBindPhone()},
+
   onShow() {
     applyDisplayToCurrentPage()
     this.refresh()

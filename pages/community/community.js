@@ -1,7 +1,7 @@
 const api = require('../../services/api')
 const social = require('../../utils/community')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
-const TITLES = { following: '我的关注', collections: '我的收藏', messages: '我的私信', profiles: '找用户' }
+const TITLES = { following: '我的关注', likes: '我的点赞', collections: '我的收藏', messages: '我的私信', profiles: '找用户' }
 Page({
   data: { displayStyle: '', mode: 'following', list: [], pageNum: 0, hasMore: false, loading: false, error: '', keyword: '', searchQuery: '' },
   onLoad(options) { const mode = Object.prototype.hasOwnProperty.call(TITLES, options.mode) ? options.mode : 'following'; this.setData({ mode }); wx.setNavigationBarTitle({ title: TITLES[mode] }) },
@@ -52,7 +52,7 @@ Page({
   onOpen(event) {
     const row = this.data.list.find(item => item.rowKey === event.currentTarget.dataset.key)
     if (!row) return
-    const url = this.data.mode === 'collections' ? `/pages/news-detail/news-detail?id=${row.id}`
+    const url = (this.data.mode === 'collections' || this.data.mode === 'likes') ? `/pages/news-detail/news-detail?id=${row.id}`
       : this.data.mode === 'messages' ? `/pages/messages/messages?peer=${row.peer.userId}`
         : `/pages/community-profile/community-profile?key=${row.key}`
     wx.navigateTo({ url })

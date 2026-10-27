@@ -178,8 +178,8 @@ function fetchReportFeedback(id) { return get(`/community/reports/${encodeURICom
 function readReportFeedback(id) { return put(`/community/reports/${encodeURIComponent(id)}/read`,null,{auth:true}) }
 function setCommunityFollowing(key, following) { return put(`/community/profiles/${encodeURIComponent(key)}/following`, { following }, { auth: true }) }
 function fetchCommunityList(mode, params) {
-  if (!['following', 'collections', 'messages', 'profiles'].includes(mode)) return Promise.reject(new Error('列表类型不正确'))
-  return get(`/community/${mode}`, params, { auth: true }).then(page => mode === 'collections'
+  if (!['following', 'likes', 'collections', 'messages', 'profiles'].includes(mode)) return Promise.reject(new Error('列表类型不正确'))
+  return get(`/community/${mode}`, params, { auth: true }).then(page => (mode === 'collections' || mode === 'likes')
     ? { ...page, records: (page.records || []).map(mapNewsItem) } : page)
 }
 function fetchNewsComments(id, params) { return get(`/news/${id}/comments`, params, { auth: true }) }

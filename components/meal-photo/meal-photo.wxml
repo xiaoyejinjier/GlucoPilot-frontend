@@ -1,0 +1,7 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="meal-photo">
+  <image wx:if="{{source}}" src="{{source}}" mode="aspectFit" binderror="failed" bindtap="preview" />
+  <view wx:elif="{{error}}" class="photo-state" bindtap="load" aria-role="button"><text>{{i18n.t('正餐照片加载失败', locale)}}</text><text class="photo-action">{{i18n.t('点击重试', locale)}}</text></view>
+  <view wx:else class="photo-state"><text>{{i18n.t('正在加载照片…', locale)}}</text></view>
+  <text wx:if="{{source}}" class="photo-caption" bindtap="preview">{{i18n.t('点击查看原图', locale)}}</text>
+</view>

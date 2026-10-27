@@ -10,3 +10,5 @@
 .post-video-preview{display:flex;flex-direction:column;gap:20rpx;margin:20rpx 0}
 
 .other-topic-list{display:flex;flex-wrap:wrap;gap:12rpx;padding:10rpx 4rpx 24rpx}.tag-catalog-error{color:var(--brand);font-size:var(--fs-small);padding:18rpx;text-align:center}
+
+.community-shortcuts>view{min-width:0;text-align:center}.shortcut-follow{position:relative;display:flex;align-items:flex-end;width:42rpx;height:41rpx}.shortcut-follow>view{position:relative;width:28rpx;height:15rpx;border:2rpx solid currentColor;border-radius:14rpx 14rpx 4rpx 4rpx;margin-bottom:2rpx}.shortcut-follow>view::before{content:"";position:absolute;left:6rpx;top:-23rpx;width:14rpx;height:14rpx;border:2rpx solid currentColor;border-radius:50%}.shortcut-follow>text{position:absolute;right:-2rpx;top:6rpx;font-size:24rpx;font-weight:600;line-height:1}

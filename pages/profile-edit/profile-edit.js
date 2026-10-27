@@ -4,6 +4,7 @@ const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { uploadMediaFile, BIZ_TYPE, MAX_IMAGE_BYTES } = require('../../utils/media')
 const { getToken } = require('../../utils/request')
 const { DIABETES_TYPE_TEXT, diabetesCode } = require('../../utils/mappers')
+const { parseMedication, medicationGroups, medicationText, NAMES } = require('../../utils/profile-medications')
 
 // 将 2022.06 / 2022/06 / 2022年6月 / 202206 / 2022-6 统一归一化为 YYYY-MM
 function normalizeYearMonth(raw) {
@@ -38,6 +39,8 @@ Page({
     form: {},
     diabetesOptions: DIABETES_TYPE_TEXT,
     diabetesIndex: 0,
+    maxDiagnosisMonth:'',diagnosisPickerValue:'',medicationGroups:medicationGroups(),
+    selectedMedications:[],otherMedication:'',otherMedicationEnabled:false,
     saving: false, uploadingAvatar:false, avatarPreview:'', loading:true
   },
 
@@ -45,6 +48,8 @@ Page({
   onLoad() {
     this._disposed = false; this._profileToken = getToken(); this._dirty = new Set(); this._avatarChanged = false; this._diabetesChanged = false
     const token = this._profileToken
+    const now=new Date(),month=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+    this.setData({maxDiagnosisMonth:month,diagnosisPickerValue:month})
     this.setData({loading:true})
     const info = !this._skipCache && getUserInfo(); this._skipCache = false
     if (info) this.fill(info)
@@ -61,6 +66,11 @@ Page({
       this.setData({form:{},avatarPreview:'',uploadingAvatar:false,saving:false}); this.onLoad()
     }
     applyDisplayToCurrentPage()
+    if(this._phoneBindingVisited&&this.current()){
+      this._phoneBindingVisited=false
+      const token=this._profileToken
+      fetchMe().then(me=>{if(this.current(token)){saveUserInfo(me);this.setData({form:{...this.data.form,phone:me.phone||''}})}}).catch(()=>{})
+    }
   },
   onHide(){this._visible=false},
   onUnload(){this._disposed=true;this._visible=false;this._uploadRun=(this._uploadRun||0)+1;if(this._returnTimer)clearTimeout(this._returnTimer)},
@@ -70,6 +80,47 @@ Page({
     for(const key of this._dirty || []) form[key]=this.data.form[key]
     if(this._avatarChanged)form.avatarUrl=this.data.form.avatarUrl
     this.setData({form,diabetesIndex:this._diabetesChanged?this.data.diabetesIndex:Math.max(0,diabetesCode(info.diabetesType))})
+    this.setData({diagnosisPickerValue:form.confirmDate||this.data.maxDiagnosisMonth})
+    if(!this._dirty.has('medication')){
+      const medication=parseMedication(form.medication)
+      this.setData({selectedMedications:medication.selected,otherMedication:medication.other,otherMedicationEnabled:!!medication.other,
+        medicationGroups:medicationGroups(medication.selected)})
+    }
+  },
+
+  onBindPhone(){
+    if(!this.current()||this.data.saving||this._openingPhone)return
+    this._openingPhone=true;this._phoneBindingVisited=true
+    wx.navigateTo({url:'/pages/account-security/account-security?bind=phone',complete:()=>{this._openingPhone=false}})
+  },
+  onDiagnosisChange(e){
+    if(!this.current()||this.data.saving)return
+    const value=String(e.detail.value||'')
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)||value<'1900-01'||value>this.data.maxDiagnosisMonth)return
+    this._dirty.add('confirmDate');this.setData({form:{...this.data.form,confirmDate:value},diagnosisPickerValue:value})
+  },
+  onClearDiagnosis(){
+    if(!this.current()||this.data.saving)return
+    this._dirty.add('confirmDate');this.setData({form:{...this.data.form,confirmDate:''},diagnosisPickerValue:this.data.maxDiagnosisMonth})
+  },
+  onMedicationTap(e){
+    if(!this.current()||this.data.saving)return
+    const name=e.currentTarget.dataset.name
+    if(!NAMES.includes(name))return
+    const selected=this.data.selectedMedications.includes(name)?this.data.selectedMedications.filter(value=>value!==name):this.data.selectedMedications.concat(name)
+    this.updateMedication(selected,this.data.otherMedication,this.data.otherMedicationEnabled)
+  },
+  onOtherMedication(){
+    if(!this.current()||this.data.saving)return
+    this.updateMedication(this.data.selectedMedications,this.data.otherMedication,!this.data.otherMedicationEnabled)
+  },
+  onOtherMedicationInput(e){if(this.current()&&!this.data.saving)this.updateMedication(this.data.selectedMedications,e.detail.value,true)},
+  updateMedication(selected,other,enabled){
+    const value=medicationText(selected,enabled?other:'')
+    if(value.length>256){wx.showToast({title:'用药信息不能超过256字',icon:'none'});return}
+    this._dirty.add('medication')
+    this.setData({selectedMedications:selected,otherMedication:other,otherMedicationEnabled:enabled,
+      medicationGroups:medicationGroups(selected),form:{...this.data.form,medication:value}})
   },
 
   onField(e) {

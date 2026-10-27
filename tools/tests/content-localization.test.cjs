@@ -83,6 +83,12 @@ test('HTML正文使用独立译文并解析原媒体地址，纯文本不升级�
   const template=fs.readFileSync(path.join(root,'pages/news-detail/news-detail.wxml'),'utf8')
   assert.ok(template.includes('wx:if="{{news.contentHtml}}"'));assert.ok(template.includes('wx:elif="{{news.contentBody}}"'));env.content.stop(page)
 })
+test('我的点赞列表沿用英文文章翻译',()=>{
+  const env=harness(ready)
+  const items=env.content.collect({mode:'likes',list:[{id:'10',title:'科学控糖',summary:'健康生活'}]},'pages/community/community')
+  assert.equal(items.get('ARTICLE_PREVIEW:10').source.title,'科学控糖')
+})
+
 test('中文模式不请求翻译，草稿编辑和非发布文章也不提交翻译',async()=>{
   const env=harness(ready),page=env.page({locale:'zh-CN'});await env.tick();assert.equal(env.calls.length,0)
   assert.equal(env.content.collect({mode:'drafts',articles:[{id:'10',title:'草稿',body:'正文'}],form:{nickname:'小林',key:'u1'}},'pages/community-articles/community-articles').size,0)

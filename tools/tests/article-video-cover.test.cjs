@@ -20,6 +20,20 @@ test('我的文章和草稿只请求小图，保留长ID与身份，不创建播
   assert.ok(page.indexOf('item.videos.length')<page.indexOf('item.images.length'));assert.match(page,/<article-video-cover media-id="\{\{item.videos\[0\].mediaId\}\}"/)
 })
 
+test('个人主页有视频优先使用首帧组件，保留整卡进入文章且无额外播放器',()=>{
+  const config=JSON.parse(fs.readFileSync(path.join(root,'pages/community-profile/community-profile.json'),'utf8'))
+  assert.equal(config.usingComponents['article-video-cover'],'/components/article-video-cover/article-video-cover')
+  const page=fs.readFileSync(path.join(root,'pages/community-profile/community-profile.wxml'),'utf8')
+  const video=page.indexOf('<view wx:if="{{item.videos.length}}" class="profile-article-cover">')
+  const photo=page.indexOf('<view wx:elif="{{item.images.length}}" class="profile-article-cover">')
+  assert.ok(video>=0 && photo>video)
+  assert.match(page,/<article-video-cover media-id="\{\{item.videos\[0\].mediaId\}\}"/)
+  assert.match(page,/data-id="\{\{item.id\}\}" bindtap="onArticle"/)
+  assert.doesNotMatch(page,/<video\b|class="video-play"/)
+  const styles=fs.readFileSync(path.join(root,'pages/community-profile/community-profile.wxss'),'utf8')
+  assert.match(styles,/\.profile-article-cover article-video-cover\{display:block;width:100%;height:100%\}/)
+})
+
 test('加载失败可重试，不把接口错误响应当封面，无令牌不请求',()=>{
   const {state,c}=harness();state.downloads[0].success({statusCode:400,tempFilePath:'error.json'})
   assert.equal(c.data.error,true);assert.equal(c.data.source,'');assert.ok(state.removed.includes('error.json'))

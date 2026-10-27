@@ -180,7 +180,7 @@ test('Canvas本地坐标不乘DPR，client坐标按当前视口矩形换算并�
     { left: 10, top: 50, width: 200, height: 240 }, { width: 400, height: 120 }), { x: 200, y: 60 })
 })
 
-test('六个实测横轴及进度排除正餐，推荐预测独立映射到早餐后', () => {
+test('曲线保留六实测横轴，进度按九时段包含正餐，预测独立映射到餐后', () => {
   const { page, canvas, render } = createPage({ records: {
     before_breakfast: measured(), breakfast: { type: 'meal', value: 39, suggestedGlucose: 39 }
   }, dpr: 3 })
@@ -191,8 +191,8 @@ test('六个实测横轴及进度排除正餐，推荐预测独立映射到早�
   assert.equal(page._chartGeometry.points.some((point) => point.nodeId === 'breakfast'), false)
   assert.equal(page._chartGeometry.predictionPoints[0].value, 39)
   assert.equal(page._chartGeometry.predictionPoints[0].x, page._chartGeometry.points[1].x)
-  assert.equal(page.data.recordCount, 1)
-  assert.equal(page.data.glucoseTotalNodes, 6)
+  assert.equal(page.data.recordCount, 2)
+  assert.equal(page.data.glucoseTotalNodes, 9)
 })
 
 test('mmol/L画在最高纵轴刻度上方，六刻度曲线仍保留完整九节点录入', () => {
@@ -404,14 +404,14 @@ test('日看板映射保留已有sourceType，无后端DTO修改', () => {
   assert.equal(result.nodes[0].sourceType, 3)
 })
 
-test('三餐推荐预测映射三个餐后，缺失或非法推荐值不回退当前吃法、不增加实测进度', () => {
+test('三餐完成度计三次，预测映射三个餐后且不回退当前吃法', () => {
   const { page, render } = createPage({ records: {
     breakfast: { type: 'meal', predictedGlucose: 30, suggestedGlucose: 7.2 },
     lunch: { type: 'meal', predictedGlucose: 31, suggestedGlucose: 8 },
     dinner: { type: 'meal', predictedGlucose: 32, suggestedGlucose: 6.9 }
   } })
   render()
-  assert.equal(page.data.recordCount, 0)
+  assert.equal(page.data.recordCount, 3)
   assert.deepEqual(Array.from(page._chartGeometry.predictionPoints, (point) => point.value), [7.2, 8, 6.9])
   assert.deepEqual(Array.from(page._chartGeometry.predictionPoints, (point) => point.x),
     [1, 3, 5].map((index) => page._chartGeometry.points[index].x))
@@ -436,6 +436,49 @@ test('预测虚线白底空心点先绘制，实测实线和异常实心点最�
   assert.ok(styleAfter.some((call) => call.args[0] === 'fillStyle' && call.args[1] === '#fff'))
   assert.ok(styleAfter.some((call) => call.args[0] === 'fillStyle' && call.args[1] === '#fa5151'))
   assert.ok(styleAfter.some((call) => call.args[0] === 'lineWidth' && call.args[1] === 2.5))
+})
+
+function dashedOperations(calls) {
+  const first = calls.canvas.findIndex((op) => op.method === 'setLineDash' && op.args[0].length)
+  const last = calls.canvas.findIndex((op, i) => i > first && op.method === 'setLineDash' && !op.args[0].length)
+  return calls.canvas.slice(first + 1, last)
+}
+
+test('每日参考虚线连续连接六时段，包含早后到中前、中后到晚前', () => {
+  const { page, render, calls } = createPage({ records: {
+    before_breakfast: measured(5.2), before_lunch: measured(6.1), before_dinner: measured(5.9),
+    after_breakfast: measured(8.1), after_lunch: measured(8.5), after_dinner: measured(7.9),
+    breakfast: { type: 'meal', suggestedGlucose: 7.1 }, lunch: { type: 'meal', suggestedGlucose: 7.3 },
+    dinner: { type: 'meal', suggestedGlucose: 6.9 }
+  } })
+  render()
+  const operations = dashedOperations(calls).filter((op) => ['moveTo', 'lineTo'].includes(op.method))
+  assert.deepEqual(operations.map((op) => op.method), ['moveTo', 'lineTo', 'lineTo', 'lineTo', 'lineTo', 'lineTo'])
+  for (let i = 0; i < 3; i++) {
+    const start = page._chartGeometry.points[i * 2], end = page._chartGeometry.predictionPoints[i]
+    assert.deepEqual(operations[i * 2].args, [start.x, start.y])
+    assert.deepEqual(operations[i * 2 + 1].args, [end.x, end.y])
+  }
+  assert.equal(page.data.recordCount, 9)
+})
+
+test('参考虚线跳过缺失餐前，不把餐后实测混入预测线或填零', () => {
+  const { page, render, calls } = createPage({ records: {
+    after_breakfast: measured(8.2), before_lunch: measured(5.6), before_dinner: measured('invalid'),
+    breakfast: { type: 'meal', suggestedGlucose: 7.1 }, lunch: { type: 'meal', suggestedGlucose: 7.2 },
+    dinner: { type: 'meal', suggestedGlucose: 6.8 }
+  } })
+  render()
+  const operations = dashedOperations(calls).filter((op) => ['moveTo', 'lineTo'].includes(op.method))
+  assert.deepEqual(operations.map((op) => op.method), ['moveTo', 'lineTo', 'lineTo', 'lineTo'])
+  const geometry = page._chartGeometry
+  const expected = [geometry.predictionPoints[0], geometry.points[2], geometry.predictionPoints[1], geometry.predictionPoints[2]]
+  expected.forEach((point, index) => assert.deepEqual(operations[index].args, [point.x, point.y]))
+  assert.equal(page._chartGeometry.predictionPoints.length, 3)
+  assert.equal(page.data.recordCount, 5)
+  const actualOnly = createPage({ records: { before_breakfast: measured(5.2), before_lunch: measured(5.6) } })
+  actualOnly.render()
+  assert.equal(dashedOperations(actualOnly.calls).some((op) => op.method === 'lineTo'), false)
 })
 
 test('重合点优先实测，预测刷新和删除会同步更新已打开详情', async () => {

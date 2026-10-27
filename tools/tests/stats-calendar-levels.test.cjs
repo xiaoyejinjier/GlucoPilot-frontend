@@ -122,24 +122,22 @@ test('返回月视图、切换血糖视图或离开页面会收起正餐', () =>
   }
 })
 
-test('只有当前展开且有真实照片的正餐可以预览原图', async () => {
+test('已保存正餐传递真实媒体ID给鉴权照片组件，不直接展示MinIO直链', async () => {
   const { page, calls } = createPage({ meals: () => ({ meals: [
-    { nodeCode: 'breakfast', foodsText: '米饭', mediaUrl: '/photo/example.jpg' },
+    { nodeCode: 'breakfast', foodsText: '米饭', mediaId:'9007199254740993',mediaUrl: 'http://storage.invalid/private.jpg' },
     { nodeCode: 'lunch', foodsText: '面条' }
   ] }) })
   await page.onMonthTap(monthEvent(10))
   await flush()
-  page.onPreviewMealPhoto(mealEvent('breakfast'))
-  assert.equal(calls.photos.length, 0)
+  assert.equal(page.data.dayRecords.find(item=>item.id==='breakfast').detail.mediaId,'9007199254740993')
+  assert.equal(page.data.dayRecords.find(item=>item.id==='lunch').detail.mediaId,'')
   page.onMealDetailTap(mealEvent('breakfast'))
-  page.onPreviewMealPhoto(mealEvent('breakfast'))
-  assert.equal(calls.photos.length, 1)
-  assert.equal(calls.photos[0].current, '/photo/example.jpg')
-  assert.equal(calls.photos[0].urls[0], '/photo/example.jpg')
+  assert.equal(page.data.expandedMealId,'breakfast')
   page.onMealDetailTap(mealEvent('lunch'))
-  page.onPreviewMealPhoto(mealEvent('breakfast'))
-  page.onPreviewMealPhoto(mealEvent('lunch'))
-  assert.equal(calls.photos.length, 1)
+  assert.equal(calls.photos.length,0)
+  const template=fs.readFileSync(path.join(directory,'stats.wxml'),'utf8')
+  assert.match(template,/<meal-photo wx:if="\{\{item.detail.mediaId\}\}" media-id="\{\{item.detail.mediaId\}\}"/)
+  assert.doesNotMatch(template,/src="\{\{item.detail.mediaUrl\}\}"/)
 })
 
 test('正餐详情使用可换行文本和快照，不限制行数；逐项循环不覆盖外层 item', () => {
@@ -153,11 +151,26 @@ test('正餐详情使用可换行文本和快照，不限制行数；逐项循�
   assert.doesNotMatch(style, /\.meal-detail-full-text\s*\{[^}]*(line-clamp|text-overflow)/)
 })
 
-test('月视图包含1～12月入口，不伪造每月记录数', () => {
+test('默认日视图，手动月视图仍包含1～12月入口且不伪造每月记录数', () => {
   const { page } = createPage()
+  assert.equal(page.data.viewMode, 'day')
+  page.onViewMode(modeEvent('month'))
   assert.equal(page.data.viewMode, 'month')
   assert.deepEqual(page.data.months.map((item) => item.month), Array.from({ length: 12 }, (_, index) => index + 1))
   assert.ok(page.data.months.every((item) => !Object.hasOwn(item, 'count')))
+})
+
+test('首次进入日历即查询今天九时段，从血糖视图返回也默认日视图并重取明细', async () => {
+  const {page,calls}=createPage()
+  page.onShow();await flush()
+  const now=new Date(),date=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+  assert.equal(page.data.activeView,'calendar');assert.equal(page.data.viewMode,'day')
+  assert.equal(calls.meals.at(-1),date);assert.equal(page.data.dayRecords.length,9)
+  const previous=calls.meals.length
+  page.setData({activeView:'glucose',viewMode:'month',expandedMealId:'breakfast'})
+  await page.onSwitchView({currentTarget:{dataset:{view:'calendar'}}});await flush()
+  assert.equal(page.data.viewMode,'day');assert.equal(page.data.expandedMealId,'')
+  assert.equal(calls.meals.length,previous+1);assert.equal(calls.meals.at(-1),date)
 })
 
 test('点击不同月份进入日视图，默认历史月份首日并查询真实月份/日期', async () => {

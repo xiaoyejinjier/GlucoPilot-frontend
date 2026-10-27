@@ -5,6 +5,10 @@
 调用方发布前应在验收记录中登记对应后端提交 SHA 和镜像标签。
 用户端 /api/v1/**，管理端 /admin/v1/**；响应 { code, message, data, requestId }，成功码 0。
 
+2026-10-27 本人点赞：GET /community/likes 需登录，支持 PageQuery 和可选 keyword（最多80字）；仅本人仍点赞且可读、已发布、未隐藏的文章，结构沿用收藏列表。复用 news_user_action，无迁移；区别于信息中心收到的点赞通知，详见权威契约“本人点赞列表”。
+
+2026-10-26食品图片同步：用户端foods列表/详情imageUrl对AI_REVIEWED且上架的来源实拍优先返回/api/v1/foods/{foodId}/image；入口只读已审核公开食品，分类禁用/下架/删除立即404，no-store，不公开原健康媒体地址。分类仍共用food_category.image_url。两类相对地址每次按当前config.baseUrl解析；营养库进入/下拉刷新当前查询，空结果不补本地示例，失败提示重试，旧请求及旧图错误不覆盖新图。无新增数据库迁移。
+
 2026-10-20返回保护：发文返回时可选择放弃未保存修改或保存草稿后离开；保存失败保留编辑器。草稿/{id}/publish成功即关闭草稿，无需等待审核；拒绝后在我的文章修改重投，失败发布不关闭。小程序通过来源页事件即时移除同账号已发布草稿，服务端列表仍为最终数据源。接口及数据库结构不变。
 
 2026-10-20修复：头像使用原bizType=1三步上传，仅登记返回的fileUrl可提交PATCH /users/me/profile，本地路径只预览；未修改头像省略avatarUrl，清空空串，上传失败/账号变化不提交旧文件。草稿500修复MySQL DATETIME的LocalDateTime/Timestamp兼容，接口与数据库结构不变；真实MySQL事务验证通过且已回滚。详见权威契约“个人头像与草稿修复”。
@@ -28,4 +32,6 @@
 权威契约见 backend 仓 `docs/API-CONTRACT.md`。邮箱：`POST /api/v1/auth/email/codes`、`POST /api/v1/auth/email/sessions`、`PATCH /api/v1/users/me/email`。设备同步请求体改为 `{ provider, deviceSn?, payload }`；MOCK 使用 `payload.readings`。
 # 2026-10-26 推荐吃法预测曲线
 
-权威契约见 backend/docs/API-CONTRACT.md“正餐推荐预测与实测血糖分离”。GET /api/v1/glucose-records/summary 的 week.points 新增 predictedAvg（可空）和 predictionCount（0–3）；前端映射为独立 predictedValue，实测 value/周摘要语义不变。推荐预测只取 predictSuggest；不足三餐按已有有效推荐预测取均值，无有效预测保留空值。记录页实测进度固定六节点，正餐预测放到对应餐后位置，以绿色虚线和白底空心点绘制。
+权威契约见 backend/docs/API-CONTRACT.md“正餐推荐预测与实测血糖分离”。GET /api/v1/glucose-records/summary 的 week.points 新增 predictedAvg（可空）和 predictionCount（0–3）；前端映射为独立 predictedValue，实测 value/周摘要语义不变。推荐预测只取 predictSuggest；不足三餐按已有有效推荐预测取均值，无有效预测保留空值。记录页“已记”统计六个有效实测加三个已保存正餐，共九时段；曲线参考虚线依次连接早前实测→早后推荐预测→中前实测→中后推荐预测→晚前实测→晚后推荐预测，餐后使用白底空心点。缺失值跳过，不填零或回退餐后实测；没有正餐预测时不画参考虚线。周图继续连接预测日均值。
+
+2026-10-26：正餐详情保留 mediaId，mediaUrl 改为 `/api/v1/meal-records/images/{mediaId}`，需本人 Bearer，照片组件从当前 API 下载临时图并预览，不直连私有 MinIO。确诊日期沿用 YYYY-MM，药物多选与其他备注合并到原 medication 字段；手机号行跳账号安全 `?bind=phone`，仍使用验证码绑定流程。

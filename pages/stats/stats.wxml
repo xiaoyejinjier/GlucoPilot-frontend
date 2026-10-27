@@ -160,10 +160,7 @@
           </view>
           <text class="meal-detail-label">{{i18n.t("补充 / 备注", locale)}}</text>
           <text class="meal-detail-full-text">{{i18n.t((item.detail.supplementText), locale)}}</text>
-          <view wx:if="{{item.detail.mediaUrl}}" class="meal-photo-wrap ui-interactive" data-id="{{item.id}}" bindtap="onPreviewMealPhoto" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-            <image src="{{item.detail.mediaUrl}}" mode="aspectFit" class="meal-detail-photo"></image>
-            <text class="meal-photo-tip">{{i18n.t("点击查看原图", locale)}}</text>
-          </view>
+          <meal-photo wx:if="{{item.detail.mediaId}}" media-id="{{item.detail.mediaId}}"></meal-photo>
         </view>
         </block>
       </view>

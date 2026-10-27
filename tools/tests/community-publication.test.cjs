@@ -49,6 +49,17 @@ test('减少此类内容在保存后移除当前文章，失败保留，举报�
   const failed=page('index',{hideCommunityArticle:async()=>{throw Error('暂时不可用')}});await flush();failed.page.setData({posts:[{id:'21'}]});await failed.page.onHideArticle('21');assert.equal(failed.page.data.posts.length,1);failed.page.onUnload()
 })
 
+test('社区快捷入口按关注点赞收藏排序，实际入口均能打开对应列表或信息页',async()=>{
+  const {page:p,state}=page('index');await flush()
+  const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+  const shortcuts=template.slice(template.indexOf('<view class="community-shortcuts">'),template.indexOf('<view class="feed-heading">'))
+  const modes=Array.from(shortcuts.matchAll(/data-mode="([^"]+)"/g),match=>match[1])
+  assert.deepEqual(modes,['following','likes','collections','messages','profiles'])
+  for(const mode of modes)p.onCommunityEntry({currentTarget:{dataset:{mode}}})
+  assert.deepEqual(state.navs.map(row=>row.url),['/pages/community/community?mode=following','/pages/community/community?mode=likes','/pages/community/community?mode=collections','/pages/information/information','/pages/community/community?mode=profiles'])
+  const count=state.navs.length;p.onCommunityEntry({currentTarget:{dataset:{mode:'invalid'}}});assert.equal(state.navs.length,count);p.onUnload()
+})
+
 test('社区评论按钮带定位参数，正文入口保持原行为，非法文章ID不会导航',async()=>{
   const {page:p,state}=page('index');await flush()
   const event={currentTarget:{dataset:{id:'10'}}};p.onComments(event);p.onOpen(event)

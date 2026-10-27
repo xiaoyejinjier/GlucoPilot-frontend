@@ -217,6 +217,26 @@ test('关注列表分页只读本人数据，搜索使用提交时的昵称且�
   page.onOpen({ currentTarget: { dataset: { key: 'u2' } } })
   assert.match(state.navs[0].url, /community-profile.*key=u2/)
 })
+test('我的点赞读取真实列表，搜索分页后打开对应文章，重新进入更新取消的点赞',async()=>{
+  let liked=true
+  const {page,state}=harness('community',{route:{mode:'likes'},api:{fetchCommunityList:async(mode,q)=>({records:liked?[{id:String(q.pageNum),title:'控糖文章'}]:[],pages:liked?2:0})}});await flush()
+  assert.equal(page.data.mode,'likes');assert.equal(state.calls[0].args[0],'likes')
+  page.onInput({detail:{value:' 控糖 '}});await page.onSearch()
+  page.onInput({detail:{value:'未提交'}});await page.onMore()
+  assert.equal(state.calls.at(-1).args[1].keyword,'控糖');assert.equal(page.data.list.length,2)
+  page.onOpen({currentTarget:{dataset:{key:'2'}}});assert.match(state.navs[0].url,/news-detail.*id=2/)
+  liked=false;page.onHide();page.onShow();await flush();assert.equal(page.data.list.length,0)
+  await page.onClearSearch();assert.equal(state.calls.at(-1).args[1].keyword,undefined);page.onUnload()
+})
+
+test('点赞列表迟到结果不会填入新账号',async()=>{
+  const old=deferred();let count=0
+  const {page,state}=harness('community',{route:{mode:'likes'},api:{fetchCommunityList:async()=>++count===1?old.promise:{records:[{id:'2',title:'新账号文章'}],pages:1}}})
+  page.onHide();state.token='account-two';page.onShow();await flush()
+  old.resolve({records:[{id:'1',title:'旧账号文章'}],pages:1});await flush()
+  assert.equal(page.data.list.map(row=>row.id).join(','),'2');page.onUnload()
+})
+
 test('我的关注支持单字服务端搜索，翻页沿用已提交条件，清空恢复全部',async()=>{
   const {page,state}=harness('community',{route:{mode:'following'},api:{fetchCommunityList:async(_mode,q)=>({records:[{key:'u'+q.pageNum,nickname:'小林'}],pages:2})}});await flush()
   page.onInput({detail:{value:' 林 '}});await page.onSearch()
