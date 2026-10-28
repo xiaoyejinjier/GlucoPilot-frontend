@@ -55,3 +55,12 @@
   flex-shrink: 0;
   margin: 0;
 }
+
+/* 注销入口：页面最下方的独立分组 */
+.danger-text {
+  color: var(--danger);
+}
+
+.cancel-entry {
+  margin-top: 40rpx;
+}

@@ -1,0 +1,131 @@
+<view class="page-no-tab" style="{{displayStyle}}">
+
+  <block wx:if="{{page === 'loading'}}">
+    <view class="card">
+      <text class="muted-line">加载中...</text>
+    </view>
+  </block>
+
+  <!-- 注销处理中（7 天可恢复窗口） -->
+  <block wx:elif="{{page === 'pending'}}">
+    <view class="card status-card">
+      <text class="status-title">注销申请已提交</text>
+      <text class="status-line">账号将于 {{deadline || '7 天期满后'}} 注销，届时血糖、饮食、健康档案与 AI 对话等数据将被永久删除。</text>
+      <text class="status-line">在此之前取消注销，可继续使用账号与全部数据。</text>
+    </view>
+    <view class="card action-card">
+      <button class="btn-primary btn-block" disabled="{{recovering}}" bindtap="onRecover">取消注销，继续使用账号</button>
+      <button class="btn-ghost btn-block btn-sm" bindtap="onExit">退出登录</button>
+    </view>
+  </block>
+
+  <!-- 已注销/正在执行兜底 -->
+  <block wx:elif="{{page === 'gone'}}">
+    <view class="card status-card">
+      <text class="status-title">账号已注销或注销正在执行</text>
+      <text class="status-line">当前账号无法继续使用。</text>
+    </view>
+    <view class="card action-card">
+      <button class="btn-primary btn-block" bindtap="onExit">退出登录</button>
+    </view>
+  </block>
+
+  <!-- 正常申请流（QQ 风格说明页） -->
+  <block wx:elif="{{page === 'applying'}}">
+    <view class="card">
+      <text class="intro-title">注销后，以下内容将被删除</text>
+      <view class="intro-list">
+        <text class="intro-item">· 血糖、饮食记录与健康档案</text>
+        <text class="intro-item">· AI 会话、消息与个人媒体文件</text>
+        <text class="intro-item">· 设备绑定、设置与反馈记录</text>
+      </view>
+      <text class="intro-title">仍会保留的内容</text>
+      <view class="intro-list">
+        <text class="intro-item">· 已发布的社区内容将匿名保留，作者显示为“已注销用户”</text>
+      </view>
+      <text class="intro-warn">注销操作不可撤销，7 天期满后数据将被彻底删除，请谨慎操作。</text>
+    </view>
+
+    <view class="card section-card">
+      <text class="section-label">注销方式</text>
+      <view class="opt-row">
+        <view class="opt-item {{mode === 1 ? 'active' : ''}}" data-mode="1" bindtap="onSelectMode">立即注销</view>
+        <view class="opt-item {{mode === 2 ? 'active' : ''}}" data-mode="2" bindtap="onSelectMode">7 天内可恢复</view>
+      </view>
+      <text class="section-hint">{{mode === 1 ? '提交后立即注销，全部数据将被永久删除。' : '提交后 7 天内可再次登录取消注销，期满后数据永久删除。'}}</text>
+    </view>
+
+    <view class="card section-card">
+      <text class="section-label">注销原因（选填）</text>
+      <view class="reason-row">
+        <view wx:for="{{reasons}}" wx:key="code" class="reason-item {{reasonCode === item.code ? 'active' : ''}}" data-code="{{item.code}}" bindtap="onSelectReason">{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="card section-card">
+      <text class="section-label">身份验证</text>
+
+      <block wx:if="{{canUseCode || canUseWechat}}">
+        <view class="opt-row" wx:if="{{canUseCode && canUseWechat}}">
+          <view class="opt-item {{verifyMode === 1 ? 'active' : ''}}" data-mode="1" bindtap="onSwitchVerifyMode">手机/邮箱验证</view>
+          <view class="opt-item {{verifyMode === 3 ? 'active' : ''}}" data-mode="3" bindtap="onSwitchVerifyMode">微信身份验证</view>
+        </view>
+
+        <!-- 手机/邮箱验证：验证码 + 滑块后才发码 -->
+        <block wx:if="{{verifyMode === 1}}">
+          <view class="channel-row" wx:if="{{hasPhone && hasEmail}}">
+            <view class="channel-item {{codeChannel === 1 ? 'active' : ''}}" data-channel="1" bindtap="onSwitchCodeChannel">手机号</view>
+            <view class="channel-item {{codeChannel === 2 ? 'active' : ''}}" data-channel="2" bindtap="onSwitchCodeChannel">邮箱</view>
+          </view>
+          <text class="section-hint">{{targetHint}}</text>
+          <view class="sms-row">
+            <input class="code-input" type="number" maxlength="6" placeholder="6 位验证码" value="{{verifyCode}}" bindinput="onCodeInput" />
+            <button class="btn-ghost sms-btn" size="mini" disabled="{{cooldownLeft > 0}}" bindtap="onSendCode">
+              {{cooldownLeft > 0 ? cooldownLeft + 's' : '获取验证码'}}
+            </button>
+          </view>
+        </block>
+
+        <!-- 微信身份验证：无验证码输入，提交时服务端核对 openid -->
+        <block wx:elif="{{verifyMode === 3}}">
+          <text class="section-hint">使用当前登录的微信身份完成验证，提交时由服务端核对 openid，无需短信或邮箱验证码。</text>
+          <button class="btn-ghost btn-block" disabled="{{wechatVerified || submitting}}" bindtap="onWechatVerify">{{wechatVerified ? '已完成微信身份验证' : '使用微信身份验证'}}</button>
+          <text wx:if="{{wechatVerified}}" class="wechat-ok">微信身份验证已完成</text>
+        </block>
+      </block>
+
+      <text wx:else class="section-hint hint-warn">当前账号未绑定手机号、邮箱或微信，无法完成身份验证，请联系客服处理。</text>
+    </view>
+
+    <view class="card section-card">
+      <view class="agree-row" bindtap="onToggleAgree">
+        <view class="agree-box {{agreed ? 'checked' : ''}}">{{agreed ? '✓' : ''}}</view>
+        <text class="agree-text">我已了解注销后数据将被永久删除</text>
+      </view>
+    </view>
+
+    <view class="submit-area">
+      <button class="btn-cancel btn-block" disabled="{{submitting || !agreed}}" bindtap="onSubmit">申请注销</button>
+    </view>
+  </block>
+
+  <!-- 加载失败兜底 -->
+  <block wx:else>
+    <view class="card status-card">
+      <text class="status-line">{{errorText}}</text>
+    </view>
+    <view class="card action-card">
+      <button class="btn-ghost btn-block" bindtap="onExit">退出登录</button>
+    </view>
+  </block>
+
+  <!-- 滑动验证浮层：拖动成功后才取票并发码 -->
+  <view wx:if="{{sliderVisible}}" class="slider-mask" catchtap="onSliderCancel">
+    <view class="slider-panel" catchtap="noop">
+      <text class="slider-title">滑动验证</text>
+      <text class="slider-sub">拖动滑块到最右侧，完成后才会发送验证码</text>
+      <slider-unlock hint="{{sliderHint}}" bind:unlock="onSliderUnlock" />
+      <text class="slider-cancel" bindtap="onSliderCancel">取消</text>
+    </view>
+  </view>
+</view>

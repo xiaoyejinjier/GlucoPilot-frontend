@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "注销账号",
+  "usingComponents": {
+    "slider-unlock": "/components/slider-unlock/slider-unlock"
+  }
+}

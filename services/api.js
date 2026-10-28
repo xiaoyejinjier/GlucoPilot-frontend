@@ -375,6 +375,11 @@ function fetchDayMeals(recordDate) {
   return get('/meal-records', { recordDate }, { auth: true })
 }
 
+/** 删除餐食记录（后端逻辑删除主记录并级联明细）；当前无删除 UI，先提供封装。 */
+function deleteMealRecord(id) {
+  return del(`/meal-records/${id}`, null, { auth: true })
+}
+
 /** ---------- device ---------- */
 /** 当前用户已绑定设备列表。 */
 function fetchMyDevices() {
@@ -515,6 +520,34 @@ function bindEmail(email, verifyCode) {
   return patch('/users/me/email', { email, verifyCode }, { auth: true })
 }
 
+/** ---------- 账号注销 ---------- */
+/** 查询注销状态；无申请时 cancellation 为 null。 */
+function fetchCancellationStatus() {
+  return get('/users/me/cancellation', null, { auth: true })
+}
+
+/** 取一次性滑动验证票据（绑 userId，180 秒有效，发码时回传）。 */
+function fetchCancellationCaptcha() {
+  return get('/users/me/cancellation/captcha', null, { auth: true, timeout: 10000 })
+}
+
+/** 发送注销验证码：channel 1=短信 2=邮箱，必须携带滑动验证票据。 */
+function sendCancellationCode(channel, captchaTicket) {
+  return post('/users/me/cancellation/code', { channel, captchaTicket }, { auth: true, timeout: 15000 })
+}
+
+/** 提交注销：mode 1=立即 2=七天可恢复；verifyType 1=短信 2=邮箱 3=微信，凭证按类型二选一。 */
+function submitCancellation(mode, reasonCode, verifyType, verifyCode, wechatCode) {
+  return post('/users/me/cancellation', {
+    mode, reasonCode, verifyType, verifyCode, wechatCode
+  }, { auth: true })
+}
+
+/** 七天可恢复窗口内恢复账号：登录会话即身份核验，无请求体。 */
+function recoverCancellation() {
+  return post('/users/me/cancellation/recovery', null, { auth: true })
+}
+
 function fetchAppConfig(groups) {
   const data = {}
   if (groups && groups.length) data.groups = groups.join(',')
@@ -631,6 +664,7 @@ module.exports = {
   analyzeMealPhoto,
   predictMealGlucose,
   fetchDayMeals,
+  deleteMealRecord,
   fetchMyDevices,
   bindDevice,
   unbindDevice,
@@ -646,6 +680,11 @@ module.exports = {
   agreeDisclaimer,
   bindPhone,
   bindEmail,
+  fetchCancellationStatus,
+  fetchCancellationCaptcha,
+  sendCancellationCode,
+  submitCancellation,
+  recoverCancellation,
   fetchAppConfig,
   submitFeedback,
   fetchFeedbacks,

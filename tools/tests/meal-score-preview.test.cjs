@@ -200,6 +200,29 @@ test('修改重量防抖重算，预测碳水同步更新', async () => {
   assert.equal(page.data.predictResult.predictCarbs, 50)
 })
 
+test('防抖/在途窗口内保存：输入已变则丢弃旧预测量，不落库（指纹校验）', async () => {
+  const { page, calls, timers } = createPage({ glucose: 5.6 })
+  await page.onLoad({})
+  await flush()
+  await timers.flush()
+  // 100g 时的预测已生效，并带上了当次输入的指纹
+  assert.equal(page.data.predictResult.predictNow, 10.6)
+  assert.equal(typeof page.data.predictResult.fingerprint, 'string')
+  // 改重量到 200g：防抖窗口内未重算，predictResult 仍是旧输入的结果
+  page.onWeightInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '200' } })
+  await flush()
+  assert.equal(page.data.predictResult.predictNow, 10.6)
+  await page.onSave()
+  assert.equal(calls.payloads.length, 1)
+  // 保存用新碳水（50g），但预测三列因指纹不一致必须整体丢弃
+  assert.equal(calls.payloads[0].carbsG, 50)
+  for (const key of ['predictNow', 'predictSuggest', 'suggestText']) {
+    assert.equal(Object.hasOwn(calls.payloads[0], key), false)
+  }
+  assert.equal(calls.records[0][1].predictedGlucose, null)
+  assert.equal(calls.records[0][1].suggestedGlucose, null)
+})
+
 test('乱序响应按版本与参数指纹丢弃旧结果', async () => {
   const deferred = []
   const { page, calls, timers } = createPage({ glucose: 5.6, predict: () => new Promise((resolve) => deferred.push(resolve)) })

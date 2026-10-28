@@ -1,4 +1,6 @@
-const { fetchMe, sendSmsCode, bindPhone, sendEmailCode, bindEmail } = require('../../services/api')
+const {
+  fetchMe, sendSmsCode, bindPhone, sendEmailCode, bindEmail, fetchCancellationStatus
+} = require('../../services/api')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { saveUserInfo } = require('../../utils/storage')
 
@@ -17,7 +19,9 @@ Page({
     newEmail: '',
     emailCode: '',
     emailCooldown: 0,
-    submitting: false
+    submitting: false,
+    // 注销入口副标题：仅注销处理中（accountStatus=4）显示“申请处理中”，详情见独立说明页。
+    recoverable: false
   },
 
   onLoad(options){if(options&&options.bind==='phone')this.onBindPhone()},
@@ -25,6 +29,7 @@ Page({
   onShow() {
     applyDisplayToCurrentPage()
     this.refresh()
+    this.refreshCancellation()
   },
 
   onUnload() {
@@ -36,12 +41,26 @@ Page({
     fetchMe()
       .then((me) => {
         saveUserInfo(me)
+        const phoneMasked = me.phoneMasked || ''
+        const emailMasked = me.emailMasked || ''
+        const hasPhone = !!phoneMasked && phoneMasked !== '未绑定'
+        const hasEmail = !!emailMasked && emailMasked !== '***' && emailMasked !== '未绑定'
         this.setData({
-          phone: me.phoneMasked || '未绑定',
-          email: me.emailMasked && me.emailMasked !== '***' ? me.emailMasked : '未绑定'
+          phone: hasPhone ? phoneMasked : '未绑定',
+          email: hasEmail ? emailMasked : '未绑定'
         })
       })
       .catch((err) => wx.showToast({ title: err.message || '账号信息加载失败', icon: 'none' }))
+  },
+
+  /** 注销入口只读状态：申请处理中标记；流程与操作全部在独立说明页完成。 */
+  refreshCancellation() {
+    return fetchCancellationStatus()
+      .then((data) => {
+        this.setData({ recoverable: !!(data && data.accountStatus === 4) })
+        return data
+      })
+      .catch(() => null)
   },
 
   onBindPhone() {
@@ -184,5 +203,10 @@ Page({
         this.setData({ submitting: false })
         wx.showToast({ title: err.message || '绑定失败', icon: 'none' })
       })
+  },
+
+  /** 注销：跳转独立说明页（QQ 风格），说明、验证与确认全部在新页面完成。 */
+  onOpenCancel() {
+    wx.navigateTo({ url: '/pages/account-cancellation/cancellation' })
   }
 })
