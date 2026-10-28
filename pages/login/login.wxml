@@ -1,16 +1,20 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
-<view class="login-screen" style="{{displayStyle}}">
+<view class="login-screen" style="{{displayStyle}};{{loginLayoutStyle}}">
   <view class="login-hero">
-    <view class="login-logo">{{i18n.t("糖", locale)}}</view>
-    <text class="login-title">{{i18n.t("AI 控糖助手", locale)}}</text>
-    <text class="login-desc">{{i18n.t("记录 · 分析 · 建议 · 追踪", locale)}}</text>
+    <view class="login-brand"><view class="login-logo">{{i18n.t("糖", locale)}}</view><text>GlucoPilot</text></view>
+    <view class="login-intro"><text class="login-title">{{i18n.t("AI 控糖助手", locale)}}</text><text class="login-desc">{{i18n.t("记录每一天，控糖更从容", locale)}}</text></view>
+    <view class="login-illustration" aria-hidden="true"><view class="login-orbit"></view><view class="login-journal"><view class="journal-heading"><view class="journal-mark"></view><view class="journal-line"></view><view class="journal-dot"></view></view><view class="journal-chart"><view class="chart-guide guide-one"></view><view class="chart-guide guide-two"></view><image class="journal-curve" src="/assets/icons/login-health-line.svg" mode="scaleToFill" /></view><view class="journal-bars"><view></view><view></view><view></view></view></view><view class="login-check"><view></view></view></view>
+    <text class="login-features">{{i18n.t("记录 · 分析 · 建议 · 追踪", locale)}}</text>
   </view>
   <view class="login-panel">
-    <button class="btn-primary btn-block ui-interactive" bindtap="onWechatLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("微信一键登录", locale)}}</button>
-    <button class="btn-ghost btn-block ui-interactive" bindtap="onPhoneLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("手机号登录", locale)}}</button>
-    <button class="btn-ghost btn-block ui-interactive" bindtap="onEmailLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("邮箱登录", locale)}}</button>
+    <text class="login-panel-title">{{i18n.t("欢迎使用", locale)}}</text>
+    <text class="login-panel-desc">{{i18n.t("选择一种方式，开始记录", locale)}}</text>
+    <button class="btn-primary btn-block login-wechat ui-interactive" bindtap="onWechatLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view class="login-button-icon wechat-icon" aria-hidden="true"><view></view><view></view></view><text>{{i18n.t("微信一键登录", locale)}}</text><text class="login-button-arrow" aria-hidden="true">›</text></button>
+    <view class="login-alternatives"><button class="btn-ghost ui-interactive" bindtap="onPhoneLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view class="login-button-icon phone-icon" aria-hidden="true"></view><text>{{i18n.t("手机号登录", locale)}}</text><text class="login-button-arrow" aria-hidden="true">›</text></button><button class="btn-ghost ui-interactive" bindtap="onEmailLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view class="login-button-icon email-icon" aria-hidden="true"></view><text>{{i18n.t("邮箱登录", locale)}}</text><text class="login-button-arrow" aria-hidden="true">›</text></button></view>
     <text class="login-agree">{{i18n.t("登录即表示同意《用户协议》《隐私政策》《免责声明》", locale)}}</text>
   </view>
+
+  <view class="login-footer"><view></view><text>{{i18n.t("记录点滴，也照顾好自己。", locale)}}</text><view></view></view>
 
   <view class="phone-mask" wx:if="{{phonePanel}}" bindtap="onClosePhonePanel"></view>
   <view class="phone-panel" wx:if="{{phonePanel}}">

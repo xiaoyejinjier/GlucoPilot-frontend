@@ -24,7 +24,7 @@
 }
 
 .view-nav-btn.on {
-  background: var(--brand);
+  background: var(--navy);
 }
 
 .view-nav-text {

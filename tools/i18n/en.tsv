@@ -1318,6 +1318,14 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 用药信息不能超过256字	Medication notes must be 256 characters or fewer
 清除	Clear
 我的点赞	My likes
+记录每一天，控糖更从容	A daily record. A little more confidence.
+欢迎使用	Welcome
+选择一种方式，开始记录	Choose how to sign in and get started
+等待对方回复或相互关注后可继续发信息	You can send more messages once they reply or you follow each other.
+对方回复或互相关注前，只能发送一条消息	You can send one message until they reply or you follow each other.
+无法确认私信权限，请重试	Could not check messaging permissions. Please retry.
+关注对方	Follow
+已关注对方	Following
 搜索点赞的文章标题	Search liked article titles
 还没有点赞，看到喜欢的文章点一下赞吧	No likes yet. Like an article to find it here.
 

@@ -1,8 +1,8 @@
 .device-page {
   min-height: 100vh;
   padding: 32rpx 28rpx calc(var(--tab-bar-h) + 36rpx + env(safe-area-inset-bottom));
-  background: #f6f8fa;
-  color: #245b91;
+  background: var(--bg);
+  color: var(--navy);
   box-sizing: border-box;
 }
 
@@ -39,7 +39,7 @@
 .summary-item { flex: 1; text-align: center; }
 .summary-value {
   display: block;
-  color: #334a68;
+  color: var(--navy);
   font-size: 40rpx;
   font-weight: 700;
 }

@@ -32,14 +32,14 @@ function harness(name, options = {}) {
     updateNewsAction: async (id, payload) => ({ liked: !!payload.liked, collected: !!payload.collected, likeCount: payload.liked ? 1 : 0, collectCount: payload.collected ? 1 : 0 }),
     ...options.api
   }
-  const api = Object.fromEntries(Object.keys(implementations).map(key => [key, (...args) => { state.calls.push({ name: key, args }); return implementations[key](...args) }]))
+  const api = Object.fromEntries(Object.keys(implementations).map(key => [key, (...args) => { state.calls.push({ name: key, args }); const result=implementations[key](...args);return key==='fetchDirectMessages'?Promise.resolve(result).then(page=>({...page,sendPermission:Object.prototype.hasOwnProperty.call(page,'sendPermission')?page.sendPermission:{canSend:true,following:false,mutualFollowing:false,state:'OPEN'}})):result }]))
   let definition, timerId = 0
   vm.runInNewContext(fs.readFileSync(path.join(root, `pages/${name}/${name}.js`), 'utf8'), {
     Page: v => { definition = v }, wx, getApp: () => app,
     setInterval: (fn, ms) => { state.intervals.set(++timerId, { fn, ms }); return timerId }, clearInterval: id => state.intervals.delete(id),
     setTimeout:(fn,ms)=>{if(!options.manualTimeouts){fn();return 0}const id=++timerId;state.timeouts.set(id,{fn:()=>{state.timeouts.delete(id);fn()},ms});return id},
     clearTimeout:id=>state.timeouts.delete(id),
-    require: key => ({ '../../services/api': api, '../../utils/community': socialModule.exports,
+    require: key => ({ '../../services/api': api, '../../utils/community': socialModule.exports, '../../utils/dm-permission':require('../../utils/dm-permission'),
       '../../utils/request': request, '../../utils/message-notifications':{refresh:()=>state.calls.push({name:'refreshUnread'}),count:v=>Math.max(0,Number(v)||0),label:v=>Number(v)>99?'99+':Number(v)>0?String(v):''}, '../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>options.cover ? options.cover(url) : url}, '../../utils/display': { applyDisplayToCurrentPage() {} } }[key])
   })
   const page = { ...definition, selectComponent:selector=>selector==='#social-feedback'?{show:text=>state.feedback.push(text)}:({beginHold:()=>state.speech.push('start'),endHold:cancel=>state.speech.push(cancel?'cancel':'stop')}), data: JSON.parse(JSON.stringify(definition.data)), setData(patch,callback) {
@@ -54,6 +54,74 @@ function harness(name, options = {}) {
   page.onShow()
   return { page, state, api: implementations, social: socialModule.exports }
 }
+
+const dmPermission=(kind,following=false)=>({canSend:kind!=='WAITING_REPLY',following,mutualFollowing:false,state:kind})
+test('等待状态保留输入和语音表情草稿，点击发送提示而不发请求，回复到来恢复发送',async()=>{
+  let sent=false,replied=false
+  const {page:p,state}=harness('messages',{api:{fetchDirectMessages:async()=>({records:sent?[message(5,true)]:[],hasMore:false,sendPermission:dmPermission(replied?'OPEN':sent?'WAITING_REPLY':'FIRST_MESSAGE')}),sendDirectMessage:async()=>{sent=true;return message(5,true)}}});await flush()
+  assert.equal(p.canCompose(),true);p.onInput({detail:{value:'你好'}});await p.onSend();await flush();assert.equal(p.data.sendPermission.state,'WAITING_REPLY')
+  p.onInput({detail:{value:'还想再发'}});p.onInputFocus({detail:{}});await p.onSend()
+  assert.equal(p.data.input,'还想再发');assert.equal(state.toasts.at(-1).title,'等待对方回复或相互关注后可继续发信息')
+  await p.loadLatest(true);assert.equal(p.data.inputFocus,true);assert.equal(p.data.input,'还想再发')
+  p.onToggleEmoji();assert.equal(p.data.emojiVisible,true);p.onEmoji({currentTarget:{dataset:{emoji:'😊'}}});assert.ok(p.data.input.includes('😊'))
+  p.onToggleVoiceMode();p.onHoldStart();await p.loadLatest(true);assert.equal(p.data.speechVisible,true);p.onHoldEnd();p.onConfirmSpeechInput({detail:{text:'这段识别文字也要保留'}});await flush()
+  assert.equal(state.calls.filter(c=>c.name==='sendDirectMessage').length,1);assert.equal(p.data.input,'这段识别文字也要保留');assert.equal(state.speech.length,2)
+  replied=true;await p.loadLatest(true);assert.equal(p.canCompose(),true);await p.onSend();assert.equal(state.calls.filter(c=>c.name==='sendDirectMessage').length,2);p.onUnload()
+})
+test('单向关注不会解锁第二条，双方互关的服务端权限到来后才恢复',async()=>{
+  let followed=false,mutual=false
+  const {page:p}=harness('messages',{api:{fetchDirectMessages:async()=>({records:[],hasMore:false,sendPermission:{...dmPermission(mutual?'OPEN':'WAITING_REPLY',followed),mutualFollowing:mutual}}),setCommunityFollowing:async()=>{followed=true;return{key:'u2',userId:'2',followed:true}}}});await flush()
+  await p.onFollowPeer();await flush();assert.equal(p.data.sendPermission.following,true);assert.equal(p.canCompose(),false)
+  mutual=true;await p.loadLatest(true);assert.equal(p.canCompose(),true);p.onUnload()
+})
+test('旧轮询权限晚于首条发送返回时不能重新放开输入，随后补取新权限',async()=>{
+  const old=deferred();let calls=0
+  const {page:p}=harness('messages',{api:{fetchDirectMessages:async()=>++calls===2?old.promise:{records:[],hasMore:false,sendPermission:dmPermission(calls===1?'FIRST_MESSAGE':'WAITING_REPLY')}}});await flush()
+  const polling=p.loadLatest(true);p.onInput({detail:{value:'招呼'}});await p.onSend();assert.equal(p.canCompose(),false)
+  old.resolve({records:[],hasMore:false,sendPermission:dmPermission('FIRST_MESSAGE')});await polling;await flush()
+  assert.equal(p.canCompose(),false);assert.equal(calls,3);p.onUnload()
+})
+test('权限缺失先禁发可重试，服务器40301保留草稿并显示等待',async()=>{
+  const {page:p,state,api}=harness('messages',{api:{fetchDirectMessages:async()=>({records:[],hasMore:false,sendPermission:null})}});await flush()
+  assert.equal(p.canCompose(),false);p.onInput({detail:{value:'保留草稿'}});await p.onSend();assert.equal(state.calls.filter(c=>c.name==='sendDirectMessage').length,0)
+  api.fetchDirectMessages=async()=>({records:[],hasMore:false,sendPermission:dmPermission('FIRST_MESSAGE')});await p.onPermissionRetry();assert.equal(p.canCompose(),true)
+  api.sendDirectMessage=async()=>{throw Object.assign(Error('等待对方回复或相互关注后可继续发信息'),{code:40301})}
+  api.fetchDirectMessages=async()=>({records:[],hasMore:false,sendPermission:dmPermission('WAITING_REPLY')});await p.onSend();await flush()
+  assert.equal(p.data.input,'保留草稿');assert.equal(p.canCompose(),false);assert.equal(p.data.sending,false);p.onUnload()
+})
+test('聊天中的关注操作晚于切换账号返回时不改变新账号权限',async()=>{
+  const follow=deferred()
+  const {page:p,state,api}=harness('messages',{api:{fetchDirectMessages:async()=>({records:[],hasMore:false,sendPermission:dmPermission('WAITING_REPLY')}),setCommunityFollowing:()=>follow.promise}});await flush()
+  const pending=p.onFollowPeer();p.onHide();state.token='new-account';api.fetchDirectMessages=async()=>({records:[],hasMore:false,sendPermission:dmPermission('FIRST_MESSAGE')});p.onShow();await flush()
+  follow.resolve({key:'u2',userId:'2',followed:true});await pending
+  assert.equal(p.data.sendPermission.state,'FIRST_MESSAGE');assert.equal(p.data.sendPermission.following,false);assert.equal(p.data.followingPeer,false);assert.equal(state.toasts.filter(t=>t.title==='关注成功').length,0);p.onUnload()
+})
+test('私信灰色已关注按钮可以取消并重新关注，失败和连点不产生错误状态',async()=>{
+  let followed=true,reject=false
+  const late=deferred()
+  const {page:p,state,api}=harness('messages',{api:{fetchDirectMessages:async()=>({records:[],hasMore:false,sendPermission:dmPermission('WAITING_REPLY',followed)}),setCommunityFollowing:async(_key,desired)=>{if(reject)throw Error('网络异常');followed=desired;return{key:'u2',userId:'2',followed}}}});await flush()
+  await p.onFollowPeer();await flush();assert.equal(followed,false);assert.equal(p.data.sendPermission.following,false);assert.equal(p.data.peer.followed,false);assert.equal(state.toasts.at(-1).title,'取消关注成功')
+  await p.onFollowPeer();await flush();assert.equal(followed,true);assert.equal(p.data.peer.followed,true);assert.equal(p.canCompose(),false)
+  reject=true;await p.onFollowPeer();await flush();assert.equal(p.data.sendPermission.following,true);assert.equal(p.data.peer.followed,true)
+  api.setCommunityFollowing=()=>late.promise;const saving=p.onFollowPeer();p.onFollowPeer();assert.equal(state.calls.filter(c=>c.name==='setCommunityFollowing').length,4)
+  followed=false;late.resolve({key:'u2',userId:'2',followed:false});await saving;await flush();assert.equal(p.data.sendPermission.following,false);p.onUnload()
+})
+test('主页与私信通过同一关注关系同步，返回读取主页修改，聊天取消后主页也更新',async()=>{
+  let followed=false
+  const api={fetchCommunityProfile:async()=>({key:'u2',userId:'2',nickname:'糖友',followed,isSelf:false}),fetchDirectMessages:async()=>({records:[],hasMore:false,sendPermission:dmPermission('WAITING_REPLY',followed)}),setCommunityFollowing:async(_key,desired)=>{followed=desired;return{key:'u2',userId:'2',nickname:'糖友',followed,isSelf:false}}}
+  const chat=harness('messages',{api}),profile=harness('community-profile',{api});await flush();assert.equal(chat.page.data.sendPermission.following,false)
+  chat.page.onHide();await profile.page.onFollow();chat.page.onShow();await flush();assert.equal(chat.page.data.sendPermission.following,true);assert.equal(chat.page.data.peer.followed,true)
+  profile.page.onHide();await chat.page.onFollowPeer();await flush();profile.page.onShow();await flush();assert.equal(profile.page.data.profile.followed,false)
+  followed=true;const timer=[...chat.state.intervals.values()][0];timer.fn();await flush();assert.equal(chat.page.data.sendPermission.following,true);assert.equal(chat.page.data.peer.followed,true)
+  chat.page.onUnload();profile.page.onUnload()
+})
+test('旧轮询和资料请求不能覆盖聊天中刚完成的取消关注',async()=>{
+  const poll=deferred(),profile=deferred();let followed=true,calls=0
+  const {page:p}=harness('messages',{api:{fetchCommunityProfile:()=>profile.promise,fetchDirectMessages:async()=>++calls===2?poll.promise:{records:[],hasMore:false,sendPermission:dmPermission('WAITING_REPLY',followed)},setCommunityFollowing:async()=>{followed=false;return{key:'u2',userId:'2',nickname:'糖友',followed:false}}}});await flush()
+  const loading=p.loadLatest(true);await p.onFollowPeer();assert.equal(p.data.sendPermission.following,false)
+  profile.resolve({key:'u2',userId:'2',nickname:'糖友',followed:true});poll.resolve({records:[],hasMore:false,sendPermission:dmPermission('WAITING_REPLY',true)});await loading;await flush()
+  assert.equal(p.data.sendPermission.following,false);assert.equal(p.data.peer.followed,false);p.onUnload()
+})
 
 test('私信表情插入光标位置，语音先按住再确认，超过上限或换账号不发送',async()=>{
   const {page:p,state}=harness('messages');await flush()

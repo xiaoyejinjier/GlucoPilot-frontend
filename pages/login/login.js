@@ -9,6 +9,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 Page({
   data: {
     displayStyle: '',
+    loginLayoutStyle: '',
     phonePanel: false,
     phone: '',
     smsCode: '',
@@ -21,11 +22,25 @@ Page({
 
   onLoad() {
     this.setData({ displayStyle: getDisplayStyle() })
-
+    this.updateLoginLayout()
   },
 
   onShow() {
     applyDisplayToCurrentPage()
+    this.updateLoginLayout()
+  },
+
+  onResize() { this.updateLoginLayout() },
+
+  updateLoginLayout() {
+    try {
+      const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+      const capsule = wx.getMenuButtonBoundingClientRect ? wx.getMenuButtonBoundingClientRect() : null
+      const statusBar = Number(info.statusBarHeight) || 0
+      const bottom = capsule && Number(capsule.bottom)
+      const top = Number.isFinite(bottom) && bottom > statusBar ? bottom + 12 : statusBar + 56
+      this.setData({ loginLayoutStyle: `--login-header-space:${top}px` })
+    } catch (_) { /* CSS safe-area fallback supports older clients. */ }
   },
 
   onUnload() {

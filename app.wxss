@@ -1,21 +1,22 @@
 @import "./utils/motion.wxss";
 /** 设计规范 Design Tokens */
 page {
-  --bg: #f6f8fa;
+  --bg: #f3f6fb;
   --surface: #ffffff;
-  --ink: #1f2328;
-  --ink-soft: #3d4854;
-  --muted: #59636e;
-  --hint: #6e7781;
-  --line: #d1d9e0;
-  --surface-subtle: #f6f8fa;
-  --brand: #0969da;
-  --brand-dark: #0550ae;
-  --brand-soft: #ddf4ff;
-  --brand-line: #b6d7fb;
-  --wx-green: #ddf4ff;
-  --accent: #0969da;
-  --accent-soft: #ddf4ff;
+  --ink: #20334d;
+  --ink-soft: #384f6d;
+  --muted: #586b83;
+  --hint: #687c93;
+  --line: #dce5f0;
+  --surface-subtle: #f0f4fa;
+  --navy: #183b68;
+  --brand: #2770cf;
+  --brand-dark: #194f91;
+  --brand-soft: #e8f1fd;
+  --brand-line: #cadcf2;
+  --wx-green: #e8f1fd;
+  --accent: #2770cf;
+  --accent-soft: #e8f1fd;
   --warn: #fa9d3b;
   --danger: #fa5151;
   --ok: #0969da;
