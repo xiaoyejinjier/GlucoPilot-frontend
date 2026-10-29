@@ -80,23 +80,24 @@ test('社区卡片点赞收藏及关注显示服务器确认反馈，连点不�
   p.onUnload();p.onAction(tap('liked'));assert.equal(state.feedback.length,4)
 })
 function page(name, overrides={}, options={}) {
-  const state={token:'one',calls:[],toasts:[],feedback:[],navs:[],modals:[],emitted:[],manualModals:false,storage:new Map()}
-  const wx={getStorageSync:k=>state.storage.get(k),setStorageSync:(k,v)=>state.storage.set(k,v),showToast:v=>state.toasts.push(v), showModal:v=>{state.modals.push(v);if(!state.manualModals)v.success({confirm:true})}, navigateTo:v=>state.navs.push(v), redirectTo:v=>state.navs.push(v), switchTab:v=>state.navs.push(v), reLaunch:v=>state.navs.push(v), setNavigationBarTitle(){},stopPullDownRefresh(){},navigateBack:v=>state.navs.push({back:true,...v})}
+  const state={token:'one',calls:[],toasts:[],feedback:[],navs:[],modals:[],emitted:[],manualModals:false,storage:options.storage instanceof Map?options.storage:new Map()}
+  const wx={getStorageSync:k=>state.storage.get(k),setStorageSync:(k,v)=>state.storage.set(k,v),showToast:v=>state.toasts.push(v), showModal:v=>{state.modals.push(v);if(!state.manualModals)v.success({confirm:true})}, navigateTo:v=>{state.navs.push(v);if(v&&typeof v.success==='function')v.success({eventChannel:{emit:(name,value)=>state.emitted.push({name,value})}})}, redirectTo:v=>state.navs.push(v), switchTab:v=>state.navs.push(v), reLaunch:v=>state.navs.push(v), setNavigationBarTitle(){},stopPullDownRefresh(){},navigateBack:v=>state.navs.push({back:true,...v})}
   const request={getToken:()=>state.token}, socialModule={exports:{}}
   vm.runInNewContext(fs.readFileSync(path.join(root,'utils/community.js'),'utf8'),{module:socialModule,wx,require:()=>request})
   const defaults={fetchMyCommunityTags:async()=>[],createDraft:async p=>({...p,id:'101',revision:1}),updateDraft:async(id,p)=>({...p,id,revision:p.revision+1}),fetchDrafts:async()=>({records:[],pages:0}),publishDraft:async()=>({id:'8',state:'AI_PENDING',title:'分享'}),fetchCommunityTags:async()=>publication.TAGS,fetchCommunityArticles:async()=>({records:[],pages:0}),fetchMyArticles:async()=>({records:[],pages:0}),submitCommunityArticle:async()=>({id:'8',state:'AI_PENDING',title:'分享'}),reportCommunityContent:async()=>({id:'9',state:'OPEN'}),...overrides}
   const api=new Proxy({}, {get:(_target,key)=>(...args)=>{state.calls.push({key,args});return defaults[key] ? defaults[key](...args) : Promise.resolve({})}})
   const media={ BIZ_TYPE:{ARTICLE_IMAGE:7,ARTICLE_VIDEO:8},MAX_IMAGE_BYTES:5*1024*1024,uploadMediaFile:async(...args)=>{state.calls.push({key:'uploadMediaFile',args});return overrides.uploadMediaFile?overrides.uploadMediaFile(...args):{id:'101'}} }
-  const dependencies={'../../utils/media':media,'../../services/api':api,'../../utils/community':socialModule.exports,'../../utils/publication':publication,'../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>url}, '../../utils/display':{applyDisplayToCurrentPage(){}},'../../utils/request':request}
+  const dependencies={'../../utils/media':media,'../../services/api':api,'../../utils/community':socialModule.exports,'../../utils/publication':publication,'../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>url}, '../../utils/display':{applyDisplayToCurrentPage(){}},'../../utils/request':request,'../../utils/tag-images':require('../../utils/tag-images')}
   const history={exports:{}}
   vm.runInNewContext(fs.readFileSync(path.join(root,'utils/article-tags.js'),'utf8'),{module:history,wx,require:key=>key==='./storage'?{getUserInfo:()=>({communityKey:state.token==='one'?'u1':'u2'})}:publication})
   dependencies['../../utils/article-tags']=history.exports
   let definition
   vm.runInNewContext(fs.readFileSync(path.join(root,`pages/${name}/${name}.js`),'utf8'),{Page:value=>{definition=value},wx,getApp:()=>({checkLogin:()=>!!state.token}),require:key=>{assert.ok(dependencies[key],key);return dependencies[key]}})
-  const instance={...definition,data:JSON.parse(JSON.stringify(definition.data)),selectComponent:()=>({show:text=>state.feedback.push(text)}),setData(values){Object.assign(this.data,values)},getOpenerEventChannel:()=>({emit:(name,value)=>state.emitted.push({name,value})})}
+  const listeners={}
+  const instance={...definition,data:JSON.parse(JSON.stringify(definition.data)),selectComponent:()=>({show:text=>state.feedback.push(text)}),setData(values){Object.assign(this.data,values)},getOpenerEventChannel:()=>({emit:(name,value)=>{state.emitted.push({name,value});(listeners[name]||[]).forEach(fn=>fn(value))},on:(name,handler)=>{(listeners[name]=listeners[name]||[]).push(handler)}})}
   if(instance.onLoad) instance.onLoad(options)
   instance.onShow()
-  return {page:instance,state,api,wx}
+  return {page:instance,state,api,wx,listeners}
 }
 
 test('配图上传阻止提前提交，成功带媒体ID，失败保留已上传项且不会混入其他账号',async()=>{
@@ -309,12 +310,93 @@ test('打开草稿箱先关闭返回保护，返回编辑器后仍保留未保�
  p.onHide();p.onShow();await flush();assert.equal(p.data.body,'写了一半的内容');assert.equal(p.hasUnsavedContent(),true);assert.equal(p.data.leaveGuardActive,true);p.onUnload()
 })
 
-test('后台新增分类立即成为社区和发文选项，用户标签只在其他分区并能筛选',async()=>{
+test('后台新增分类立即成为社区和发文选项，其他改为＋并进入全部标签页筛选',async()=>{
  const tags=[{code:'topic_new',name:'控糖早餐',type:'OFFICIAL'},{code:'other',name:'其他',type:'OFFICIAL'},{code:'custom_breakfast',name:'早餐搭配',type:'USER'}]
  const feed=page('index',{fetchCommunityTags:async()=>tags});await flush();assert.deepEqual(Array.from(feed.page.data.tags,t=>t.code),['topic_new','other']);assert.equal(feed.page.data.otherTags[0].code,'custom_breakfast')
- feed.page.onTag({currentTarget:{dataset:{code:'other'}}});await flush();assert.equal(feed.page.data.otherSelected,true);assert.equal(feed.state.calls.filter(c=>c.key==='fetchCommunityArticles').at(-1).args[0].tag,'other')
- feed.page.onOtherTag({currentTarget:{dataset:{code:'custom_breakfast'}}});await flush();assert.equal(feed.state.calls.filter(c=>c.key==='fetchCommunityArticles').at(-1).args[0].tag,'custom_breakfast');feed.page.onUnload()
- const editor=page('community-compose',{fetchCommunityTags:async()=>tags});await flush();editor.page.onTag({currentTarget:{dataset:{code:'topic_new'}}});assert.equal(editor.page.data.tagCodes[0],'topic_new');assert.equal(editor.page.data.tags.some(t=>t.code==='custom_breakfast'),false);assert.equal(editor.page.data.otherTags.length,1);editor.page.onUnload()
+ const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ assert.match(template,/item\.code === 'other' \? '＋'/)
+ assert.equal(template.includes('other-topic-list'),false)
+ feed.page.onTag({currentTarget:{dataset:{code:'other'}}});await flush()
+ assert.match(feed.state.navs.at(-1).url,/community-tags\?mode=browse/)
+ feed.state.navs.at(-1).events.filterTag({code:'custom_breakfast'});await flush()
+ assert.equal(feed.page.data.otherSelected,true);assert.equal(feed.state.calls.filter(c=>c.key==='fetchCommunityArticles').at(-1).args[0].tag,'custom_breakfast');feed.page.onUnload()
+ const editor=page('community-compose',{fetchCommunityTags:async()=>tags});await flush()
+ editor.page.applyPickedTags({tagCodes:['topic_new'],customTags:[]})
+ assert.equal(editor.page.data.tagCodes[0],'topic_new');assert.equal(editor.page.data.selectedTags[0].code,'topic_new')
+ const composeTemplate=fs.readFileSync(path.join(root,'pages/community-compose/community-compose.wxml'),'utf8')
+ assert.match(composeTemplate,/onOpenMyTags/);assert.match(composeTemplate,/selectedTags/);assert.equal(composeTemplate.includes('other-tag-title'),false);editor.page.onUnload()
+})
+
+test('发文页点＋进入全部标签页，首页官方默认常用，编辑态可加减并回填',async()=>{
+  const tags=[{code:'diet',name:'饮食控糖',type:'OFFICIAL'},{code:'other',name:'其他',type:'OFFICIAL'},{code:'custom_breakfast',name:'早餐搭配',type:'USER'}]
+  const editor=page('community-compose',{fetchCommunityTags:async()=>tags,fetchMyCommunityTags:async()=>[{code:'custom_breakfast',name:'早餐搭配',type:'USER',enabled:1}]});await flush()
+  editor.page.applyPickedTags({tagCodes:['diet'],customTags:[]});editor.page.onOpenMyTags()
+  const opened=editor.state.navs.at(-1);assert.match(opened.url,/community-tags\?mode=pick&slots=3/);assert.equal(editor.state.emitted.at(-1).name,'seed')
+  assert.deepEqual(Array.from(editor.state.emitted.at(-1).value.tagCodes),['diet'])
+  const manager=page('community-tags',{fetchCommunityTags:async()=>tags,fetchMyCommunityTags:async()=>[{code:'custom_breakfast',name:'早餐搭配',type:'USER',enabled:1}]},{mode:'pick',slots:'3'})
+  await flush();manager.page.getOpenerEventChannel().emit('seed',{tagCodes:['diet'],customTags:[],slots:3});await flush()
+  assert.deepEqual(Array.from(manager.page.data.catalogTags,t=>t.code).filter(Boolean).sort(),['custom_breakfast','diet','other'])
+  assert.ok(manager.page.data.catalogTags.some(t=>t.code==='diet'&&!t.deletable))
+  assert.ok(manager.page.data.catalogTags.some(t=>t.code==='other'&&!t.deletable&&t.name==='其他'))
+  assert.ok(manager.page.data.catalogTags.some(t=>t.code==='custom_breakfast'&&t.deletable&&t.selected===false))
+  assert.deepEqual(Array.from(manager.page.data.frequentTags,t=>t.code).filter(c=>c==='diet'||c==='other').sort(),['diet','other'])
+  assert.equal(manager.page.data.frequentTags.some(t=>t.code==='diet'&&t.selected),true)
+  assert.equal(manager.page.data.frequentTags.some(t=>t.code==='other'&&t.name==='其他'),true)
+  assert.match(manager.page.data.catalogTags.find(t=>t.code==='diet').icon,/\/assets\/tags\/diet\.svg$/)
+  assert.match(manager.page.data.catalogTags.find(t=>t.code==='other').icon,/\/assets\/tags\/other\.svg$/)
+  assert.match(manager.page.data.catalogTags.find(t=>t.code==='custom_breakfast').icon,/\/assets\/tags\/custom\.svg$/)
+  manager.page.onToggleEdit();assert.equal(manager.page.data.editing,true)
+  manager.page.onRemoveFrequent({currentTarget:{dataset:{key:'c:diet'}}});await flush()
+  assert.equal(manager.page.data.frequentTags.some(t=>t.code==='diet'),false)
+  assert.ok(manager.page.data.catalogTags.some(t=>t.code==='diet'))
+  manager.page.onAddFrequent({currentTarget:{dataset:{key:'c:diet'}}});await flush()
+  assert.ok(manager.page.data.frequentTags.some(t=>t.code==='diet'&&t.selected))
+  manager.page.setData({editing:false})
+  manager.page.onTapTag({currentTarget:{dataset:{key:'c:custom_breakfast'}}})
+  manager.page.setData({input:'周末记录'});manager.page.onSave();await flush()
+  assert.ok(manager.page.data.tags.some(t=>t.name==='周末记录'&&t.deletable))
+  manager.page.onConfirm()
+  const confirmed=manager.state.emitted.find(row=>row.name==='confirmTags')
+  assert.ok(confirmed);assert.ok(confirmed.value.tagCodes.includes('diet'));assert.ok(confirmed.value.tagCodes.includes('custom_breakfast'));assert.ok(confirmed.value.customTags.includes('周末记录'))
+  opened.events.confirmTags(confirmed.value)
+  assert.deepEqual(Array.from(editor.page.data.customTags),['周末记录'])
+  assert.ok(editor.page.data.tagCodes.includes('diet'));assert.ok(editor.page.data.tagCodes.includes('custom_breakfast'))
+  manager.page.onToggleEdit()
+  manager.page.onRemoveFrequent({currentTarget:{dataset:{key:'c:custom_breakfast'}}});await flush()
+  assert.equal(manager.page.data.tags.some(t=>t.code==='custom_breakfast'),false)
+  assert.ok(manager.page.data.tags.some(t=>t.code==='diet'))
+  const layout=fs.readFileSync(path.join(root,'pages/community-tags/community-tags.wxml'),'utf8')
+  assert.match(layout,/我的常用标签/);assert.match(layout,/全部标签/);assert.match(layout,/tag-grid/);assert.match(layout,/onToggleEdit/)
+  assert.match(layout,/onRemoveFrequent/);assert.match(layout,/onAddFrequent/);assert.match(layout,/chip-minus/);assert.match(layout,/grid-plus/)
+  assert.match(layout,/chip-icon/);assert.match(layout,/item\.icon/)
+  assert.equal(layout.includes('onTab'),false);assert.equal(layout.includes('tab-scroll'),false)
+  assert.equal(layout.includes('chip-x'),false);assert.equal(layout.includes('×'),false)
+  assert.match(layout,/点 - 移出常用/);assert.match(layout,/点下方 \+ 加入常用/)
+  const styles=fs.readFileSync(path.join(root,'pages/community-tags/community-tags.wxss'),'utf8')
+  assert.match(styles,/\.chip-minus\{[^}]*position:absolute/)
+  assert.match(styles,/\.chip-minus\{[^}]*top:-10rpx/)
+  assert.match(styles,/\.chip-minus\{[^}]*right:-10rpx/)
+  editor.page.onUnload();manager.page.onUnload()
+})
+
+test('移出常用后首页话题栏同步隐藏，加回后恢复且＋始终保留',async()=>{
+  const tags=[{code:'diet',name:'饮食控糖',type:'OFFICIAL'},{code:'other',name:'其他',type:'OFFICIAL'},{code:'custom_breakfast',name:'早餐搭配',type:'USER'}]
+  const manager=page('community-tags',{fetchCommunityTags:async()=>tags,fetchMyCommunityTags:async()=>[]},{mode:'browse'})
+  await flush()
+  assert.deepEqual(Array.from(manager.page.data.frequentTags,t=>t.code).filter(Boolean).sort(),['diet','other'])
+  manager.page.onRemoveFrequent({currentTarget:{dataset:{key:'c:diet'}}});await flush()
+  assert.equal(manager.page.data.frequentTags.some(t=>t.code==='diet'),false)
+  const feed=page('index',{fetchCommunityTags:async()=>tags},{storage:manager.state.storage});await flush()
+  assert.deepEqual(Array.from(feed.page.data.tags,t=>t.code),['other'])
+  assert.ok(feed.page.data.tags.some(t=>t.code==='other'))
+  manager.page.onAddFrequent({currentTarget:{dataset:{key:'c:diet'}}});await flush()
+  assert.ok(manager.page.data.frequentTags.some(t=>t.code==='diet'))
+  const restored=page('index',{fetchCommunityTags:async()=>tags},{storage:manager.state.storage});await flush()
+  assert.deepEqual(Array.from(restored.page.data.tags,t=>t.code).sort(),['diet','other'])
+  manager.page.onRemoveFrequent({currentTarget:{dataset:{key:'c:other'}}});await flush()
+  const keepPlus=page('index',{fetchCommunityTags:async()=>tags},{storage:manager.state.storage});await flush()
+  assert.ok(keepPlus.page.data.tags.some(t=>t.code==='other'))
+  manager.page.onUnload();feed.page.onUnload();restored.page.onUnload();keepPlus.page.onUnload()
 })
 
 test('删除后的官方和常用标签不可再选，草稿正文保留且服务器刷新清理选择',async()=>{

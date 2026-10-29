@@ -1,0 +1,45 @@
+.tags-page{padding:0 0 calc(40rpx + env(safe-area-inset-bottom));background:#f5f6f8;min-height:100vh}
+.tags-topbar{display:flex;align-items:center;justify-content:space-between;gap:20rpx;padding:16rpx 28rpx;background:#fff;border-bottom:1rpx solid #eef0f3}
+.topbar-hint{font-size:22rpx;color:var(--muted)}
+.edit-action{flex-shrink:0;padding:8rpx 4rpx 8rpx 16rpx;font-size:var(--fs-body);color:var(--brand);font-weight:600}
+
+.mine-section,.catalog-section{background:#fff;padding:18rpx 28rpx 28rpx;margin-bottom:16rpx}
+.section-head{display:flex;align-items:baseline;gap:16rpx;flex-wrap:wrap;margin-bottom:20rpx}
+.section-title{font-size:var(--fs-body);font-weight:700;color:var(--ink-soft)}
+.section-note{font-size:22rpx;color:var(--hint)}
+.mine-empty{padding:12rpx 0 4rpx;font-size:var(--fs-small);color:var(--hint)}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:16rpx;padding-top:8rpx;padding-right:8rpx}
+.chip{position:relative;display:flex;align-items:center;gap:10rpx;max-width:100%;padding:10rpx 20rpx 10rpx 10rpx;border-radius:999rpx;border:1rpx solid #e3e6eb;background:#fff;color:var(--ink-soft);font-size:var(--fs-small)}
+.text-chip{background:#fff;border-color:#dde1e6}
+.chip.on{border-color:var(--brand-line);background:var(--brand-soft);color:var(--brand-dark);font-weight:600}
+.chip-icon{width:44rpx;height:44rpx;border-radius:50%;flex-shrink:0;background:#eef3f8}
+.chip-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280rpx}
+.chip-minus{position:absolute;top:-10rpx;right:-10rpx;z-index:2;width:36rpx;height:36rpx;line-height:32rpx;text-align:center;border-radius:50%;background:rgba(32,43,56,.78);color:#fff;font-size:30rpx;font-weight:600;box-shadow:0 2rpx 8rpx rgba(32,43,56,.18)}
+
+.tag-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18rpx}
+.grid-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:12rpx;padding:22rpx 10rpx 18rpx;border-radius:22rpx;background:#f7f8fa;border:1rpx solid transparent;box-sizing:border-box}
+.grid-item.selected{border-color:var(--brand-line);background:var(--brand-soft)}
+.grid-item.pinned{opacity:.92}
+.grid-mark-wrap{position:relative;width:84rpx;height:84rpx}
+.grid-mark{width:84rpx;height:84rpx;border-radius:22rpx;display:block;background:#eef3f8}
+.grid-check{position:absolute;right:-4rpx;bottom:-4rpx;width:32rpx;height:32rpx;line-height:30rpx;text-align:center;border-radius:50%;background:var(--brand);color:#fff;font-size:20rpx;font-weight:700}
+.grid-name{width:100%;text-align:center;font-size:22rpx;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid-plus{position:absolute;top:8rpx;right:8rpx;width:40rpx;height:40rpx;line-height:36rpx;text-align:center;border-radius:50%;background:var(--brand);color:#fff;font-size:28rpx;font-weight:700}
+.grid-plus.disabled{background:rgba(32,43,56,.22)}
+
+.tags-empty,.tags-state{text-align:center;padding:64rpx 20rpx;color:var(--muted);font-size:var(--fs-small)}
+.tags-error{color:#ad7241;text-align:center;padding:32rpx;font-size:var(--fs-small);background:#fff}
+
+.editor-card{margin:8rpx 22rpx 24rpx;background:#fff;border-radius:24rpx;padding:26rpx 28rpx}
+.editor-title{display:block;font-size:var(--fs-body);font-weight:600;color:var(--ink-soft);margin-bottom:16rpx}
+.editor-row{display:flex;align-items:center;gap:16rpx}
+.editor-row input{flex:1;min-width:0;height:72rpx;padding:0 22rpx;border:1rpx solid var(--brand-line);border-radius:18rpx;background:#fafcfb;font-size:var(--fs-small);color:var(--ink-soft)}
+.editor-row button{margin:0;padding:0 28rpx;line-height:72rpx;height:72rpx;border-radius:18rpx;background:var(--brand);color:#fff;font-size:var(--fs-small);font-weight:600}
+.editor-row button::after{border:0}
+.editor-row button[disabled]{background:var(--brand-line);color:#f8faf9}
+.editor-hint{display:block;margin-top:14rpx;font-size:20rpx;color:var(--hint);line-height:1.7}
+
+.pick-bar{position:sticky;bottom:0;padding:18rpx 26rpx calc(18rpx + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1rpx solid var(--line);display:flex;align-items:center;gap:18rpx}
+.pick-bar text{flex:1;font-size:var(--fs-small);color:var(--muted)}
+.pick-bar button{margin:0;min-width:200rpx;padding:0 28rpx;line-height:80rpx;height:80rpx;border-radius:20rpx;background:var(--brand);color:#fff;font-size:var(--fs-body);font-weight:600}
+.pick-bar button::after{border:0}

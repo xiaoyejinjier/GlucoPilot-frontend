@@ -1,0 +1,58 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="page-no-tab tags-page" style="{{displayStyle}}">
+  <view class="tags-topbar">
+    <text class="topbar-hint">{{i18n.t(mode === 'pick' ? '已选 ' + (selectedCount) + ' / ' + (slots) : '点选标签筛选内容', locale)}}</text>
+    <text class="edit-action ui-interactive" bindtap="onToggleEdit" hover-class="ui-pressed">{{i18n.t((editing ? '完成' : '编辑'), locale)}}</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="tags-state">{{i18n.t("正在加载标签…", locale)}}</view>
+  <view wx:elif="{{error}}" class="tags-error ui-interactive" bindtap="load" hover-class="ui-pressed">{{i18n.t(error, locale)}}</view>
+  <block wx:else>
+    <view class="mine-section">
+      <view class="section-head">
+        <text class="section-title">{{i18n.t("我的常用标签", locale)}}</text>
+        <text class="section-note">{{i18n.t((editing ? '点 - 移出常用；点下方 + 加入常用' : mode === 'pick' ? '点击取消选择' : '点击进入标签'), locale)}}</text>
+      </view>
+      <view wx:if="{{!frequentTags.length}}" class="mine-empty">{{i18n.t(mode === 'pick' ? '还没有选择标签，从下方点选' : '还没有常用标签，从下方点 + 加入', locale)}}</view>
+      <view wx:else class="chip-wrap">
+        <view wx:for="{{frequentTags}}" wx:key="key" class="chip text-chip {{item.selected ? 'on' : ''}} ui-interactive" data-key="{{item.key}}" bindtap="onTapFrequent" hover-class="ui-pressed">
+          <image class="chip-icon" src="{{item.icon}}" mode="aspectFill" />
+          <text class="chip-label">{{item.name}}</text>
+          <text wx:if="{{editing}}" class="chip-minus" data-key="{{item.key}}" catchtap="onRemoveFrequent" hover-class="ui-pressed">-</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="catalog-section">
+      <view class="section-head">
+        <text class="section-title">{{i18n.t("全部标签", locale)}}</text>
+        <text class="section-note">{{i18n.t("含社区首页话题与自建标签", locale)}}</text>
+      </view>
+      <view wx:if="{{!catalogTags.length}}" class="tags-empty">{{i18n.t("暂时没有可用标签", locale)}}</view>
+      <view wx:else class="tag-grid">
+        <view wx:for="{{catalogTags}}" wx:key="key" class="grid-item {{item.selected ? 'selected' : ''}} {{item.pinned ? 'pinned' : ''}} ui-interactive" data-key="{{item.key}}" bindtap="onTapTag" hover-class="ui-pressed">
+          <view class="grid-mark-wrap">
+            <image class="grid-mark" src="{{item.icon}}" mode="aspectFill" />
+            <view wx:if="{{item.selected}}" class="grid-check">✓</view>
+          </view>
+          <text class="grid-name">{{item.name}}</text>
+          <text wx:if="{{editing}}" class="grid-plus {{item.pinned ? 'disabled' : ''}}" data-key="{{item.key}}" catchtap="onAddFrequent">＋</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="editor-card">
+      <text class="editor-title">{{i18n.t("添加自定义", locale)}}</text>
+      <view class="editor-row">
+        <input value="{{input}}" maxlength="16" placeholder="{{i18n.t('标签名称，最多16字', locale)}}" bindinput="onInput" bindconfirm="onSave" confirm-type="done" />
+        <button class="ui-interactive" bindtap="onSave" disabled="{{!input}}" hover-class="ui-pressed">{{i18n.t("添加", locale)}}</button>
+      </view>
+      <text class="editor-hint">{{i18n.t("新标签保存在本机，发文选用后会出现在社区话题中。", locale)}}</text>
+    </view>
+  </block>
+
+  <view wx:if="{{mode === 'pick' && !loading && !error}}" class="pick-bar">
+    <text>{{i18n.t("已选 " + (selectedCount) + " / " + (slots), locale)}}</text>
+    <button class="ui-interactive" bindtap="onConfirm" hover-class="ui-pressed">{{i18n.t("完成", locale)}}</button>
+  </view>
+</view>

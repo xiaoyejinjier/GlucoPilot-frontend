@@ -14,6 +14,7 @@
     "pages/information/information",
     "pages/messages/messages",
     "pages/community-compose/community-compose",
+    "pages/community-tags/community-tags",
     "pages/community-articles/community-articles",
     "pages/community-report/community-report",
     "pages/community-reports/community-reports",

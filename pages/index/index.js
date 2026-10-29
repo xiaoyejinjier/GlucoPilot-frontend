@@ -2,6 +2,7 @@ const api = require('../../services/api')
 const { mapField } = require('../../utils/remote-image')
 const social = require('../../utils/community')
 const { TAGS, reportUrl } = require('../../utils/publication')
+const tagHistory = require('../../utils/article-tags')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 
 Page({
@@ -22,15 +23,33 @@ Page({
       const choices=await api.fetchCommunityTags()
       if(!social.active(this,version)||run!==this._tagRun)return
       const rows=Array.isArray(choices)?choices:[],isUser=t=>t.type==='USER'||String(t.code).startsWith('custom_')
-      const tags=rows.filter(t=>!isUser(t)),otherTags=rows.filter(isUser)
-      const removed=this.data.activeTag&&!rows.some(t=>t.code===this.data.activeTag)
+      const unpinned=new Set(tagHistory.unpinned().map(n=>String(n).toLowerCase()))
+      const tags=rows.filter(t=>!isUser(t)).filter(t=>t.code==='other'||!unpinned.has(String(t.name).toLowerCase()))
+      const otherTags=rows.filter(isUser)
+      const removed=!!(this.data.activeTag&&!(
+        tags.some(t=>t.code===this.data.activeTag)||
+        (this.data.otherSelected&&rows.some(t=>t.code===this.data.activeTag))
+      ))
       this.setData({tags,otherTags,tagsError:'',...(removed?{activeTag:'',otherSelected:false}: {})})
       if(removed)this.load(true)
     }catch(error){if(social.active(this,version)&&run===this._tagRun)this.setData({tagsError:'标签加载失败，点击重试'})}
   },
-  onOtherTag(e){const code=e.currentTarget.dataset.code||'other';if(code!=='other'&&!this.data.otherTags.some(t=>t.code===code))return;this.setData({activeTag:code,otherSelected:true,posts:[]});this.load(true)},
   onHide() { social.end(this); this._loadRun = (this._loadRun || 0) + 1 },
   onUnload() { this.onHide() },
+  openMyTags() {
+    if (!social.active(this)) return
+    const version = this._communityVersion
+    wx.navigateTo({
+      url: '/pages/community-tags/community-tags?mode=browse',
+      events: {
+        filterTag: detail => {
+          if (!social.active(this, version)) return
+          const code = detail && detail.code ? String(detail.code) : 'other'
+          this.setData({ activeTag:code, otherSelected:true, posts:[] }); this.load(true)
+        }
+      }
+    })
+  },
   async load(reset) {
     if (!social.active(this) || (!reset && (this.data.loading || !this.data.hasMore))) return
     const version = this._communityVersion, run = this._loadRun = (this._loadRun || 0) + 1
@@ -51,7 +70,13 @@ Page({
     }
   },
   onMode(e) { const mode = e.currentTarget.dataset.mode; if (!['recommend','following'].includes(mode) || mode === this.data.feedMode) return; this.setData({ feedMode: mode, posts: [] }); this.load(true) },
-  onTag(e) { const code = e.currentTarget.dataset.code || ''; if (code === this.data.activeTag) return; this.setData({ activeTag: code,otherSelected:code==='other', posts: [] }); this.load(true) },
+  onTag(e) {
+    const code = e.currentTarget.dataset.code || ''
+    if (code === 'other') return this.openMyTags()
+    if (code === this.data.activeTag) return
+    this.setData({ activeTag: code, otherSelected: false, posts: [] })
+    this.load(true)
+  },
   onSearchInput(e) { this.setData({ keyword: e.detail.value }) },
   onSearch() { this.load(true) }, onRetry() { this.load(true) }, onMore() { this.load(false) }, onReachBottom() { this.load(false) },
   async onPullDownRefresh() { try { await Promise.all([this.loadTags(),this.load(true)]) } finally { wx.stopPullDownRefresh() } },

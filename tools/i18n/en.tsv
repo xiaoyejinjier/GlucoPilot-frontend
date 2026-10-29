@@ -1347,3 +1347,44 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 厂商	Vendor
 生成并同步	Generate & sync
 每次生成新 SN，可多次创建多台模拟设备	A new serial number is generated each time, so you can create several demo devices
+选择分类，点＋管理并选用自己的标签	Choose a category, or tap + to manage your own tags
+我的标签	My tags
+全部标签	All tags
+点选要带上文章的标签，也可在这里新增、修改或删除。	Pick tags for this post. You can also add, edit or delete them here.
+管理自己的标签：可新增、修改、删除；点选可筛选社区内容。	Manage your tags: add, edit or delete. Tap one to filter the feed.
+查看全部其他话题 ›	Browse all other topics ›
+还没有自己的标签，先在下方添加一个吧	No personal tags yet. Add one below.
+已在文章中使用	Used in your posts
+本机常用	Saved on this device
+修改标签	Edit tag
+新增标签	Add tag
+标签名称，最多16字	Tag name, up to 16 characters
+保存后更新本机标签名；已发布文章仍保留原标签。	Saves the name on this device. Published posts keep the original tag.
+新标签保存在本机，发文选用后会出现在社区“＋”话题下。	New tags stay on this device and appear under + after you use them in a post.
+取消修改	Cancel editing
+这个标签已经有了	This tag already exists
+删除标签	Delete tag
+修改	Edit
+共	Total
+点＋查看全部标签，选择或删除不想要的	Tap + to see all tags, then choose or remove ones you do not want
+点选要用的标签，再点一次可取消；自建标签可删除。	Tap to select a tag, tap again to clear it. You can delete custom tags.
+点选标签筛选社区内容；自建标签可从本机删除。	Tap a tag to filter the feed. Custom tags can be removed on this device.
+暂时没有可用标签	No tags available yet
+自建标签	Custom tag
+官方分类	Official topic
+添加自定义	Add custom tag
+新标签保存在本机，发文选用后会出现在社区话题中。	New tags stay on this device and appear in community topics after you use them in a post.
+我的常用标签	My frequent tags
+点击进入标签	Tap to open
+点击取消选择	Tap to deselect
+点击 × 删除自建标签	Tap × to remove a custom tag
+点击 × 移出常用或删除自建	Tap × to remove from frequent tags or delete a custom tag
+点 - 移出常用；点下方 + 加入常用	Tap - to unpin frequent tags; tap + below to pin
+还没有选择标签，从下方点选	No tags selected yet. Pick from below
+还没有常用标签，从下方添加	No frequent tags yet. Add some below
+还没有常用标签，从下方点选	No frequent tags yet. Pick from below
+还没有常用标签，从下方点 + 加入	No frequent tags yet. Tap + below to add
+含社区首页话题与自建标签	Includes home feed topics and your custom tags
+全部	All
+点选标签筛选内容	Tap a tag to filter content
+编辑	Edit
