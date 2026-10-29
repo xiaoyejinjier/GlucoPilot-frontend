@@ -1388,3 +1388,48 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 全部	All
 点选标签筛选内容	Tap a tag to filter content
 编辑	Edit
+注销账号	Delete account
+确认注销账号	Delete account?
+注销申请已提交	Deletion request submitted
+账号将于	Your account will be deleted on
+7 天期满后	the end of the 7-day period
+注销，届时血糖、饮食、健康档案与 AI 对话等数据将被永久删除。	— glucose, meal, health profile and AI chat data will then be permanently deleted.
+在此之前取消注销，可继续使用账号与全部数据。	Cancel before then to keep using your account and all data.
+取消注销，继续使用账号	Cancel deletion and keep using your account
+账号已注销或注销正在执行	Account deleted or deletion in progress
+当前账号无法继续使用。	This account can no longer be used.
+注销后，以下内容将被删除	After deletion, the following will be removed
+· 血糖、饮食记录与健康档案	· Glucose and meal records, health profile
+· AI 会话、消息与个人媒体文件	· AI chats, messages and personal media
+· 设备绑定、设置与反馈记录	· Device bindings, settings and feedback
+仍会保留的内容	What will be retained
+· 已发布的社区内容将匿名保留，作者显示为“已注销用户”	· Published community posts remain, shown as "Deleted user"
+注销操作不可撤销，7 天期满后数据将被彻底删除，请谨慎操作。	Deletion cannot be undone; data is permanently removed after 7 days.
+注销方式	Deletion option
+立即注销	Delete now
+7 天内可恢复	Recoverable within 7 days
+提交后立即注销，全部数据将被永久删除。	Your account and all data are deleted immediately.
+提交后 7 天内可再次登录取消注销，期满后数据永久删除。	Log in within 7 days to cancel; data is permanently deleted afterwards.
+注销原因（选填）	Reason (optional)
+身份验证	Identity verification
+手机/邮箱验证	Phone or email
+微信身份验证	WeChat verification
+6 位验证码	6-digit code
+使用当前登录的微信身份完成验证，提交时由服务端核对 openid，无需短信或邮箱验证码。	Verify with your current WeChat identity; the server checks openid, no SMS or email code needed.
+已完成微信身份验证	WeChat verified
+使用微信身份验证	Verify with WeChat
+微信身份验证已完成	WeChat identity verified
+当前账号未绑定手机号、邮箱或微信，无法完成身份验证，请联系客服处理。	No phone, email or WeChat is linked. Contact support to verify your identity.
+我已了解注销后数据将被永久删除	I understand my data will be permanently deleted
+申请注销	Request deletion
+滑动验证	Slider verification
+拖动滑块到最右侧，完成后才会发送验证码	Drag the slider all the way right to send the code
+不再使用	No longer needed
+隐私顾虑	Privacy concerns
+功能不满意	Not satisfied with features
+注销状态加载失败，请返回重试。	Unable to load deletion status. Go back and retry.
+服务版本不兼容，请更新小程序或稍后重试。	Unsupported service version. Update the mini program or try again later.
+验证码将发送至已绑定手机号	Code will be sent to your linked phone
+验证码将发送至已绑定邮箱	Code will be sent to your linked email
+按住滑块，拖动到最右侧	Press and drag the slider to the far right
+申请处理中	Processing

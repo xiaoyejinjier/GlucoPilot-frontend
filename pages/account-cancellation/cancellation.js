@@ -4,6 +4,7 @@ const {
 } = require('../../services/api')
 const { clearAccountCache } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
+const i18n = require('../../utils/i18n')
 
 /** 注销原因与 user_account_cancellation.reason_code 对齐（1..4）。 */
 const CANCEL_REASONS = [
@@ -27,6 +28,7 @@ function formatDeadline(value) {
 Page({
   data: {
     displayStyle: '',
+    locale: i18n.getLocale(),
     // applying=正常申请流；pending=注销处理中（7 天可恢复窗口）；gone=已注销/执行中兜底；loading/error
     page: 'loading',
     errorText: '注销状态加载失败，请返回重试。',
@@ -69,6 +71,7 @@ Page({
 
   onShow() {
     applyDisplayToCurrentPage()
+    this.setData({ locale: i18n.getLocale() })
     this.refresh()
   },
 

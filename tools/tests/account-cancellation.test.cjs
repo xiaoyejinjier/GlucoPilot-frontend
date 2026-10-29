@@ -62,7 +62,8 @@ function pageHarness(options={}){
   const deps={
     '../../services/api':api,
     '../../utils/display':{applyDisplayToCurrentPage(){}},
-    '../../utils/storage':{clearAccountCache(){state.cleared++}}
+    '../../utils/storage':{clearAccountCache(){state.cleared++}},
+    '../../utils/i18n':{getLocale:()=> 'zh',t:v=>v}
   }
   let def
   vm.runInNewContext(fs.readFileSync(path.join(root,'pages/account-cancellation/cancellation.js'),'utf8'),{
