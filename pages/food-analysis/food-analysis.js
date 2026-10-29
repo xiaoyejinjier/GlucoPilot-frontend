@@ -345,9 +345,11 @@ Page({
   },
   async onConfirmGlucose() {
     if (this.data.busy || this.data.predictLoading) return
-    const value = numberOrNull(this.data.glucoseInput)
-    if (value === null || value < 0.1 || value > 30) {
-      wx.showToast({ title: '请输入 0.1-30 的血糖值', icon: 'none' })
+    const raw = String(this.data.glucoseInput || '').trim()
+    const value = numberOrNull(raw)
+    const fraction = (raw.split('.')[1] || '').replace(/0+$/, '')
+    if (value === null || fraction.length > 1 || value < 0.1 || value > 39.9) {
+      wx.showToast({ title: '请输入 0.1-39.9 之间、最多 1 位小数的血糖值', icon: 'none' })
       return
     }
     if (!this.ensureLogin() || !this.ensureOpen()) return

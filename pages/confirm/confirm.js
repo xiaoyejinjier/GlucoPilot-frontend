@@ -101,9 +101,11 @@ Page({
       return
     }
 
-    const value = parseFloat(this.data.value)
-    if (isNaN(value) || value <= 0 || value >= 40) {
-      wx.showToast({ title: '请输入有效血糖值', icon: 'none' })
+    const raw = String(this.data.value || '').trim()
+    const value = parseFloat(raw)
+    const fraction = (raw.split('.')[1] || '').replace(/0+$/, '')
+    if (isNaN(value) || fraction.length > 1 || value < 0.1 || value > 39.9) {
+      wx.showToast({ title: '请输入 0.1-39.9 之间、最多 1 位小数的血糖值', icon: 'none' })
       return
     }
 

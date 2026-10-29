@@ -299,8 +299,8 @@ test('补充信息或退出页面后，迟到响应不回写旧结果', async ()
   }
 })
 
-test('确定校验：空值/非数字/超范围拦截并提示，边界值通过', async () => {
-  for (const bad of ['', 'abc', '0', '0.05', '30.1']) {
+test('确定校验：空值/非数字/超范围/多余小数位拦截并提示，边界值通过', async () => {
+  for (const bad of ['', 'abc', '0', '0.05', '39.96', '40']) {
     const { page, calls, timers } = createPage()
     await page.onLoad({})
     await flush()
@@ -312,17 +312,17 @@ test('确定校验：空值/非数字/超范围拦截并提示，边界值通过
     assert.equal(calls.upserts.length, 0, 'input=' + bad)
     assert.equal(page.data.currentGlucose, '', 'input=' + bad)
     assert.equal(calls.toasts.length, 1, 'input=' + bad)
-    assert.ok(String(calls.toasts[0][0].title).includes('0.1-30'), 'input=' + bad)
+    assert.ok(String(calls.toasts[0][0].title).includes('0.1-39.9'), 'input=' + bad)
   }
   const edge = createPage()
   await edge.page.onLoad({})
   await flush()
   await edge.timers.flush()
-  edge.page.onGlucoseInput({ detail: { value: '30' } })
+  edge.page.onGlucoseInput({ detail: { value: '39.9' } })
   await edge.page.onConfirmGlucose()
   await flush()
   await edge.timers.flush()
-  assert.equal(edge.page.data.currentGlucose, '30')
+  assert.equal(edge.page.data.currentGlucose, '39.9')
   assert.equal(edge.calls.predictions, 1)
 })
 
