@@ -20,7 +20,7 @@
         data-cat="{{item.name}}"
         bindtap="onCategoryTap"
        hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-        <image class="cat-icon" src="{{item.icon}}" mode="aspectFit" data-id="{{item.id}}" data-src="{{item.icon}}" binderror="onCategoryImageError" />
+        <view class="cat-icon"><food-image src="{{item.icon}}" mode="aspectFit" revision="{{categoryImageRevision}}"></food-image></view>
         <text class="cat-name">{{i18n.t((item.name), locale)}}</text>
       </view>
     </view>
@@ -36,14 +36,7 @@
       data-index="{{index}}"
       bindtap="onFoodTap"
      hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-      <image
-        class="food-thumb"
-        src="{{item.image}}"
-        mode="aspectFill"
-        data-index="{{index}}"
-        data-src="{{item.image}}"
-        binderror="onImageError"
-      />
+      <view class="food-thumb"><food-image src="{{item.image}}" mode="aspectFill" revision="{{foodImageRevision}}"></food-image></view>
       <view class="food-meta">
         <text class="food-name">{{i18n.t((item.name), locale)}}</text>
         <text class="food-info">{{i18n.t((item.carbs) + "克碳水/100g · " + (item.cal) + "kcal", locale)}}</text>

@@ -1,2 +1,7 @@
 /mvnw text eol=lf
 *.cmd text eol=crlf
+
+# Keep generated localization sources reproducible on Windows.
+/tools/i18n/runtime.txt text eol=lf
+/utils/locales/en.js text eol=lf
+/utils/i18n.wxs text eol=lf

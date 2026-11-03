@@ -42,17 +42,24 @@ function request(options) {
       ...(timeout ? { timeout } : {}),
       success(res) {
         const body = res.data || {}
-        if (res.statusCode === 401 || body.code === 40100) {
-          if (auth && getToken() === requestToken) {
-            setToken('')
-            wx.setStorageSync('isLoggedIn', false)
-          }
+        if (res.statusCode === 401 || body.code === 40100 || body.code === 40101) {
           const message = auth
             ? (body.message || '未登录或 Token 失效')
             : '登录服务暂不可用，请稍后重试'
+          let sessionHandled = false
+          // 只处理当前令牌的失效；较早请求的迟到401不能影响用户刚完成的新登录。
+          if (auth && requestToken && getToken() === requestToken) {
+            setToken('')
+            wx.setStorageSync('isLoggedIn', false)
+            const app = typeof getApp === 'function' ? getApp() : null
+            if (app && typeof app.handleSessionExpired === 'function') {
+              sessionHandled = app.handleSessionExpired(requestToken, message)
+            }
+          }
           reject(Object.assign(new Error(message), {
             code: 40100,
             body,
+            sessionHandled,
             requestId: body.requestId || ''
           }))
           return

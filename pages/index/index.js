@@ -57,7 +57,8 @@ Page({
     this.setData({ loading: true, error: '' })
     try {
       const page = await api.fetchCommunityArticles({ pageNum, pageSize: 15, tag: this.data.activeTag,
-        following: this.data.feedMode === 'following', keyword: this.data.keyword.trim() })
+        following: this.data.feedMode === 'following', keyword: this.data.keyword.trim(),
+        sort: this.data.feedMode === 'following' || this.data.keyword.trim() ? 'LATEST' : 'RECOMMEND' })
       if (!social.active(this, version) || run !== this._loadRun) return
       const records = (await mapField(page.records || [], 'cover')).map(post => ({ ...post, timeLabel: social.timeLabel(post.publishAt || post.createdAt) }))
       if (!social.active(this, version) || run !== this._loadRun) return

@@ -79,6 +79,8 @@ App({
   resetLoginState() {
     // During onLaunch the instance exists as this, but getApp() may not be ready yet.
     messageNotifications.reset(this)
+    this._profilePromise = null
+    this._profileToken = ''
     setToken('')
     wx.setStorageSync('isLoggedIn', false)
     this.globalData.isLoggedIn = false
@@ -86,6 +88,19 @@ App({
     this.globalData.disclaimerRequired = false
     this.globalData.disclaimerCurrentVersion = ''
     this.globalData.navigationGuideToken = ''
+  },
+
+  // 所有鉴权请求（含静默通知轮询）共用失效处理，避免旧终端卡在加载或继续显示账号缓存。
+  handleSessionExpired(expiredToken, message) {
+    const currentToken = getToken()
+    if (!expiredToken || (currentToken && currentToken !== expiredToken)) return false
+    if (this._expiredSessionToken === expiredToken) return true
+    this._expiredSessionToken = expiredToken
+    this.resetLoginState()
+    clearAccountCache()
+    this.openLogin()
+    wx.showToast({ title: message || '登录已失效，请重新登录', icon: 'none', duration: 3500 })
+    return true
   },
 
   openLogin() {
@@ -105,7 +120,7 @@ App({
     if (!this.globalData.isLoggedIn || !token) {
       return Promise.reject(Object.assign(new Error('请先登录'), { code: 40100 }))
     }
-    if (this._profilePromise) return this._profilePromise
+    if (this._profilePromise && this._profileToken === token) return this._profilePromise
 
     const task = Promise.all([
       fetchMe(),
@@ -137,6 +152,7 @@ App({
     })
 
     this._profilePromise = task
+    this._profileToken = token
     task.then(
       () => { if (this._profilePromise === task) this._profilePromise = null },
       () => { if (this._profilePromise === task) this._profilePromise = null }
@@ -146,12 +162,15 @@ App({
 
   /** 未同意或版本已更新时强制进入免责声明页。 */
   enforceDisclaimer() {
+    const token = getToken()
     return this.syncProfile()
       .then((state) => {
+        if (getToken() !== token || !this.globalData.isLoggedIn) return null
         if (state.needsDisclaimer) this.openRequiredDisclaimer()
         return state
       })
       .catch((error) => {
+        if ((error && error.sessionHandled) || (getToken() && getToken() !== token)) return null
         if ((error && error.code === 40100) || !getToken()) {
           this.resetLoginState()
           this.openLogin()
@@ -162,8 +181,10 @@ App({
 
   /** 登录完成后的唯一去向：注销/禁用拦截优先，其次免责声明，否则进入记录页。 */
   goAfterLogin() {
+    const token = getToken()
     return this.syncProfile()
       .then((state) => {
+        if (getToken() !== token || !this.globalData.isLoggedIn) return null
         const status = state.userInfo && state.userInfo.accountStatus
         if (status === 4) return this.interceptCancelledLogin()
         if (status === 0) return this.interceptDisabledLogin()
@@ -175,6 +196,7 @@ App({
         return state
       })
       .catch((error) => {
+        if ((error && error.sessionHandled) || (getToken() && getToken() !== token)) return null
         // 无有效身份或资料校验失败时留在登录流程，不能当成“尚未同意”。
         this.resetLoginState()
         this.openLogin()

@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "食物营养库",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "food-image": "/components/food-image/food-image"
+  }
 }

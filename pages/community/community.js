@@ -1,7 +1,7 @@
 const api = require('../../services/api')
 const social = require('../../utils/community')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
-const TITLES = { following: '我的关注', likes: '我的点赞', collections: '我的收藏', messages: '我的私信', profiles: '找用户' }
+const TITLES = { following: '我的关注', likes: '我的点赞', collections: '我的收藏', messages: '我的私信', profiles: '找糖友' }
 Page({
   data: { displayStyle: '', mode: 'following', list: [], pageNum: 0, hasMore: false, loading: false, error: '', keyword: '', searchQuery: '' },
   onLoad(options) { const mode = Object.prototype.hasOwnProperty.call(TITLES, options.mode) ? options.mode : 'following'; this.setData({ mode }); wx.setNavigationBarTitle({ title: TITLES[mode] }) },
@@ -11,7 +11,7 @@ Page({
     this._loadRun=(this._loadRun||0)+1
     this.setData({ list: [], pageNum: 0, hasMore: false, loading: false, error: '', ...(oldToken && oldToken !== this._communityToken ? { keyword: '', searchQuery:'' } : {}) })
     applyDisplayToCurrentPage()
-    if (this.data.mode !== 'profiles' || this.data.keyword.trim().length >= 2) this.load(true)
+    if (this.data.mode !== 'profiles' || this.data.keyword.trim().length >= 1) this.load(true)
     if (this.data.mode === 'messages') this._pollTimer = setInterval(() => {
       if (this.data.pageNum <= 1) this.load(true, true)
     }, 5000)
@@ -20,7 +20,7 @@ Page({
   onHide() { social.end(this); this.stopPolling() }, onUnload() { social.end(this); this.stopPolling() },
   onInput(event) { this.setData({ keyword: event.detail.value }) },
   onSearch() {
-    if (this.data.mode === 'profiles' && this.data.keyword.trim().length < 2) { wx.showToast({ title: '请输入对方的昵称', icon: 'none' }); return }
+    if (this.data.mode === 'profiles' && !this.data.keyword.trim()) { wx.showToast({ title: '请输入至少1个字的昵称', icon: 'none' }); return }
     return this.load(true)
   },
   onClearSearch() {

@@ -71,13 +71,13 @@ const DEFAULT_FOOD_IMAGE = '/assets/foods/rice.svg'
 function getFoodImage(name, categoryName, imageUrl) {
   const source = String(imageUrl || '').trim()
 
-  // 完整公网地址由小程序直接展示；生产环境需在微信后台配置下载域名。
-  if (/^https?:\/\//i.test(source)) return source
-
-  // 后台上传的配图使用稳定 API 路径，通过用户端统一配置解析。
-  if (/^\/api\/v1\/foods\/(?:images\/\d+|\d+\/image)$/.test(source)) {
-    return `${config.baseUrl.replace(/\/+$/, '')}${source.slice('/api/v1'.length)}`
+  // Stable backend paths must follow the current connection, even when a legacy host was saved.
+  const backend = source.match(/^(?:https?:\/\/[^/?#]+)?(\/api\/v1\/foods\/(?:images\/[1-9]\d{0,18}|[1-9]\d{0,18}\/image))(\?[^#]*)?(?:#.*)?$/i)
+  if (backend) {
+    return `${config.baseUrl.replace(/\/+$/, '')}${backend[1].slice('/api/v1'.length)}${backend[2] || ''}`
   }
+
+  if (/^https?:\/\//i.test(source)) return source
 
   // 小程序自身的本地资源可以直接使用。
   if (source.startsWith('/assets/foods/') && source.toLowerCase().endsWith('.svg')) return source

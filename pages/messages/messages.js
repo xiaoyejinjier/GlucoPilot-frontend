@@ -32,31 +32,66 @@ Page({
   stopPolling() { if (this._pollTimer) clearInterval(this._pollTimer); this._pollTimer = null },
   onHide() {
     this.onCloseSpeechInput(); social.end(this); this.stopPolling(); this.clearRefreshFeedback(); this._edgeTouch=null
+    this._inputFocused = false; this._keyboardLayoutVersion = (this._keyboardLayoutVersion || 0) + 1
     this.setData({pulling:false,bottomPull:0,edgeReturning:false})
     if (this._keyboardHandler && wx.offKeyboardHeightChange) wx.offKeyboardHeightChange(this._keyboardHandler)
-    this._keyboardHandler = null; this.setData({ keyboardHeight:0,inputFocus:false })
+    this._keyboardHandler = null; this.setData({ keyboardHeight:0,inputFocus:false,viewportHeight:this._fullHeight || 0 })
   }, onUnload() { this.onHide() },
   attachKeyboard() {
-    try { const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync(); this._fullHeight = this._windowHeight = info.windowHeight; this.updateViewport(0) } catch (_) {}
+    try {
+      const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+      if (info && Number.isFinite(info.windowHeight) && info.windowHeight > 0) {
+        this._windowHeight = info.windowHeight
+        if (!this._fullHeight || (!this._inputFocused && !this.data.keyboardHeight)) this._fullHeight = info.windowHeight
+        this.updateViewport()
+      }
+    } catch (_) {}
     if (!this._keyboardHandler && wx.onKeyboardHeightChange && wx.offKeyboardHeightChange) {
-      this._keyboardHandler = event => { if (social.active(this)) this.updateViewport(Number(event.height)) }
+      const version = this._communityVersion
+      this._keyboardHandler = event => { if (social.active(this, version)) this.onKeyboardHeightChange(event) }
       wx.onKeyboardHeightChange(this._keyboardHandler)
     }
   },
+  onKeyboardHeightChange(event) {
+    if (!social.active(this)) return
+    const detail = (event && event.detail) || event || {}
+    const height = Number(detail.height)
+    if (!Number.isFinite(height) || height < 0) return
+    this.updateViewport(height)
+  },
   updateViewport(height = this.data.keyboardHeight) {
-    if (!this._fullHeight || !Number.isFinite(height) || height < 0) return
-    this.setData({ keyboardHeight:height, viewportHeight:Math.max(1,Math.min(this._windowHeight,this._fullHeight-height)) },()=>this.measureList())
+    if (!social.active(this) || !this._fullHeight || !Number.isFinite(height) || height < 0) return
+    // Android may resize the window before notifying the keyboard height: subtract it only once.
+    const viewportHeight = Math.max(1, Math.min(this._windowHeight, this._fullHeight - height))
+    if (height === this.data.keyboardHeight && viewportHeight === this.data.viewportHeight) return
+    const version = this._communityVersion, layoutVersion = this._keyboardLayoutVersion = (this._keyboardLayoutVersion || 0) + 1
+    const last = this.data.messages[this.data.messages.length - 1]
+    const scrollToLast = !!(height && this._inputFocused && last)
+    this.setData({ keyboardHeight:height, viewportHeight, ...(scrollToLast ? {scrollTarget:''} : {}) }, () => {
+      this.measureList()
+      if (!scrollToLast) return
+      const scroll = () => {
+        if (social.active(this, version) && layoutVersion === this._keyboardLayoutVersion) this.setData({scrollTarget:`dm-${last.id}`})
+      }
+      if (wx.nextTick) wx.nextTick(scroll)
+      else scroll()
+    })
   },
   onResize(event) {
     const height = Number(event.size && event.size.windowHeight)
     if (!social.active(this) || !Number.isFinite(height) || height < 1) return
     this._windowHeight = height
-    if (!this.data.inputFocus && !this.data.speechVisible && !this.data.keyboardHeight) this._fullHeight = height
+    if (!this._inputFocused && !this.data.speechVisible && !this.data.keyboardHeight) this._fullHeight = height
     this.updateViewport()
   },
   onInput(event) { this._cursor = event.detail.cursor; this.setData({ input: event.detail.value }) },
-  onInputBlur(event) { this._cursor = event.detail.cursor; this.setData({ inputFocus:false }) },
-  onInputFocus(event) { this.setData({ emojiVisible:false,inputFocus:true }); if (event.detail && event.detail.height) this.updateViewport(Number(event.detail.height)) },
+  onInputBlur(event) { this._inputFocused = false; this._cursor = event.detail.cursor; this.setData({ inputFocus:false }) },
+  onInputFocus(event) {
+    this._inputFocused = true; this.setData({ emojiVisible:false,inputFocus:true })
+    const height = Number(event.detail && event.detail.height)
+    if (Number.isFinite(height) && height > 0) this.onKeyboardHeightChange({height})
+    else this.updateViewport()
+  },
   canCompose(){return !!(this.data.sendPermission&&this.data.sendPermission.canSend)},
   canUseInputTools(){return !!(this.data.ready&&this.data.sendPermission)},
   applySendPermission(value,epoch){

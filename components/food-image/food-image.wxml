@@ -1,0 +1,4 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<image wx:if="{{source}}" class="food-image" src="{{source}}" mode="{{mode}}" data-src="{{source}}" binderror="onImageError" />
+<view wx:elif="{{loading}}" class="food-placeholder"><view class="food-spinner"></view></view>
+<view wx:else class="food-placeholder food-retry" catchtap="onRetry" aria-role="button" aria-label="{{i18n.t('图片加载失败，点击重试', locale)}}"><text>↻</text></view>

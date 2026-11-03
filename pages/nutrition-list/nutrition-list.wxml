@@ -13,14 +13,7 @@
       data-index="{{index}}"
       bindtap="onFoodTap"
      hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-      <image
-        class="food-thumb"
-        src="{{item.image}}"
-        mode="aspectFill"
-        data-index="{{index}}"
-        data-src="{{item.image}}"
-        binderror="onImageError"
-      />
+      <view class="food-thumb"><food-image src="{{item.image}}" mode="aspectFill" revision="{{imageRevision}}"></food-image></view>
       <view class="food-main">
         <text class="food-name">{{i18n.t((item.name), locale)}}</text>
         <text class="food-val">{{i18n.t((item.carbs) + "克碳水/100g", locale)}}</text>

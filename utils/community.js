@@ -26,6 +26,7 @@ function active(page, version = page._communityVersion, error) {
 }
 function end(page) { page._communityVisible = false; page._communityVersion = (page._communityVersion || 0) + 1 }
 function failure(page, error, version = page._communityVersion) {
+  if (error && error.sessionHandled) return
   if (!active(page, version, error)) return
   if (error && error.code === 40100) {
     getApp().resetLoginState()

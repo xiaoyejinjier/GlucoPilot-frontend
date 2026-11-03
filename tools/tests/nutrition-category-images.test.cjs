@@ -28,13 +28,11 @@ test('管理端选择的内置图、完整地址与旧地址正确映射，空�
   assert.equal(images.getFoodImage('','水果类','https://cdn.example.test/grape.jpg'),'https://cdn.example.test/grape.jpg')
   assert.equal(images.getFoodImage('','坚果类',''),'/assets/foods/almond.svg')
 })
-test('旧请求和旧图片错误不能覆盖管理员刚换的新图，真正加载失败才回落',async()=>{
+test('旧分类请求不能覆盖管理员刚换的新图，页面保留后台图片身份',async()=>{
   const {p,requests,state}=page();const old=p.loadCategories(),latest=p.loadCategories()
   requests[1].resolve([category('/api/v1/foods/images/21')]);await latest
   requests[0].resolve([category('/api/v1/foods/images/14')]);await old
-  const current=p.data.categories[0].icon;p.onCategoryImageError({currentTarget:{dataset:{id:'4',src:'https://api.example.test/api/v1/foods/images/14'}}});assert.equal(p.data.categories[0].icon,current)
-  p.onCategoryImageError({currentTarget:{dataset:{id:'4',src:current}}});assert.equal(p.data.categories[0].icon,'/assets/foods/apple.svg')
-  const updates=state.updates;p.onCategoryImageError({currentTarget:{dataset:{id:'4',src:'/assets/foods/apple.svg'}}});assert.equal(state.updates,updates)
+  assert.equal(p.data.categories[0].icon,'https://api.example.test/api/v1/foods/images/21')
 })
 test('分类清空同步移除旧项，刷新失败结束动画，离开页面丢弃迟到数据',async()=>{
   const {p,requests,state}=page();const first=p.loadCategories();requests[0].resolve([]);await first;assert.equal(p.data.categories.length,0)
@@ -48,6 +46,7 @@ test('在模块已加载后切换真机服务器，分类和食品图片使用�
   config.baseUrl='https://phone.example.test/gateway/api/v1/'
   assert.equal(images.getFoodImage('','水果类','/api/v1/foods/images/39'),'https://phone.example.test/gateway/api/v1/foods/images/39')
   assert.equal(images.getFoodImage('小笼包','主食类','/api/v1/foods/26/image'),'https://phone.example.test/gateway/api/v1/foods/26/image')
+  assert.equal(images.getFoodImage('小笼包','主食类','http://old.example.test/api/v1/foods/26/image?v=2'),'https://phone.example.test/gateway/api/v1/foods/26/image?v=2')
 })
 
 test('食品搜索空结果不伪造本地食品，旧查询不能覆盖刚更新的照片',async()=>{
@@ -56,7 +55,6 @@ test('食品搜索空结果不伪造本地食品，旧查询不能覆盖刚更�
   foodRequests[1].resolve({records:[{id:'26',image:'new-photo'}]});await newer
   foodRequests[0].resolve({records:[{id:'1',image:'old-photo'}]});await old
   assert.equal(p.data.searchResults[0].id,'26')
-  p.onImageError({currentTarget:{dataset:{index:0,src:'old-photo'}}});assert.equal(p.data.searchResults[0].image,'new-photo')
   const empty=p.query({keyword:'不存在'});foodRequests[2].resolve({records:[]});await empty
   assert.equal(p.data.searchResults.length,0)
   const error=p.query({keyword:'小笼包'});foodRequests[3].reject(new Error('offline'));await error
@@ -78,7 +76,7 @@ test('下拉及重新进入会同时刷新当前食品，离页与清空搜索�
   assert.equal(p.data.searchResults.length,0)
 })
 
-test('独立分类列表每次进入与下拉读取新图，隐藏、旧错误与空结果不恢复示例',async()=>{
+test('独立分类列表每次进入与下拉读取新图，隐藏与空结果不恢复示例',async()=>{
   const cats=[],foods=[],state={stopped:0,toasts:0};let definition
   const deps={
     '../../utils/display':{applyDisplayToCurrentPage(){}},
@@ -99,7 +97,6 @@ test('独立分类列表每次进入与下拉读取新图，隐藏、旧错误�
   const refresh=p.onPullDownRefresh();cats[1].resolve([category('/api/v1/foods/images/40')]);await Promise.resolve();await Promise.resolve()
   foods[1].resolve({records:[{id:'23',image:'latest'}]});await refresh
   assert.equal(state.stopped,1);assert.equal(p.data.list[0].image,'latest')
-  p.onImageError({currentTarget:{dataset:{index:0,src:'first'}}});assert.equal(p.data.list[0].image,'latest')
   const empty=p.onShow();cats[2].resolve([category('')]);await Promise.resolve();await Promise.resolve()
   foods[2].resolve({records:[]});await empty;assert.equal(p.data.list.length,0)
   const hidden=p.onShow();p.onHide();cats[3].resolve([category('')]);await hidden

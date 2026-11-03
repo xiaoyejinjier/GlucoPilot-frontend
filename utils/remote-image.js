@@ -1,15 +1,42 @@
 /**
  * 把 http(s) 图片先下载到本地临时路径再交给 <image>。
- * 真机调试切到广域网后，wx.request 会经调试通道转发，<image src="http://局域网IP"> 仍由手机直连，连不上电脑就会空白。
- * wx.downloadFile 与 wx.request 走同一条调试通道。
+ * 接口请求成功不代表原生 <image> 的网络加载也成功；统一通过下载结果、本地缓存和错误重试显示。
+ * 临时文件被系统清理后重新下载，稳定业务地址始终保留在页面数据中。
  */
 const cache = Object.create(null)
 const pending = Object.create(null)
+const downloadQueue = []
+let activeDownloads = 0
 
-// Backend object and avatar routes follow the current API host. External image URLs stay intact.
+// A food list can contain dozens of images; keep native download concurrency bounded.
+function queueDownload(options) {
+  downloadQueue.push(options)
+  pumpDownloads()
+}
+
+function pumpDownloads() {
+  while (activeDownloads < 5 && downloadQueue.length) {
+    const options = downloadQueue.shift()
+    activeDownloads++
+    let done = false
+    const finish = (callback, result) => {
+      if (done) return
+      done = true
+      try { callback(result) } finally { activeDownloads--; pumpDownloads() }
+    }
+    try {
+      wx.downloadFile({ ...options,
+        success: result => finish(options.success, result),
+        fail: error => finish(options.fail, error)
+      })
+    } catch (error) { finish(options.fail, error) }
+  }
+}
+
+// Stable backend image routes follow the current API host. External CDN URLs stay intact.
 function resolveImageUrl(url) {
   const source = String(url || '').trim()
-  const match = source.match(/^(?:https?:\/\/[^/?#]+)?(\/api\/v1\/media-files\/(?:local-objects|avatars\/[1-9]\d{0,18}))(\?[^#]*)?(?:#.*)?$/i)
+  const match = source.match(/^(?:https?:\/\/[^/?#]+)?(\/api\/v1\/(?:media-files\/(?:local-objects|avatars\/[1-9]\d{0,18})|foods\/(?:images\/[1-9]\d{0,18}|[1-9]\d{0,18}\/image)))(\?[^#]*)?(?:#.*)?$/i)
   if (!match) return source
   const base = String(require('./config').baseUrl || '').replace(/\/+$/, '')
   return base ? base + match[1].slice('/api/v1'.length) + (match[2] || '') : source
@@ -40,7 +67,7 @@ async function loadRemoteImage(url) {
   if (pending[source]) return pending[source]
   delete cache[source]
   const task = new Promise((resolve) => {
-    wx.downloadFile({
+    queueDownload({
       url: source,
       timeout:15000,
       success(res) {

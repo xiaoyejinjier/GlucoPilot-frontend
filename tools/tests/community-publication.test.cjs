@@ -24,6 +24,20 @@ test('回复请求使用目标路径，普通评论沿用原接口；用户内�
 const flush = async () => { for (let i=0;i<20;i++) await Promise.resolve() }
 const deferred = () => { let resolve,reject; const promise = new Promise((a,b) => { resolve=a;reject=b });return {promise,resolve,reject} }
 
+test('社区推荐使用个性化排序，关注及关键词查询使用最新排序，切换标签保留推荐',async()=>{
+  const {page:p,state}=page('index');await flush()
+  const last=()=>state.calls.filter(row=>row.key==='fetchCommunityArticles').at(-1).args[0]
+  assert.equal(last().sort,'RECOMMEND')
+  p.onMode({currentTarget:{dataset:{mode:'following'}}});await flush()
+  assert.equal(last().sort,'LATEST');assert.equal(last().following,true)
+  p.onMode({currentTarget:{dataset:{mode:'recommend'}}});await flush()
+  p.onTag({currentTarget:{dataset:{code:'diet'}}});await flush()
+  assert.equal(last().sort,'RECOMMEND');assert.equal(last().tag,'diet')
+  p.onSearchInput({detail:{value:'早餐'}});p.onSearch();await flush()
+  assert.equal(last().sort,'LATEST');assert.equal(last().keyword,'早餐')
+  p.onUnload()
+})
+
 test('发文和存草稿保留所选可见范围，失败不丢失，回填后可以继续修改',async()=>{
   const {page:p,state}=page('community-compose');await flush()
   p.setData({title:'好友生活记录',body:'今天认真记录了早餐和运动情况，想和互相关注的好友一起交流。'});p.setTags(['daily'])

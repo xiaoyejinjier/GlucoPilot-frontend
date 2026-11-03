@@ -1,6 +1,6 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { fetchFoodCategories, fetchFoods, fetchFoodDetail } = require('../../services/api')
-const { DEFAULT_FOOD_IMAGE, getFoodImage } = require('../../utils/food-images')
+const { getFoodImage } = require('../../utils/food-images')
 
 function categoryItem(category) {
   const name = typeof category === 'string' ? category : category.categoryName
@@ -14,6 +14,8 @@ Page({
     categoryMeta: [],
     keyword: '',
     searchResults: [],
+    categoryImageRevision: 0,
+    foodImageRevision: 0,
     usingRemote: false
   },
 
@@ -41,7 +43,8 @@ Page({
         this.setData({
           usingRemote: true,
           categoryMeta: rows,
-          categories: rows.map(categoryItem)
+          categories: rows.map(categoryItem),
+          categoryImageRevision: this.data.categoryImageRevision + 1
         })
         if (this.data.keyword) return this.reloadFoods()
       })
@@ -50,15 +53,6 @@ Page({
         this.setData({ usingRemote: false })
         wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
       })
-  },
-
-  onCategoryImageError(e) {
-    const { id, src } = e.currentTarget.dataset
-    const index = this.data.categories.findIndex(item => item.id === String(id))
-    const category = this.data.categories[index]
-    if (!category || category.icon !== src) return
-    const fallback = getFoodImage('', category.name)
-    if (category.icon !== fallback) this.setData({ [`categories[${index}].icon`]: fallback })
   },
 
   onSearch(e) {
@@ -97,7 +91,7 @@ Page({
       .then((page) => {
         if (request !== this._foodRequest) return
         const records = (page && page.records) || []
-        this.setData({ searchResults: records })
+        this.setData({ searchResults: records, foodImageRevision: this.data.foodImageRevision + 1 })
       })
       .catch(() => {
         if (request !== this._foodRequest) return
@@ -128,13 +122,5 @@ Page({
     fetchFoodDetail(food.id)
       .then(show)
       .catch((err) => wx.showToast({ title: err.message || '详情加载失败', icon: 'none' }))
-  },
-
-  onImageError(e) {
-    const index = Number(e.currentTarget.dataset.index)
-    const item = this.data.searchResults[index]
-    if (!Number.isInteger(index) || !item || item.image !== e.currentTarget.dataset.src) return
-    if (item.image === DEFAULT_FOOD_IMAGE) return
-    this.setData({ [`searchResults[${index}].image`]: DEFAULT_FOOD_IMAGE })
   }
 })

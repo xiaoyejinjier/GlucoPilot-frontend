@@ -18,11 +18,14 @@ function createFlow(options = {}) {
   const storage = {
     getUserInfo: () => state.storage.get('userInfo') || null,
     saveUserInfo: (value) => state.storage.set('userInfo', value),
-    login: () => state.storage.set('isLoggedIn', true)
+    login: () => state.storage.set('isLoggedIn', true),
+    clearAccountCache() {
+      for (const key of ['accessToken', 'userInfo', 'glucoseRecords', 'isLoggedIn']) state.storage.delete(key)
+    }
   }
   const display = { applyDisplayToCurrentPage() {}, saveDisplaySettings() {}, getDisplayStyle: () => '' }
   const services = {
-    async fetchMe() { state.profiles++; if (options.profileError) throw options.profileError; return { ...state.profile } },
+    async fetchMe() { state.profiles++; if (options.profileError) throw options.profileError; return options.profileFetch ? options.profileFetch() : { ...state.profile } },
     async fetchAppConfig() { state.configs++; return options.configFetch ? options.configFetch() : { TEXT: { 'text.disclaimer.version': 'v1' } } },
     async agreeDisclaimer(version) {
       state.agreements++
@@ -84,6 +87,49 @@ function createFlow(options = {}) {
 }
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+test('全局会话失效只提示并跳转一次，清理账号缓存并保留服务器地址', () => {
+  const { app, state } = createFlow({ route: 'pages/messages/messages', storage: {
+    accessToken: 'old-token', userInfo: { id: '1' }, glucoseRecords: { day: {} }, apiBaseUrl: 'https://api.example.test/api/v1'
+  } })
+  app.globalData.isLoggedIn = true
+  assert.equal(app.handleSessionExpired('old-token', '账号已在其他终端登录，请重新登录'), true)
+  assert.equal(state.storage.has('accessToken'), false)
+  assert.equal(state.storage.has('userInfo'), false)
+  assert.equal(app.globalData.isLoggedIn, false)
+  assert.equal(state.storage.get('apiBaseUrl'), 'https://api.example.test/api/v1')
+  app.handleSessionExpired('old-token', '重复响应')
+  assert.deepEqual(state.routes, ['/pages/login/login'])
+  assert.equal(state.toasts.length, 1)
+  state.storage.set('accessToken', 'new-token')
+  app.globalData.isLoggedIn = true
+  assert.equal(app.handleSessionExpired('old-token', '迟到响应'), false)
+  assert.equal(state.storage.get('accessToken'), 'new-token')
+  assert.equal(app.globalData.isLoggedIn, true)
+})
+
+test('旧资料请求未结束时重新登录使用新请求，迟到401不退出新账号', async () => {
+  let rejectOld, resolveNew, count = 0
+  const oldProfile = new Promise((_resolve, reject) => { rejectOld = reject })
+  const newProfile = new Promise(resolve => { resolveNew = resolve })
+  const flow = createFlow({ route: 'pages/ai/ai', storage: { accessToken: 'old-token' },
+    profileFetch: () => ++count === 1 ? oldProfile : newProfile })
+  flow.app.globalData.isLoggedIn = true
+  const oldFlow = flow.app.enforceDisclaimer()
+  flow.app.handleSessionExpired('old-token', '账号已在其他终端登录，请重新登录')
+  flow.state.storage.set('accessToken', 'new-token')
+  flow.app.globalData.isLoggedIn = true
+  const newFlow = flow.app.goAfterLogin()
+  assert.equal(flow.state.profiles, 2)
+  resolveNew({ disclaimerAgreed: true, disclaimerVersion: 'v1', accountStatus: 1 })
+  await newFlow
+  rejectOld(Object.assign(new Error('old session'), { code: 40100 }))
+  await oldFlow
+  assert.equal(flow.state.storage.get('accessToken'), 'new-token')
+  assert.equal(flow.app.globalData.isLoggedIn, true)
+  assert.equal(flow.state.routes.at(-1), '/pages/ai/ai')
+  assert.equal(flow.state.toasts.length, 1)
+})
 
 test('登录布局避开真机胶囊，返回或窗口改变后重读顶部边界',()=>{
   const options={windowInfo:{statusBarHeight:44},capsule:{bottom:76}},flow=createFlow(options),login=flow.page('login')

@@ -13,7 +13,7 @@ function harness(name, options = {}) {
   const app = { checkLogin: () => !!state.token, resetLoginState() { state.token = ''; state.reset++ } }
   const request = { getToken: () => state.token }
   const wx = { showToast: v => state.toasts.push(v), navigateTo: v => state.navs.push(v), reLaunch: v => state.navs.push(v),
-    setNavigationBarTitle() {}, nextTick(fn) { if(options.manualNextTick)state.ticks.push(fn);else fn() }, pageScrollTo(v) { state.scrolls.push(v);if(v.success)v.success();if(v.complete)v.complete() }, showModal: v => state.modals.push(v), setClipboardData: v => state.clipboard.push(v.data) }
+    setNavigationBarTitle() {}, nextTick(fn) { if(options.manualNextTick)state.ticks.push(fn);else fn() }, pageScrollTo(v) { state.scrolls.push(v);if(v.success)v.success();if(v.complete)v.complete() }, showModal: v => state.modals.push(v), setClipboardData: v => state.clipboard.push(v.data), ...options.wx }
   const socialModule = { exports: {} }
   vm.runInNewContext(fs.readFileSync(path.join(root, 'utils/community.js'), 'utf8'), { module: socialModule, require: () => request, wx, getApp: () => app })
   const implementations = {
@@ -54,6 +54,130 @@ function harness(name, options = {}) {
   page.onShow()
   return { page, state, api: implementations, social: socialModule.exports }
 }
+
+test('找糖友单字模糊搜索保留分页，返回页面后可重新加载单字条件', async () => {
+  const h = harness('community', { route: { mode: 'profiles' }, api: {
+    fetchCommunityList: async (_mode, query) => ({ records: [
+      { key: `u${query.pageNum + 1}`, userId: String(query.pageNum + 1), nickname: `糖友${query.pageNum}` }
+    ], pages: 2 })
+  } })
+  await flush()
+  assert.equal(h.state.calls.length, 0)
+  h.page.onInput({ detail: { value: ' 糖 ' } })
+  await h.page.onSearch()
+  assert.equal(h.state.calls.at(-1).args[1].keyword, '糖')
+  assert.equal(h.page.data.list.length, 1)
+  assert.equal(h.page.data.hasMore, true)
+  await h.page.onMore()
+  assert.equal(h.page.data.list.length, 2)
+  assert.equal(h.state.calls.at(-1).args[1].keyword, '糖')
+  h.page.onHide(); h.page.onShow(); await flush()
+  assert.equal(h.page.data.list.length, 1)
+  h.page.onInput({ detail: { value: ' ' } })
+  const count = h.state.calls.length
+  await h.page.onSearch()
+  assert.equal(h.state.calls.length, count)
+  assert.match(h.state.toasts.at(-1).title, /至少1个字/)
+})
+
+function keyboardHarness(options = {}) {
+  const keyboard = { windowHeight: 720, listeners: new Set() }
+  const wx = { getWindowInfo: () => ({ windowHeight: keyboard.windowHeight }) }
+  if (options.global !== false) {
+    wx.onKeyboardHeightChange = listener => keyboard.listeners.add(listener)
+    wx.offKeyboardHeightChange = listener => keyboard.listeners.delete(listener)
+  }
+  const h = harness('messages', { ...options, wx })
+  return { ...h, keyboard, resize(height) {
+    keyboard.windowHeight = height
+    h.page.onResize({ size: { windowHeight: height } })
+  } }
+}
+
+test('私信键盘：聚焦高度为0且没有全局通知时，组件事件仍抬起整条输入栏并保留草稿', async () => {
+  const { page:p, state } = keyboardHarness({ global:false }); await flush()
+  p.onInput({detail:{value:'尚未发送的文字',cursor:7}})
+  p.onInputFocus({detail:{height:0}})
+  p.onKeyboardHeightChange({detail:{height:300}})
+  assert.equal(p.data.viewportHeight,420)
+  assert.equal(p.data.keyboardHeight,300)
+  assert.equal(p.data.input,'尚未发送的文字')
+  assert.equal(state.calls.some(c=>c.name==='sendDirectMessage'),false)
+  const template=fs.readFileSync(path.join(root,'pages/messages/messages.wxml'),'utf8')
+  assert.match(template,/<input\b[^>]*bindkeyboardheightchange="onKeyboardHeightChange"/)
+  assert.match(template,/adjust-position="\{\{false\}\}"/)
+  p.onUnload()
+})
+
+test('私信键盘：窗口先缩小或键盘先通知都只扣一次高度，收起后恢复', async () => {
+  for (const resizeFirst of [true,false]) {
+    const {page:p,resize}=keyboardHarness();await flush()
+    p.onInputFocus({detail:{}})
+    if(resizeFirst)resize(420)
+    p.onKeyboardHeightChange({height:300})
+    if(!resizeFirst)resize(420)
+    assert.equal(p.data.viewportHeight,420)
+    p.onInputBlur({detail:{cursor:0}})
+    if(resizeFirst)resize(720)
+    p.onKeyboardHeightChange({detail:{height:0}})
+    if(!resizeFirst)resize(720)
+    assert.equal(p.data.viewportHeight,720)
+    assert.equal(p.data.keyboardHeight,0)
+    p.onUnload()
+  }
+})
+
+test('私信键盘：输入法切换和普通窗口缩放可恢复，非法高度不破坏布局', async () => {
+  const {page:p,resize}=keyboardHarness();await flush()
+  resize(600)
+  p.onInputFocus({detail:{height:250}})
+  assert.equal(p.data.viewportHeight,350)
+  p.onKeyboardHeightChange({detail:{height:280}})
+  assert.equal(p.data.viewportHeight,320)
+  for(const height of [-1,NaN,Infinity,'invalid',undefined])p.onKeyboardHeightChange({detail:{height}})
+  assert.equal(p.data.viewportHeight,320)
+  p.onInputBlur({detail:{cursor:0}})
+  p.onKeyboardHeightChange({height:0})
+  assert.equal(p.data.viewportHeight,600)
+  p.onUnload()
+})
+
+test('私信键盘：离页恢复高度并移除监听，返回后旧监听不能覆盖新页面', async () => {
+  const {page:p,keyboard}=keyboardHarness();await flush()
+  assert.equal(keyboard.listeners.size,1)
+  const old=[...keyboard.listeners][0]
+  old({height:300})
+  assert.equal(p.data.viewportHeight,420)
+  p.onHide()
+  assert.equal(p.data.viewportHeight,720)
+  assert.equal(keyboard.listeners.size,0)
+  const hidden=JSON.stringify(p.data)
+  old({height:400});p.onKeyboardHeightChange({detail:{height:400}})
+  assert.equal(JSON.stringify(p.data),hidden)
+  p.onShow();await flush()
+  assert.equal(keyboard.listeners.size,1)
+  old({height:500})
+  assert.equal(p.data.keyboardHeight,0)
+  ;[...keyboard.listeners][0]({height:280})
+  assert.equal(p.data.viewportHeight,440)
+  p.onUnload()
+})
+
+test('私信键盘：组件与全局重复通知不会重复滚动，离页后布局回调失效', async () => {
+  const {page:p,state}=keyboardHarness({manualNextTick:true});await flush()
+  p.setData({messages:[message(9)],scrollTarget:'dm-9'})
+  p.onInputFocus({detail:{height:300}})
+  p.onKeyboardHeightChange({detail:{height:300}})
+  assert.equal(state.ticks.length,1)
+  assert.equal(p.data.scrollTarget,'')
+  state.ticks.shift()()
+  assert.equal(p.data.scrollTarget,'dm-9')
+  p.onKeyboardHeightChange({height:320})
+  p.onHide();const hidden=JSON.stringify(p.data)
+  state.ticks.splice(0).forEach(fn=>fn())
+  assert.equal(JSON.stringify(p.data),hidden)
+  p.onUnload()
+})
 
 const dmPermission=(kind,following=false)=>({canSend:kind!=='WAITING_REPLY',following,mutualFollowing:false,state:kind})
 test('等待状态保留输入和语音表情草稿，点击发送提示而不发请求，回复到来恢复发送',async()=>{

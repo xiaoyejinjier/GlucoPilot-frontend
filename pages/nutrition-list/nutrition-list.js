@@ -1,12 +1,12 @@
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { fetchFoodCategories, fetchFoods } = require('../../services/api')
-const { DEFAULT_FOOD_IMAGE } = require('../../utils/food-images')
 
 Page({
   data: {
     displayStyle: '',
     category: '',
-    list: []
+    list: [],
+    imageRevision: 0
   },
 
   onLoad(options) {
@@ -40,7 +40,8 @@ Page({
         if (!page || request !== this._request) return
         const records = (page.records || []).map((f) => ({ ...f, category }))
         this.setData({
-          list: records
+          list: records,
+          imageRevision: this.data.imageRevision + 1
         })
       })
       .catch(() => {
@@ -59,13 +60,5 @@ Page({
         (item.gi != null ? ` · GI ${item.gi}` : ''),
       showCancel: false
     })
-  },
-
-  onImageError(e) {
-    const index = Number(e.currentTarget.dataset.index)
-    const item = this.data.list[index]
-    if (!Number.isInteger(index) || !item || item.image !== e.currentTarget.dataset.src) return
-    if (item.image === DEFAULT_FOOD_IMAGE) return
-    this.setData({ [`list[${index}].image`]: DEFAULT_FOOD_IMAGE })
   }
 })
