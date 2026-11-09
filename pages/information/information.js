@@ -1,6 +1,7 @@
 const api = require('../../services/api')
 const social = require('../../utils/community')
 const notices = require('../../utils/message-notifications')
+const { getToken } = require('../../utils/request')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const TABS = [{key:'messages',label:'私信',symbol:'✉'},{key:'likes',kind:'LIKE',label:'点赞',symbol:'♡'},{key:'collections',kind:'COLLECT',label:'收藏',symbol:'☆'},{key:'comments',kind:'COMMENT',label:'收到的评论',symbol:'评'},{key:'follows',kind:'FOLLOW',label:'新关注我的',symbol:'友'},{key:'myComments',label:'我的评论',symbol:'说'}]
 Page({
@@ -13,9 +14,34 @@ Page({
     try{const page=tab.key==='myComments'?await api.fetchMyComments({pageNum,pageSize:20}):tab.kind?await api.fetchInteractionNotices(tab.kind,{pageNum,pageSize:20}):await api.fetchCommunityList('messages',{pageNum,pageSize:20});if(!social.active(this,version)||run!==this._run)return;
       const records=page.records.map(item=>tab.key==='myComments'?{...item,rowKey:String(item.id),timeLabel:social.relativeTime(item.createdAt)}:tab.kind?{...item,rowKey:item.id,timeLabel:social.relativeTime(item.createdAt),action:tab.kind==='LIKE'?'赞了你的文章':tab.kind==='COLLECT'?'收藏了你的文章':tab.kind==='COMMENT'?'评论了你':'关注了你'}:{...item,rowKey:item.peer.key,unreadCount:notices.count(item.unreadCount),unreadLabel:notices.label(item.unreadCount),timeLabel:social.timeLabel(item.lastMessage&&item.lastMessage.createdAt)});
       const map=new Map((reset?[]:this.data.list).map(item=>[item.rowKey,item]));records.forEach(item=>map.set(item.rowKey,item));this.setData({list:Array.from(map.values()),pageNum,hasMore:pageNum<Number(page.pages)});
-      if(tab.kind&&records.length)await api.readInteractionNotices(tab.kind,records[0].id);if(social.active(this,version)&&run===this._run)notices.refresh();
+      if(social.active(this,version)&&run===this._run)notices.refresh();
     }catch(error){if(social.active(this,version,error)&&run===this._run){this.setData({error:error.message||'信息加载失败，请重试'});if(error.code===40100)social.failure(this,error,version)}}finally{if(social.active(this,version)&&run===this._run){this._busy=false;this.setData({loading:false})}}},
-  onOpen(e){const item=this.data.list.find(row=>row.rowKey===String(e.currentTarget.dataset.id));if(!item||!social.active(this))return;if(this.data.activeTab==='myComments'){if(!item.articleAvailable)return wx.showToast({title:'文章已不可查看',icon:'none'});wx.navigateTo({url:`/pages/news-detail/news-detail?id=${item.newsId}&comments=1&commentId=${item.id}`});return}if(this.data.activeTab==='messages')wx.navigateTo({url:`/pages/messages/messages?peer=${item.peer.userId}`});else if(item.kind==='FOLLOW')wx.navigateTo({url:`/pages/community-profile/community-profile?key=${item.actor.key}`});else {const target=item.kind==='COMMENT'?'&comments=1'+(/^[1-9]\d{0,18}$/.test(String(item.commentId||''))?`&commentId=${item.commentId}`:''):'';wx.navigateTo({url:`/pages/news-detail/news-detail?id=${item.newsId}${target}`})}},
+  onOpen(e) {
+    const item = this.data.list.find(row => row.rowKey === String(e.currentTarget.dataset.id))
+    if (!item || !social.active(this)) return
+    let url
+    if (this.data.activeTab === 'myComments') {
+      if (!item.articleAvailable) return wx.showToast({title:'文章已不可查看',icon:'none'})
+      url = `/pages/news-detail/news-detail?id=${item.newsId}&comments=1&commentId=${item.id}`
+    } else if (this.data.activeTab === 'messages') {
+      url = `/pages/messages/messages?peer=${item.peer.userId}`
+    } else if (item.kind === 'FOLLOW') {
+      url = `/pages/community-profile/community-profile?key=${item.actor.key}`
+    } else {
+      const target = item.kind === 'COMMENT' ? '&comments=1' + (/^[1-9]\d{0,18}$/.test(String(item.commentId || '')) ? `&commentId=${item.commentId}` : '') : ''
+      url = `/pages/news-detail/news-detail?id=${item.newsId}${target}`
+    }
+    const token = getToken()
+    wx.navigateTo({url, success: () => {
+      // 分类列表加载不标已读；只有具体页面打开成功，才处理对应单条互动。
+      if (!item.kind || item.read || getToken() !== token) return
+      api.readInteractionNotice(item.id).then(() => {
+        if (getToken() === token) notices.refresh(true)
+      }).catch(error => {
+        if (getToken() === token) wx.showToast({title:error.message || '标记失败，请重试',icon:'none'})
+      })
+    }, fail: () => { if (getToken() === token) wx.showToast({title:'页面打开失败，请重试',icon:'none'}) }})
+  },
   onReports(){if(social.active(this))wx.navigateTo({url:'/pages/community-reports/community-reports'})},
   onMore(){return this.load(false)},onRetry(){return this.load(true)},onReachBottom(){this.load(false)},async onPullDownRefresh(){try{await this.load(true);notices.refresh()}finally{wx.stopPullDownRefresh()}}
 })

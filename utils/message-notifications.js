@@ -19,9 +19,12 @@ function publish(value, owner) {
   const tab = typeof page.getTabBar === 'function' && page.getTabBar()
   if (tab) tab.setData({ unreadCount:n })
 }
-async function refresh() {
+async function refresh(force = false) {
   if (!getToken()) { reset(); return }
-  if (!enabled || busy) return
+  if (!enabled) return
+  // 明确的已读操作使旧汇总失效，避免旧请求把红点重新加回来。
+  if (force === true) { epoch++; busy = false }
+  if (busy) return
   if (token !== getToken()) { stop(); start(); return }
   busy = true
   const version = epoch, requestedToken = token

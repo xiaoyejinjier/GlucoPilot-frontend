@@ -193,6 +193,12 @@ function fetchUnreadMessages() { return get('/community/messages/unread', null, 
 function fetchInformationSummary() { return get('/community/information/summary', null, { auth:true }) }
 function fetchInteractionNotices(kind,params) { return get('/community/notifications',{ ...params,kind },{auth:true}) }
 function readInteractionNotices(kind,throughId) { return put('/community/notifications/read',{kind,throughId},{auth:true}) }
+function readInteractionNotice(id) { return put(`/community/notifications/${encodeURIComponent(id)}/read`, null, {auth:true}) }
+function fetchUserReminders(params) { return get('/user-reminders', params, {auth:true}) }
+function fetchUserReminder(kind,id) { return get(`/user-reminders/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`, null, {auth:true}) }
+function readUserReminder(kind,id,revision) { return put(`/user-reminders/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/read`, {revision}, {auth:true}) }
+function readInformationCategory(kind) { return put(`/user-reminders/information/${encodeURIComponent(kind)}/read`, null, {auth:true}) }
+function readAllUserReminders(date) { return put(`/user-reminders/read-all?date=${encodeURIComponent(date)}`, null, {auth:true}) }
 function fetchDrafts(params) { return get('/community/drafts',params,{auth:true}) }
 function fetchDraft(id) { return get(`/community/drafts/${encodeURIComponent(id)}`,null,{auth:true}) }
 function createDraft(payload) { return post('/community/drafts',payload,{auth:true}) }
@@ -626,6 +632,8 @@ module.exports = {
   fetchEnglishLocalizations,
   fetchMutualFriends,setArticleVisibility,hideCommunityArticle,recordArticleView,
   fetchInformationSummary, fetchInteractionNotices, readInteractionNotices,
+  readInteractionNotice, fetchUserReminders, fetchUserReminder, readUserReminder, readInformationCategory,
+  readAllUserReminders,
   fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
   createExportTask, fetchExportTasks, generateExportTask, deleteExportTask,
   fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,

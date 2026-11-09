@@ -463,3 +463,5 @@
   font-weight: 700;
   color: var(--ink);
 }
+/* 从血糖提醒进入时强调关联的实测时段。 */
+.day-row.reminder-focused{border-color:#81b4ef;background:#edf5ff;box-shadow:0 0 0 3rpx rgba(67,133,212,.12)}

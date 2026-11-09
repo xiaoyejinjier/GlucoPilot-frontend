@@ -1,0 +1,10 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="reply-page" style="{{displayStyle}}">
+  <view wx:if="{{loading}}" class="reply-state">{{i18n.t('正在加载…',locale)}}</view>
+  <view wx:elif="{{error}}" class="reply-state"><text>{{i18n.t(error,locale)}}</text><button bindtap="onRetry">{{i18n.t('重试',locale)}}</button></view>
+  <block wx:elif="{{item}}">
+    <view class="reply-card"><view class="reply-meta"><text class="reply-author">{{i18n.t('管理端回复',locale)}}</text><text>{{item.timeText}}</text></view><text class="reply-body">{{item.userReply}}</text></view>
+    <view class="measurement-card"><text class="measurement-title">{{i18n.t('关联测量',locale)}}</text><text class="measurement-date">{{item.recordDate}} · {{i18n.t(item.nodeName,locale)}}</text><view class="measurement-value">{{item.glucoseValue}} <text>mmol/L</text></view><text class="measurement-note">{{i18n.t('回复对应当时的测量，当前记录可能已有更新。',locale)}}</text><button bindtap="onRecord">{{i18n.t('查看记录 ›',locale)}}</button></view>
+    <view wx:if="{{readError}}" class="reply-state"><text>{{i18n.t(readError,locale)}}</text><button bindtap="markRead" disabled="{{reading}}">{{i18n.t('标为已读',locale)}}</button></view>
+  </block>
+</view>

@@ -23,7 +23,7 @@ function harness(name, options = {}) {
     fetchCommunityList: async () => ({ records: [], pages: 0 }),
     fetchDirectMessages: async () => ({ records: [], hasMore: false, nextBeforeId: null }),
     readDirectMessages: async () => ({}), sendDirectMessage: async () => message(5, true),
-    fetchInteractionNotices:async()=>({records:[],pages:0}),readInteractionNotices:async()=>({}),
+    fetchInteractionNotices:async()=>({records:[],pages:0}),readInteractionNotices:async()=>({}),readInteractionNotice:async()=>({}),
     fetchMyComments:async()=>({records:[],pages:0}),
     fetchNewsDetail: async () => ({ id: '10', title: '真实文章', liked: false, collected: false, likeCount: 0, collectCount: 0, commentCount: 0 }),
     fetchNewsComments: async () => ({ records: [], pages: 0 }), addNewsComment: async () => ({}), deleteNewsComment: async () => ({}),
@@ -261,11 +261,14 @@ test('私信表情插入光标位置，语音先按住再确认，超过上限�
   assert.equal(state.calls.filter(c=>c.name==='sendDirectMessage').length,1);p.onUnload()
 })
 
-test('信息中心包含私信点赞收藏评论新关注，按当前类别标记已读并跳到真实目标',async()=>{
+test('信息中心分类加载保持未读，打开具体目标成功后才标记该条',async()=>{
   const {page:p,state}=harness('information',{route:{tab:'likes'},api:{fetchInteractionNotices:async kind=>({records:[{id:'90',kind,actor:{key:'u2',nickname:'糖友'},newsId:'10',newsTitle:'我的文章',createdAt:'2026-10-20T12:00:00',read:false}],pages:1})}})
   await flush();assert.equal(p.data.tabs.map(t=>t.label).join(','),'私信,点赞,收藏,收到的评论,新关注我的,我的评论');assert.equal(p.data.list[0].action,'赞了你的文章')
-  assert.deepEqual(state.calls.find(c=>c.name==='readInteractionNotices').args,['LIKE','90'])
+  assert.equal(state.calls.filter(c=>c.name==='readInteractionNotices'||c.name==='readInteractionNotice').length,0)
   p.onOpen({currentTarget:{dataset:{id:'90'}}});assert.match(state.navs[0].url,/news-detail.*id=10/)
+  assert.equal(state.calls.filter(c=>c.name==='readInteractionNotice').length,0)
+  state.navs[0].success();await flush()
+  assert.deepEqual(state.calls.find(c=>c.name==='readInteractionNotice').args,['90'])
   p.onTab({currentTarget:{dataset:{key:'follows'}}});await flush();p.onOpen({currentTarget:{dataset:{id:'90'}}});assert.match(state.navs[1].url,/community-profile.*key=u2/)
   assert.equal(state.intervals.size,1);p.onHide();assert.equal(state.intervals.size,0)
 })

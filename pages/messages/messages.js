@@ -246,7 +246,7 @@ Page({
       this.setData({ messages, ready: true, ...(empty || reset ? { hasMore: page.hasMore, beforeId: page.nextBeforeId } : {}),
         ...(changed && !preservePosition && !this.data.refreshing ? { scrollTarget: `dm-${last.id}` } : {}) },()=>this.measureList())
       this.applySendPermission(page.sendPermission,permissionEpoch)
-      if (page.records.length) api.readDirectMessages(this._peer, page.records[page.records.length - 1].id).then(() => { if (social.active(this,version)) notifications.refresh() }).catch(error => { if (error.code === 40100) social.failure(this, error, version) })
+      if (page.records.length) api.readDirectMessages(this._peer, page.records[page.records.length - 1].id).then(() => { if (social.active(this,version)) notifications.refresh(true) }).catch(error => { if (error.code === 40100) social.failure(this, error, version) })
     } catch (error) { if (social.active(this, version, error)) { this.setData({ error: error.message || '消息加载失败，点击重试' }); if (!quiet || error.code === 40100) social.failure(this, error, version) } }
     finally { if (social.active(this, version)) { this._loading = false; this.setData({ loading: false });if(this._permissionReload){this._permissionReload=false;this.refreshPermission()} } }
   },

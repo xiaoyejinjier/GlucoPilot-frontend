@@ -43,6 +43,7 @@ function getWeekYAxis(points) {
 Page({
   data: {
     displayStyle: '',
+    reminderNodeCode: '',
     year: 2026,
     month: 9,
     activeView: 'calendar',
@@ -77,6 +78,15 @@ Page({
     weekPickerOptions: [],
     weekChartError: false,
     loading: false
+  },
+
+  onLoad(options = {}) {
+    const date = parseLocalDate(options.date)
+    if (!date || !GLUCOSE_NODES.some(node => node.id === options.nodeCode && !node.isMeal)) return
+    this._inited = true
+    this._reminderFocusPending = true
+    this.setData({ year: date.getFullYear(), month: date.getMonth() + 1, selectedDay: date.getDate(),
+      activeView: 'calendar', viewMode: 'day', reminderNodeCode: options.nodeCode })
   },
 
   onShow() {
@@ -242,6 +252,11 @@ Page({
           dayGlucoseAvg: average,
           dayLoading: false,
           dayLoadFailed: false
+        }, () => {
+          if (this._reminderFocusPending && this.data.reminderNodeCode && requestVersion === this._dayRequestVersion) {
+            this._reminderFocusPending = false
+            wx.pageScrollTo({ selector: '#reminder-node-' + this.data.reminderNodeCode, duration: 250 })
+          }
         })
       })
       .catch((err) => {
