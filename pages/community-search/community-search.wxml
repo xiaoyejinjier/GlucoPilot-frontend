@@ -1,0 +1,9 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="page search-page" style="{{displayStyle}}">
+  <community-search-panel
+    active="{{true}}"
+    show-close="{{false}}"
+    embedded="{{false}}"
+    initial-keyword="{{initialKeyword}}"
+  />
+</view>

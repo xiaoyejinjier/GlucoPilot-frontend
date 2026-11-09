@@ -6,14 +6,14 @@ const tagHistory = require('../../utils/article-tags')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 
 Page({
-  data: { displayStyle: '', tags: [], otherTags:[],otherSelected:false,tagsError:'',activeTag: '', feedMode: 'recommend', keyword: '', posts: [],
-    loading: false, error: '', pageNum: 0, hasMore: false },
+  data: { displayStyle: '', tags: [], otherTags:[],otherSelected:false,tagsError:'',activeTag: '', feedMode: 'recommend', posts: [],
+    loading: false, error: '', pageNum: 0, hasMore: false, searchMounted: false, searchOpen: false },
   onShow() {
     if (!getApp().checkLogin()) return
     const tabBar = typeof this.getTabBar === 'function' && this.getTabBar()
     if (tabBar) { tabBar.setData({ selected: 2 }); if (tabBar.refreshGuide) tabBar.refreshGuide() }
     const token = this._communityToken; social.begin(this); applyDisplayToCurrentPage()
-    if (token && token !== this._communityToken) this.setData({ posts: [], keyword: '', activeTag: '', feedMode: 'recommend',tags:[],otherTags:[],otherSelected:false })
+    if (token && token !== this._communityToken) this.setData({ posts: [], activeTag: '', feedMode: 'recommend',tags:[],otherTags:[],otherSelected:false })
     this._busy = new Set(); this.load(true)
     this.loadTags()
   },
@@ -56,37 +56,82 @@ Page({
     const pageNum = reset ? 1 : this.data.pageNum + 1
     this.setData({ loading: true, error: '' })
     try {
-      const page = await api.fetchCommunityArticles({ pageNum, pageSize: 15, tag: this.data.activeTag,
-        following: this.data.feedMode === 'following', keyword: this.data.keyword.trim(),
-        sort: this.data.feedMode === 'following' || this.data.keyword.trim() ? 'LATEST' : 'RECOMMEND' })
+      const hot = this.data.feedMode === 'hot'
+      const page = hot
+        ? await api.fetchHotArticles({ limit: 10 })
+        : await api.fetchCommunityArticles({ pageNum, pageSize: 15, tag: this.data.activeTag,
+            following: this.data.feedMode === 'following',
+            sort: this.data.feedMode === 'following' ? 'LATEST' : 'RECOMMEND' })
       if (!social.active(this, version) || run !== this._loadRun) return
-      const records = (await mapField(page.records || [], 'cover')).map(post => ({ ...post, timeLabel: social.timeLabel(post.publishAt || post.createdAt) }))
+      const records = (await mapField(page.records || [], 'cover')).map((post, index) => ({
+        ...post,
+        images: post.images || [],
+        videos: post.videos || [],
+        tags: post.tags || [],
+        timeLabel: social.timeLabel(post.publishAt || post.createdAt),
+        hotRank: hot ? index + 1 : 0
+      }))
       if (!social.active(this, version) || run !== this._loadRun) return
-      const map = new Map((reset ? [] : this.data.posts).map(post => [post.id, post])); records.forEach(post => map.set(post.id, post))
-      this.setData({ posts: Array.from(map.values()), pageNum, hasMore: pageNum < Number(page.pages), loading: false })
+      const map = new Map((reset || hot ? [] : this.data.posts).map(post => [post.id, post])); records.forEach(post => map.set(post.id, post))
+      this.setData({ posts: Array.from(map.values()), pageNum: hot ? 1 : pageNum, hasMore: hot ? false : pageNum < Number(page.pages), loading: false })
     } catch (error) {
       if (!social.active(this, version, error) || run !== this._loadRun) return
       this.setData({ loading: false, error: error.message || '社区加载失败，请重试', ...(reset ? { posts: [], hasMore: false } : {}) })
       if (error.code === 40100) social.failure(this, error, version)
     }
   },
-  onMode(e) { const mode = e.currentTarget.dataset.mode; if (!['recommend','following'].includes(mode) || mode === this.data.feedMode) return; this.setData({ feedMode: mode, posts: [] }); this.load(true) },
+  onMode(e) {
+    const mode = e.currentTarget.dataset.mode
+    if (!['recommend','following','hot'].includes(mode) || mode === this.data.feedMode) return
+    this.setData({
+      feedMode: mode,
+      posts: [],
+      ...(mode === 'hot' ? { activeTag: '', otherSelected: false } : {})
+    })
+    this.load(true)
+  },
   onTag(e) {
     const code = e.currentTarget.dataset.code || ''
     if (code === 'other') return this.openMyTags()
     if (code === this.data.activeTag) return
-    this.setData({ activeTag: code, otherSelected: false, posts: [] })
+    this.setData({ activeTag: code, otherSelected: false, posts: [], ...(this.data.feedMode === 'hot' ? { feedMode: 'recommend' } : {}) })
     this.load(true)
   },
-  onSearchInput(e) { this.setData({ keyword: e.detail.value }) },
-  onSearch() { this.load(true) }, onRetry() { this.load(true) }, onMore() { this.load(false) }, onReachBottom() { this.load(false) },
+  onOpenSearch() {
+    if (!social.active(this)) return
+    this._searchCloseTimer && clearTimeout(this._searchCloseTimer)
+    this.setData({ searchMounted: true, searchOpen: false })
+    const defer = typeof wx.nextTick === 'function' ? wx.nextTick : (fn) => setTimeout(fn, 16)
+    defer(() => this.setData({ searchOpen: true }))
+  },
+  onCloseSearch() {
+    if (!this.data.searchMounted) return
+    this.setData({ searchOpen: false })
+    this._searchCloseTimer && clearTimeout(this._searchCloseTimer)
+    this._searchCloseTimer = setTimeout(() => {
+      if (!this.data.searchOpen) this.setData({ searchMounted: false })
+    }, 240)
+  },
+  onSearchOverlayTouchMove() {},
+  onRetry() { this.load(true) },
+  onMore() { this.load(false) },
+  onReachBottom() { this.load(false) },
   async onPullDownRefresh() { try { await Promise.all([this.loadTags(),this.load(true)]) } finally { wx.stopPullDownRefresh() } },
   onWrite() { wx.navigateTo({ url: '/pages/community-compose/community-compose' }) },
   onMyArticles() { wx.navigateTo({ url: '/pages/community-articles/community-articles' }) },
   onOpen(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}` }) },
   onComments(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}&comments=1` }) },
   onProfile(e) { const key = e.currentTarget.dataset.key; if (/^[ub][1-9]\d{0,18}$/.test(String(key || ''))) wx.navigateTo({ url: `/pages/community-profile/community-profile?key=${key}` }) },
-  onCommunityEntry(e) { if(e.currentTarget.dataset.mode === 'messages') { wx.navigateTo({url:'/pages/information/information'}); return } const mode = e.currentTarget.dataset.mode; if (['following','likes','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` }) },
+  onCommunityEntry(e) {
+    const mode = e.currentTarget.dataset.mode
+    if (mode === 'messages') { wx.navigateTo({ url: '/pages/information/information' }); return }
+    if (mode === 'hot') {
+      if (this.data.feedMode !== 'hot') this.setData({ feedMode: 'hot', posts: [], activeTag: '', otherSelected: false })
+      this.load(true)
+      return
+    }
+    if (['following','likes','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` })
+  },
   onReport(e) {
     const id=String(e.currentTarget.dataset.id),post=this.data.posts.find(row=>String(row.id)===id)
     if(!post||!social.active(this))return

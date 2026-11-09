@@ -224,6 +224,15 @@ function fetchCommunityArticles(params = {}) {
   return get('/community/articles', params, { auth: true })
     .then(page => ({ ...page, records: (page.records || []).map(mapCommunityArticle) }))
 }
+function fetchHotArticles(params = {}) {
+  return get('/community/hot-articles', { limit: (params && params.limit) || 10 }, { auth: true })
+    .then(body => ({
+      records: (body && body.records || []).map(mapCommunityArticle),
+      generatedAt: body && body.generatedAt,
+      total: body && body.total != null ? body.total : ((body && body.records) || []).length,
+      pages: 1
+    }))
+}
 function fetchMyArticles(params) { return get('/community/articles/mine', params, { auth: true }) }
 function fetchMutualFriends(params) { return get('/community/friends',params,{auth:true}) }
 function setArticleVisibility(id,payload) { return put(`/community/articles/${encodeURIComponent(id)}/visibility`,payload,{auth:true}) }
@@ -636,7 +645,7 @@ module.exports = {
   readAllUserReminders,
   fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
   createExportTask, fetchExportTasks, generateExportTask, deleteExportTask,
-  fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchMyArticles, fetchCommunityArticle,
+  fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchHotArticles, fetchMyArticles, fetchCommunityArticle,
   submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
   fetchCommunityProfile, setCommunityFollowing, fetchCommunityList, fetchMyReports, fetchReportFeedback, readReportFeedback,
   fetchNewsComments, fetchCommentContext, fetchCommentReplies, addNewsComment, deleteNewsComment, fetchMyComments,
