@@ -312,6 +312,8 @@ test('从历史列表进入：直接用带过来的 sessionId 读历史，不再
   assert.equal(page.data.fromHistory, true)
   assert.equal(page.data.sessionTitle, '控糖饮食怎么记')
   assert.equal(page.data.sessionReadOnly, true)
+  // 只读提示换成「点按钮」，而不是既有的「请退出小语后重新进入」
+  assert.equal(page.data.sessionNotice, '历史对话只能查看，继续聊天请点「回到当前对话」')
   assert.equal(state.titles[state.titles.length - 1].title, '控糖饮食怎么记')
 
   page.onShow()

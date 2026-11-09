@@ -10,6 +10,9 @@ const app = getApp()
 const DELTA_FLUSH_MS = 60
 const HISTORY_PAGE_SIZE = 20
 
+/** 从历史列表进来时的只读提示：这里已经有按钮，不该再让用户「退出小语重新进入」 */
+const HISTORY_READONLY_NOTICE = '历史对话只能查看，继续聊天请点「回到当前对话」'
+
 function pad2(n) {
   return String(n).padStart(2, '0')
 }
@@ -220,12 +223,16 @@ Page({
     const sessionId = toIdString(params.sessionId)
     if (!sessionId) return
     const title = String(params.title || '').trim()
-    this.setData({
+    const gate = sessionGate(params.sessionStatus)
+    const preset = {
       sessionId,
       sessionTitle: title || DEFAULT_TITLE,
       fromHistory: true,
-      ...this.gateData(sessionGate(params.sessionStatus))
-    })
+      ...this.gateData(gate)
+    }
+    // 只读时换一句更准确的提示：既有文案是「请退出小语后重新进入」，而这里已经给了按钮
+    if (gate.readOnly) preset.sessionNotice = HISTORY_READONLY_NOTICE
+    this.setData(preset)
     // 标题优先用列表带来的（已含默认标题兜底），避免历史页显示统一叫「小语」
     if (title) wx.setNavigationBarTitle({ title })
   },
