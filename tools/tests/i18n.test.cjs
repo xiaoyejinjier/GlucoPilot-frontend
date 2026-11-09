@@ -55,7 +55,10 @@ test('动态标题切换语言或从缓存返回不丢失，文章名和对方�
 })
 test('JS和WXS同源，所有内置文案中英文一致，日期计数和复合状态没有中文残留',()=>{
   const generated=require('../build-i18n.cjs').build()
-  for(const [file,content] of Object.entries(generated))assert.equal(fs.readFileSync(path.join(root,file),'utf8'),content,file)
+  // 行尾由 git 检出策略决定（core.autocrlf=true 时工作区是 CRLF），与生成逻辑无关，
+  // 比较前统一归一化，避免测试结果依赖开发机平台的换行配置。
+  const normalize=text=>text.replace(/\r\n/g,'\n')
+  for(const [file,content] of Object.entries(generated))assert.equal(normalize(fs.readFileSync(path.join(root,file),'utf8')),normalize(content),file)
   const module={exports:{}}
   vm.runInNewContext(fs.readFileSync(path.join(root,'utils/i18n.wxs'),'utf8'),{module,getRegExp:RegExp})
   for(const [zh,en] of Object.entries(catalog.messages)){
