@@ -9,6 +9,7 @@
     "pages/stats/stats",
     "pages/glucose-reply/glucose-reply",
     "pages/mine/mine",
+    "pages/chat-history/chat-history",
     "pages/news-detail/news-detail",
     "pages/community/community",
     "pages/community-search/community-search",

@@ -1468,3 +1468,19 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 热帖加载失败	Unable to load trending posts
 请输入搜索词	Enter a search term
 搜索失败，请重试	Search failed. Please try again.
+历史对话	Past chats
+与小语聊过的内容都会留在这里，点开任意一条继续看	Everything you discuss with Xiaoyu stays here. Open any entry to read on.
+历史对话加载失败	Unable to load past chats
+暂无历史对话	No past chats yet
+和小语聊天后，对话会出现在这里	Your chats with Xiaoyu will appear here.
+我的对话	My chats
+和小语聊过的历史对话	Past conversations with Xiaoyu
+回到当前对话	Back to current chat
+置顶	Pin
+取消置顶	Unpin
+已置顶	Pinned
+已取消置顶	Unpinned
+删除对话	Delete chat
+删除后不可恢复，确定删除这个对话吗？	This chat cannot be restored. Delete it?
+对话已删除	Chat deleted
+条消息	messages
