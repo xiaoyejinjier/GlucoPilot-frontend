@@ -1,0 +1,137 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="search-panel {{embedded ? 'embedded' : 'page-mode'}}">
+  <view class="search-bar">
+    <text wx:if="{{showClose}}" class="search-back ui-interactive" bindtap="onClose" hover-class="ui-pressed">←</text>
+    <view class="search-field">
+      <text class="search-icon">⌕</text>
+      <input
+        class="search-input"
+        focus="{{inputFocus}}"
+        value="{{keyword}}"
+        maxlength="80"
+        confirm-type="search"
+        placeholder="{{i18n.t('搜索感兴趣的内容', locale)}}"
+        bindinput="onInput"
+        bindconfirm="onConfirmSearch"
+      />
+      <text wx:if="{{keyword}}" class="search-clear ui-interactive" bindtap="onClearInput" hover-class="ui-pressed">×</text>
+    </view>
+    <text class="search-submit ui-interactive" bindtap="onConfirmSearch" hover-class="ui-pressed">{{i18n.t("搜索", locale)}}</text>
+  </view>
+
+  <scroll-view
+    class="search-body"
+    scroll-y
+    enhanced="{{true}}"
+    show-scrollbar="{{false}}"
+    bindscrolltolower="onReachBottom"
+  >
+    <block wx:if="{{panel === 'landing'}}">
+      <view wx:if="{{history.length}}" class="section">
+        <view class="section-head">
+          <text class="section-title">{{i18n.t("搜索历史", locale)}}</text>
+          <text class="section-action ui-interactive" bindtap="onClearHistory" hover-class="ui-pressed">{{i18n.t("清空", locale)}}</text>
+        </view>
+        <view class="history-list">
+          <text
+            wx:for="{{history}}"
+            wx:key="*this"
+            class="history-chip ui-interactive"
+            data-keyword="{{item}}"
+            bindtap="onTapHistory"
+            hover-class="ui-pressed"
+          >{{item}}</text>
+        </view>
+      </view>
+
+      <view class="section">
+        <view class="section-head">
+          <text class="section-title">{{i18n.t("社区热搜", locale)}}</text>
+        </view>
+        <view wx:if="{{hotLoading}}" class="state">{{i18n.t("正在加载热帖…", locale)}}</view>
+        <view wx:elif="{{hotError}}" class="state action ui-interactive" bindtap="onRetryHot" hover-class="ui-pressed">{{i18n.t((hotError) + " · 点击重试", locale)}}</view>
+        <view wx:elif="{{!hotLeft.length}}" class="state">{{i18n.t("暂无热帖", locale)}}</view>
+        <view wx:else class="hot-grid">
+          <view class="hot-col">
+            <view
+              wx:for="{{hotLeft}}"
+              wx:key="id"
+              class="hot-row ui-interactive"
+              data-id="{{item.id}}"
+              bindtap="onOpenHot"
+              hover-class="ui-pressed"
+            >
+              <text class="hot-rank {{item.rank <= 3 ? 'top' : ''}}">{{item.rank}}</text>
+              <text class="hot-title">{{item.title}}</text>
+            </view>
+          </view>
+          <view class="hot-col">
+            <view
+              wx:for="{{hotRight}}"
+              wx:key="id"
+              class="hot-row ui-interactive"
+              data-id="{{item.id}}"
+              bindtap="onOpenHot"
+              hover-class="ui-pressed"
+            >
+              <text class="hot-rank">{{item.rank}}</text>
+              <text class="hot-title">{{item.title}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <block wx:elif="{{panel === 'suggest'}}">
+      <view wx:if="{{suggestLoading}}" class="state">{{i18n.t("正在匹配…", locale)}}</view>
+      <view wx:elif="{{suggestEmpty}}" class="state">{{i18n.t("暂无匹配", locale)}}</view>
+      <view wx:else class="suggest-list">
+        <view
+          wx:for="{{suggests}}"
+          wx:key="id"
+          class="suggest-row ui-interactive"
+          data-title="{{item.title}}"
+          bindtap="onTapSuggest"
+          hover-class="ui-pressed"
+        >
+          <text class="suggest-text">
+            <text>{{item.before}}</text><text class="suggest-match">{{item.match}}</text><text>{{item.after}}</text>
+          </text>
+        </view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view wx:if="{{resultLoading && !results.length}}" class="state">{{i18n.t("正在搜索…", locale)}}</view>
+      <view wx:elif="{{resultError && !results.length}}" class="feed-empty">
+        <text class="empty-title">{{i18n.t("暂时没能加载内容", locale)}}</text>
+        <text class="empty-copy">{{i18n.t((resultError), locale)}}</text>
+        <button class="ui-interactive" bindtap="onRetryResult" hover-class="ui-pressed">{{i18n.t("重新加载", locale)}}</button>
+      </view>
+      <view wx:elif="{{!results.length}}" class="feed-empty">
+        <text class="empty-title">{{i18n.t("没有找到相关内容", locale)}}</text>
+        <text class="empty-copy">{{i18n.t("试试其他关键词，或看看社区热搜", locale)}}</text>
+      </view>
+      <block wx:else>
+        <view
+          wx:for="{{results}}"
+          wx:key="id"
+          class="result-card ui-interactive"
+          data-id="{{item.id}}"
+          bindtap="onOpenResult"
+          hover-class="ui-pressed"
+        >
+          <image wx:if="{{item.hasCover}}" class="result-cover" src="{{item.cover}}" mode="aspectFill" />
+          <view class="result-copy">
+            <text class="result-title">{{i18n.content(contentTranslations, 'ARTICLE_PREVIEW', item.id, 'title', item.title, locale)}}</text>
+            <text class="result-summary">{{i18n.content(contentTranslations, 'ARTICLE_PREVIEW', item.id, 'summary', item.summary, locale)}}</text>
+            <text class="result-meta">{{i18n.t((item.timeLabel), locale)}}</text>
+          </view>
+        </view>
+        <view wx:if="{{resultLoading}}" class="state">{{i18n.t("正在加载更多…", locale)}}</view>
+        <view wx:elif="{{hasMore}}" class="state action ui-interactive" bindtap="onMoreResults" hover-class="ui-pressed">{{i18n.t("加载更多", locale)}}</view>
+        <view wx:else class="state">{{i18n.t("已经看到这里啦", locale)}}</view>
+      </block>
+    </block>
+  </scroll-view>
+</view>

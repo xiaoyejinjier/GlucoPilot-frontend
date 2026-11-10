@@ -1450,3 +1450,52 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 输入昵称，至少1个字	Search by nickname (at least 1 character)
 请输入至少1个字的昵称	Enter at least 1 character of a nickname
 账号已在其他终端登录，请重新登录	Your account was signed in on another device. Please sign in again.
+全部已读	Mark all as read
+标为已读	Mark as read
+查看记录 ›	View record ›
+查看回复 ›	View reply ›
+已标为已读	Marked as read
+已全部标为已读	Marked all as read
+页面打开失败，请重试	Unable to open this page. Please try again.
+标记失败，请重试	Unable to mark as read. Please try again.
+提醒不存在或已更新	This reminder is unavailable or has been updated.
+提醒内容已更新，请刷新后查看	This reminder has changed. Refresh to view the latest content.
+回复对应当时的测量，当前记录可能已有更新。	This reply refers to the measurement at that time. The current record may have changed.
+处理中…	Processing…
+热榜	Trending
+全站讨论热度 Top10	Top 10 trending articles
+按互动与时效加权，约每两分钟更新	Ranked by engagement and recency. Updated about every two minutes.
+讨论热度 · 时效加权	Engagement · Recency
+正在加载热榜…	Loading trending articles…
+热榜暂无内容	No trending articles yet
+互动起来后，讨论热度高的文章会出现在这里。	Popular discussions will appear here as people engage.
+搜索历史	Search history
+清空	Clear
+社区热搜	Trending in the community
+正在加载热帖…	Loading trending posts…
+暂无热帖	No trending posts yet
+正在匹配…	Finding matches…
+暂无匹配	No matches
+正在搜索…	Searching…
+没有找到相关内容	No matching content found
+试试其他关键词，或看看社区热搜	Try another keyword or explore trending posts.
+热帖加载失败	Unable to load trending posts
+请输入搜索词	Enter a search term
+搜索失败，请重试	Search failed. Please try again.
+历史对话	Past chats
+与小语聊过的内容都会留在这里，点开任意一条继续看	Everything you discuss with Xiaoyu stays here. Open any entry to read on.
+历史对话加载失败	Unable to load past chats
+暂无历史对话	No past chats yet
+和小语聊天后，对话会出现在这里	Your chats with Xiaoyu will appear here.
+我的对话	My chats
+和小语聊过的历史对话	Past conversations with Xiaoyu
+回到当前对话	Back to current chat
+置顶	Pin
+取消置顶	Unpin
+已置顶	Pinned
+已取消置顶	Unpinned
+删除对话	Delete chat
+删除后不可恢复，确定删除这个对话吗？	This chat cannot be restored. Delete it?
+对话已删除	Chat deleted
+条消息	messages
+历史对话只能查看，继续聊天请点「回到当前对话」	Past chats are read-only. Tap Back to current chat to continue.

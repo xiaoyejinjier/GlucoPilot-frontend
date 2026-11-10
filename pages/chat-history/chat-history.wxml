@@ -1,0 +1,58 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">{{i18n.t("与小语聊过的内容都会留在这里，点开任意一条继续看", locale)}}</text>
+  </view>
+
+  <view class="history-filters">
+    <view
+      wx:for="{{filters}}"
+      wx:key="label"
+      class="filter-chip ui-interactive {{filterKey === item.key ? 'is-active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="onFilterTap"
+      hover-class="ui-pressed"
+      hover-start-time="0"
+      hover-stay-time="90"
+      hover-stop-propagation="{{true}}"
+    >{{i18n.t(item.label, locale)}}</view>
+  </view>
+
+  <view wx:if="{{error && list.length === 0}}" class="card empty-card">
+    <text class="empty-text">{{i18n.t("历史对话加载失败", locale)}}</text>
+    <text class="empty-hint">{{i18n.t("请检查网络后点击刷新", locale)}}</text>
+    <view class="empty-action ui-interactive" bindtap="onRetry" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重试", locale)}}</view>
+  </view>
+
+  <view wx:elif="{{!loading && list.length === 0}}" class="card empty-card">
+    <text class="empty-text">{{i18n.t("暂无历史对话", locale)}}</text>
+    <text class="empty-hint">{{i18n.t("和小语聊天后，对话会出现在这里", locale)}}</text>
+  </view>
+
+  <view
+    wx:for="{{list}}"
+    wx:key="id"
+    class="card history-card ui-interactive"
+    data-id="{{item.id}}"
+    bindtap="onSessionTap"
+    bindlongpress="onSessionLongPress"
+    hover-class="ui-pressed"
+    hover-start-time="0"
+    hover-stay-time="90"
+  >
+    <view class="history-head">
+      <text class="history-title">{{i18n.t((item.title), locale)}}</text>
+      <text wx:if="{{item.isPinned}}" class="history-pin">{{i18n.t("置顶", locale)}}</text>
+    </view>
+    <text wx:if="{{item.lastMessagePreview}}" class="history-preview">{{item.lastMessagePreview}}</text>
+    <view class="history-meta">
+      <text class="history-status {{item.sessionStatus === 1 ? 'is-active' : ''}}">{{i18n.t((item.sessionStatusText), locale)}}</text>
+      <text class="history-dot">·</text>
+      <text class="history-count">{{item.msgCount}} {{i18n.t("条消息", locale)}}</text>
+      <text class="history-time">{{item.timeText}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="history-footer">{{i18n.t("正在加载…", locale)}}</view>
+  <view wx:elif="{{list.length > 0 && !hasMore}}" class="history-footer">{{i18n.t("已经是全部记录了", locale)}}</view>
+</view>

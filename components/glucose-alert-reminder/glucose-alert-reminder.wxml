@@ -23,20 +23,33 @@
         <text class="notice-dialog-title">{{i18n.t("提醒与回复", locale)}}</text>
         <text class="notice-dialog-subtitle">{{i18n.t("查看新信息、血糖提醒与跟进回复", locale)}}</text>
       </view>
-      <view class="notice-close" bindtap="closeNotice" hover-class="notice-close-pressed" aria-role="button" aria-label="{{i18n.t('关闭提醒与回复', locale)}}"><view class="close-icon" aria-hidden="true"></view></view>
+      <view class="notice-heading-actions">
+        <button class="notice-read-all" catchtap="onReadAll" disabled="{{allReading || !!reading || !!informationReading || repliesLoading || (!alerts.length && !replyTotal && !socialTotal)}}">{{i18n.t(allReading ? '处理中…' : '全部已读', locale)}}</button>
+        <view class="notice-close" bindtap="closeNotice" hover-class="notice-close-pressed" aria-role="button" aria-label="{{i18n.t('关闭提醒与回复', locale)}}"><view class="close-icon" aria-hidden="true"></view></view>
+      </view>
     </view>
     <scroll-view class="notice-scroll" scroll-y="{{true}}" catchtouchmove="onNoticeContentTap">
       <view class="notice-content">
         <view wx:if="{{!alerts.length && !socialItems.length && !replyTotal && !repliesError && !repliesLoading}}" class="notice-empty reply-card"><view class="notice-entry-icon" aria-hidden="true"><view class="message-icon"></view></view><text class="empty-title">{{i18n.t('暂无新消息', locale)}}</text><text>{{i18n.t('有新信息、血糖提醒或跟进回复时，会在这里提醒你。', locale)}}</text></view>
-        <view wx:if="{{socialItems.length}}" class="reply-card"><view class="reply-heading"><view class="notice-section-label"><text>{{i18n.t("新信息", locale)}}</text></view></view><view wx:for="{{socialItems}}" wx:key="key" class="social-notice-row ui-interactive" data-key="{{item.key}}" bindtap="onInformation" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text>{{i18n.t((item.title), locale)}}</text><view><text class="social-notice-count">{{i18n.t((item.count > 99 ? '99+' : item.count), locale)}}</text><text> ›</text></view></view></view>
+        <view wx:if="{{socialItems.length}}" class="reply-card">
+          <view class="reply-heading"><view class="notice-section-label"><text>{{i18n.t("新信息", locale)}}</text></view></view>
+          <view wx:for="{{socialItems}}" wx:key="key" class="social-notice-row ui-interactive" data-key="{{item.key}}" bindtap="onInformation" hover-class="ui-pressed">
+            <view class="social-notice-target"><text>{{i18n.t(item.title, locale)}}</text><text class="social-notice-count">{{item.count > 99 ? '99+' : item.count}}</text><text> ›</text></view>
+            <button class="notice-read-button" data-key="{{item.key}}" catchtap="onReadInformation" disabled="{{!!informationReading || allReading}}">{{i18n.t(informationReading === item.key ? '处理中…' : '全部已读', locale)}}</button>
+          </view>
+        </view>
         <view wx:if="{{alerts.length}}" class="alert-card">
           <view class="alert-heading">
             <view class="notice-section-label"><view class="section-mark alert-mark" aria-hidden="true">!</view><text class="alert-title">{{i18n.t("血糖提醒", locale)}}</text></view>
             <text class="section-count">{{i18n.t("今日 " + (alerts.length) + " 条", locale)}}</text>
           </view>
-          <view wx:for="{{alerts}}" wx:key="id" class="alert-item {{item.type}}">
+          <view wx:for="{{alerts}}" wx:key="id" class="alert-item {{item.type}}" data-kind="GLUCOSE" data-id="{{item.id}}" bindtap="onOpenReminder">
             <view class="alert-item-label"><text class="alert-node-name">{{i18n.t((item.name), locale)}}</text><text class="alert-badge">{{i18n.t((item.label), locale)}}</text></view>
             <view class="alert-reading"><text class="alert-value">{{i18n.t((item.value), locale)}}</text><text class="alert-unit">mmol/L</text></view>
+            <view wx:if="{{item.revision}}" class="notice-item-actions">
+              <text class="notice-view-link" data-kind="GLUCOSE" data-id="{{item.id}}" catchtap="onOpenReminder">{{i18n.t('查看记录 ›', locale)}}</text>
+              <button class="notice-read-button" data-kind="GLUCOSE" data-id="{{item.id}}" catchtap="onReadReminder" disabled="{{!!reading || allReading}}">{{i18n.t('标为已读', locale)}}</button>
+            </view>
           </view>
           <view wx:if="{{!alerts.length}}" class="notice-empty"><text class="empty-title">{{i18n.t("暂无异常提醒", locale)}}</text><text>{{i18n.t("今日暂无已记录的异常实测血糖提醒。", locale)}}</text></view>
           <text wx:else class="alert-tip">{{i18n.t("以上为当日已记录的实测值，请核对测量结果并留意身体状况。如有明显不适或数值持续异常，请及时寻求专业帮助。", locale)}}</text>
@@ -46,13 +59,17 @@
             <view class="notice-section-label"><view class="section-mark reply-mark" aria-hidden="true"><view class="message-icon"></view></view><text>{{i18n.t("管理端回复", locale)}}</text></view>
             <view class="reply-action reply-refresh" catchtap="refreshReplies" hover-class="reply-action-pressed" aria-role="button" aria-label="{{i18n.t('刷新管理端回复', locale)}}"><text class="refresh-icon {{repliesLoading ? 'is-loading' : ''}}" aria-hidden="true">↻</text><text>{{i18n.t((repliesLoading ? '刷新中…' : '刷新回复'), locale)}}</text></view>
           </view>
-          <view wx:for="{{replies}}" wx:key="id" class="reply-item">
+          <view wx:for="{{replies}}" wx:key="id" class="reply-item" data-kind="REPLY" data-id="{{item.id}}" bindtap="onOpenReminder">
             <view class="reply-item-heading"><text class="reply-author">{{i18n.t("管理端", locale)}}</text><text class="reply-time">{{i18n.t((item.repliedAtText), locale)}}</text></view>
             <text class="reply-content">{{item.userReply}}</text>
             <view class="reply-record">
               <text class="reply-record-label">{{i18n.t("关联测量", locale)}}</text>
               <text class="reply-context">{{i18n.t((item.recordDate) + " · " + (item.nodeName) + " · " + (item.glucoseValue) + " mmol/L", locale)}}</text>
               <text class="reply-measurement">{{i18n.t("测量时间：" + (item.recordedAtText), locale)}}</text>
+            </view>
+            <view class="notice-item-actions">
+              <text class="notice-view-link" data-kind="REPLY" data-id="{{item.id}}" catchtap="onOpenReminder">{{i18n.t('查看回复 ›', locale)}}</text>
+              <button class="notice-read-button" data-kind="REPLY" data-id="{{item.id}}" catchtap="onReadReminder" disabled="{{!!reading || allReading}}">{{i18n.t('标为已读', locale)}}</button>
             </view>
           </view>
           <view wx:if="{{!replies.length && !repliesLoading && !repliesError}}" class="notice-empty"><text class="empty-title">{{i18n.t("暂无管理端回复", locale)}}</text><text>{{i18n.t("有跟进回复时，会在这里展示。", locale)}}</text></view>

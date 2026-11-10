@@ -33,7 +33,7 @@ Page({
   async markRead(){
     const item=this.data.selected;if(!social.active(this)||!item||!item.unread||this._reading)return
     this._reading=true;const version=this._communityVersion;this.setData({readError:false})
-    try{await api.readReportFeedback(item.id);if(!social.active(this,version))return;this.setData({selected:{...this.data.selected,feedbackRead:true,unread:false}});notices.refresh()}
+    try{await api.readReportFeedback(item.id);if(!social.active(this,version))return;this.setData({selected:{...this.data.selected,feedbackRead:true,unread:false}});notices.refresh(true)}
     catch(error){if(social.active(this,version,error)){this.setData({readError:true});if(error.code===40100)social.failure(this,error,version)}}
     finally{if(social.active(this,version))this._reading=false}
   },

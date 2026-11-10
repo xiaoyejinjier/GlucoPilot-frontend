@@ -32,15 +32,18 @@ test('提醒只派生显示数据，不修改原节点、数值或缓存', () =>
   assert.equal(alerts[1].name, '晚餐后')
 })
 
-function createComponent(fetchReplies = async () => ({ records: [], total: 0 })) {
+function createComponent(fetchReplies = async () => ({ records: [], total: 0 }), overrides = {}) {
   let component
-  const state = { token: 'test-user-a', calls: [], events: [],navs:[] }
+  const state = { token: 'test-user-a', calls: [], events: [],navs:[],reads:[],toasts:[],navFails:false,refreshes:0 }
   vm.runInNewContext(fs.readFileSync(path.join(directory, 'glucose-alert-reminder.js'), 'utf8'), {
-    Component(value) { component = value }, wx:{navigateTo:value=>state.navs.push(value)},require(name) {
+    Component(value) { component = value }, wx:{navigateTo:value=>{state.navs.push(value);if(state.navFails){if(value.fail)value.fail()}else if(value.success)value.success()},showToast:value=>state.toasts.push(value)},require(name) {
       if (name === '../../utils/glucose-alerts') return { buildGlucoseAlerts }
       if (name === '../../utils/request') return { getToken: () => state.token }
+      if (name === '../../utils/storage') return { getTodayKey: () => '2026-10-15' }
+      if (name === '../../utils/message-notifications') return { refresh: async () => { state.refreshes++ } }
       assert.equal(name, '../../services/api')
-      return { fetchGlucoseAlertReplies: (page, size) => { state.calls.push({ page, size }); return fetchReplies(page, size) } }
+      return { fetchUserReminders: async ({pageNum:page,pageSize:size}) => { state.calls.push({page,size});return {alerts:[],replies:await fetchReplies(page,size)} },
+        readUserReminder:async(...args)=>{state.reads.push(args)},readInformationCategory:async(...args)=>{state.reads.push(args)},readAllUserReminders:async(...args)=>{state.reads.push(['ALL',...args])},...overrides }
     }
     // 不提供 wx：不使用系统弹窗、跳转或存储写操作；自定义弹窗仅由用户点击打开。
   })
@@ -50,11 +53,11 @@ function createComponent(fetchReplies = async () => ({ records: [], total: 0 }))
   return { component, instance, state }
 }
 
-test('实测提醒随节点更正/删除自然清除，节点观察不额外请求', () => {
+test('读取已读登记前不从缓存重建徽标，避免已读提醒闪回', () => {
   const { component, instance, state } = createComponent()
   const observer = component.properties.nodes.observer
   observer.call(instance, [measured(3.2)])
-  assert.equal(instance.data.alerts.length, 1)
+  assert.equal(instance.data.alerts.length, 0)
   observer.call(instance, [measured(6.2)])
   assert.equal(instance.data.alerts.length, 0)
   observer.call(instance, [])
@@ -208,4 +211,113 @@ test('未登录时不读取回复，401清除token后不残留上个账号公开
   await instance.refreshReplies()
   assert.equal(instance.data.replies.length, 0)
   assert.equal(instance.data.repliesLoading, false)
+})
+
+const reminder = (kind = 'GLUCOSE') => ({kind,id:'123',revision:'a'.repeat(64),recordId:'123',recordDate:'2026-10-15',nodeCode:'before_breakfast',nodeName:'早餐前',glucoseValue:12.6,recordedAt:'2026-10-15T08:00:00',userReply:kind==='REPLY'?'公开回复':null,repliedAt:kind==='REPLY'?'2026-10-15T09:00:00':null})
+
+test('手动已读成功后移除提醒，重载按服务端已读结果保持消失，不改血糖记录',async()=>{
+  let unread=true
+  const writes=[]
+  const {instance,state}=createComponent(undefined,{
+    fetchUserReminders:async()=>({alerts:unread?[reminder()]:[],replies:{records:[],total:0}}),
+    readUserReminder:async(...args)=>{writes.push(args);unread=false}
+  })
+  await instance.refreshReplies();assert.equal(instance.data.alerts.length,1)
+  await instance.onReadReminder({currentTarget:{dataset:{kind:'GLUCOSE',id:'123'}}})
+  assert.equal(instance.data.alerts.length,0);assert.deepEqual(writes,[['GLUCOSE','123','a'.repeat(64)]])
+  await instance.refreshReplies();assert.equal(instance.data.alerts.length,0)
+  assert.equal(state.toasts.at(-1).title,'已标为已读')
+})
+
+test('跳转失败保留未读；实测跳到对应日时段后才标记；回复交给详情加载成功后标记',async()=>{
+  const {instance,state}=createComponent(undefined,{fetchUserReminders:async()=>({alerts:[reminder()],replies:{records:[reminder('REPLY')],total:1}})})
+  await instance.refreshReplies();state.navFails=true
+  instance.onOpenReminder({currentTarget:{dataset:{kind:'GLUCOSE',id:'123'}}})
+  assert.equal(state.reads.length,0);assert.equal(instance.data.alerts.length,1)
+  state.navFails=false
+  instance.onOpenReminder({currentTarget:{dataset:{kind:'GLUCOSE',id:'123'}}})
+  await new Promise(resolve=>setImmediate(resolve))
+  assert.match(state.navs.at(-1).url,/stats.*date=2026-10-15&nodeCode=before_breakfast/)
+  assert.equal(state.reads.length,1)
+  instance.onOpenReminder({currentTarget:{dataset:{kind:'REPLY',id:'123'}}})
+  assert.match(state.navs.at(-1).url,/glucose-reply.*id=123/);assert.equal(state.reads.length,1)
+})
+
+test('已读写入失败不吞提醒，重复点击串行，切换账号后的迟到响应不改新账号内容',async()=>{
+  let resolve, writes=0
+  const {instance,state}=createComponent(undefined,{
+    fetchUserReminders:async()=>({alerts:[reminder()],replies:{records:[],total:0}}),
+    readUserReminder:()=>{writes++;return new Promise(done=>{resolve=done})}
+  })
+  await instance.refreshReplies()
+  const first=instance.consumeReminder(instance.data.alerts[0],state.token)
+  const second=instance.consumeReminder(instance.data.alerts[0],state.token)
+  assert.equal(writes,1);await second
+  state.token='account-b';await instance.refreshReplies();resolve();await first
+  assert.equal(instance.data.alerts.length,1)
+  const failed=createComponent(undefined,{
+    fetchUserReminders:async()=>({alerts:[reminder()],replies:{records:[],total:0}}),
+    readUserReminder:async()=>{throw new Error('网络失败')}
+  })
+  await failed.instance.refreshReplies();await failed.instance.consumeReminder(failed.instance.data.alerts[0],failed.state.token)
+  assert.equal(failed.instance.data.alerts.length,1);assert.equal(failed.state.toasts.at(-1).title,'网络失败')
+})
+
+test('类别入口不自动已读，只有主动全部已读才清理该类并刷新全局汇总',async()=>{
+  const {instance,state}=createComponent()
+  instance.onInformation({currentTarget:{dataset:{key:'likes'}}})
+  assert.equal(state.reads.length,0)
+  await instance.onReadInformation({currentTarget:{dataset:{key:'likes'}}})
+  assert.equal(state.reads[0][0],'LIKE');assert.equal(state.refreshes,1)
+})
+
+test('已读完成前发出的旧列表不能把提醒重新加回来',async()=>{
+  let count=0,resolve,unread=true
+  const {instance,state}=createComponent(undefined,{
+    fetchUserReminders:()=>{
+      if(++count===2)return new Promise(done=>{resolve=done})
+      return Promise.resolve({alerts:unread?[reminder()]:[],replies:{records:[],total:0}})
+    },readUserReminder:async()=>{unread=false}
+  })
+  await instance.refreshReplies()
+  const old=instance.refreshReplies()
+  await instance.consumeReminder(instance.data.alerts[0],state.token)
+  assert.equal(instance.data.alerts.length,0)
+  resolve({alerts:[reminder()],replies:{records:[],total:0}});await old
+  assert.equal(instance.data.alerts.length,0)
+})
+
+test('顶部全部已读使用统一接口，刷新真实未读结果，新到内容仍保留',async()=>{
+  let consumed=false
+  const calls=[]
+  const {instance,state}=createComponent(undefined,{
+    fetchUserReminders:async()=>({alerts:consumed?[{...reminder(),id:'999',revision:'b'.repeat(64)}]:[reminder()],replies:{records:[],total:0}}),
+    readAllUserReminders:async date=>{calls.push(date);consumed=true}
+  })
+  await instance.refreshReplies();await instance.onReadAll()
+  assert.deepEqual(calls,['2026-10-15']);assert.equal(instance.data.alerts[0].id,'999')
+  assert.equal(state.refreshes,1);assert.equal(instance.data.allReading,false)
+  assert.equal(state.toasts.at(-1).title,'已全部标为已读')
+  const template=fs.readFileSync(path.join(directory,'glucose-alert-reminder.wxml'),'utf8')
+  const start=template.indexOf('class="notice-dialog-heading"'),end=template.indexOf('<scroll-view')
+  assert.ok(template.indexOf('catchtap="onReadAll"')>start&&template.indexOf('catchtap="onReadAll"')<end)
+})
+
+test('全部已读防止连点，失败保留内容，换账号后旧回调不能更新新账号',async()=>{
+  let writes=0,resolve
+  const own=createComponent(undefined,{
+    fetchUserReminders:async()=>({alerts:[reminder()],replies:{records:[],total:0}}),
+    readAllUserReminders:()=>{writes++;return new Promise(done=>{resolve=done})}
+  })
+  await own.instance.refreshReplies()
+  const first=own.instance.onReadAll();await own.instance.onReadAll();assert.equal(writes,1)
+  own.state.token='B';await own.instance.refreshReplies();resolve();await first
+  assert.equal(own.state.refreshes,0);assert.equal(own.instance.data.alerts.length,1)
+  const failed=createComponent(undefined,{
+    fetchUserReminders:async()=>({alerts:[reminder()],replies:{records:[],total:0}}),
+    readAllUserReminders:async()=>{throw new Error('网络失败')}
+  })
+  await failed.instance.refreshReplies();await failed.instance.onReadAll()
+  assert.equal(failed.instance.data.alerts.length,1);assert.equal(failed.instance.data.allReading,false)
+  assert.equal(failed.state.toasts.at(-1).title,'网络失败')
 })

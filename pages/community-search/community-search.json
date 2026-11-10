@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "搜索",
+  "usingComponents": {
+    "community-search-panel": "/components/community-search-panel/community-search-panel"
+  }
+}

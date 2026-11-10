@@ -6,6 +6,7 @@
     "social-feedback": "/components/social-feedback/social-feedback",
     "article-photo": "/components/article-photo/article-photo",
     "avatar-image": "/components/avatar-image/avatar-image",
-    "article-video": "/components/article-video/article-video"
+    "article-video": "/components/article-video/article-video",
+    "community-search-panel": "/components/community-search-panel/community-search-panel"
   }
 }

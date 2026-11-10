@@ -10,6 +10,9 @@ const app = getApp()
 const DELTA_FLUSH_MS = 60
 const HISTORY_PAGE_SIZE = 20
 
+/** 从历史列表进来时的只读提示：这里已经有按钮，不该再让用户「退出小语重新进入」 */
+const HISTORY_READONLY_NOTICE = '历史对话只能查看，继续聊天请点「回到当前对话」'
+
 function pad2(n) {
   return String(n).padStart(2, '0')
 }
@@ -39,6 +42,8 @@ Page({
     sessionStatusText: '',
     sessionReadOnly: false,
     sessionNotice: '',
+    /** 从历史对话列表进入：只读时给出「回到当前对话」出口，而不是让用户退出页面 */
+    fromHistory: false,
     hasHistory: false,
     historyReady: false,
     historyLoading: false,
@@ -54,7 +59,7 @@ Page({
     ]
   },
 
-  onLoad() {
+  onLoad(query) {
     this.refreshChatViewport()
     this._localSeq = 0
     this._sessionPromise = null
@@ -68,6 +73,9 @@ Page({
     this.setData({
       messages: []
     })
+    // 从「历史对话」列表点进来时带上 sessionId：先把它放进门禁与标题，
+    // onShow 里的 loadHistory() 便会直接读这个会话，而不是去取「当前会话」。
+    this.applyPresetSession(query)
   },
 
   onShow() {
@@ -201,6 +209,42 @@ Page({
 
   /** ---------- 会话 ---------- */
 
+  /**
+   * 历史对话列表带来的会话：sessionId 一旦放进 data，ensureSession() 就会直接返回它，
+   * 所以这里不需要额外分支，只要把状态门禁和标题一起准备好。
+   *
+   * 只有列表显式带 `from=history` 才认这个 sessionId：其余入口（包括残留的
+   * pendingChatSession / pendingNewChat）一律忽略，保持「进小语 = 自动恢复当前对话」
+   * 这条既有规则（tools/tests/chat-session-lifecycle.test.cjs 有断言）。
+   */
+  applyPresetSession(query) {
+    const params = query || {}
+    if (params.from !== 'history') return
+    const sessionId = toIdString(params.sessionId)
+    if (!sessionId) return
+    const title = String(params.title || '').trim()
+    const gate = sessionGate(params.sessionStatus)
+    const preset = {
+      sessionId,
+      sessionTitle: title || DEFAULT_TITLE,
+      fromHistory: true,
+      ...this.gateData(gate)
+    }
+    // 只读时换一句更准确的提示：既有文案是「请退出小语后重新进入」，而这里已经给了按钮
+    if (gate.readOnly) preset.sessionNotice = HISTORY_READONLY_NOTICE
+    this.setData(preset)
+    // 标题优先用列表带来的（已含默认标题兜底），避免历史页显示统一叫「小语」
+    if (title) wx.setNavigationBarTitle({ title })
+  },
+
+  /** 只读的历史会话里退回「当前对话」：清掉预设会话再重新取或建 */
+  onBackToCurrent() {
+    this.setData({ fromHistory: false })
+    wx.setNavigationBarTitle({ title: '小语' })
+    this.resetToFresh()
+    return this.loadHistory()
+  },
+
   gateData(gate) {
     return { sessionStatus: gate.sessionStatus, sessionStatusText: gate.sessionStatusText,
       sessionReadOnly: gate.readOnly, sessionNotice: gate.notice }
@@ -219,7 +263,7 @@ Page({
     this._currentRound = this._lastRound = null
     this.setData({ sessionId: '', sessionTitle: '', messages: [], hasHistory: false, sending: false,
       inputValue: '', voiceMode: false, speechVisible: false, holdingSpeech: false, scrollIntoView: '', historyReady: false, historyLoading: false,
-      historyHasMore: false, historyCursor: null, historyError: '',
+      historyHasMore: false, historyCursor: null, historyError: '', fromHistory: false,
       ...this.gateData(sessionGate(SESSION_STATUS.ACTIVE)) })
   },
 

@@ -24,7 +24,7 @@ test('回复请求使用目标路径，普通评论沿用原接口；用户内�
 const flush = async () => { for (let i=0;i<20;i++) await Promise.resolve() }
 const deferred = () => { let resolve,reject; const promise = new Promise((a,b) => { resolve=a;reject=b });return {promise,resolve,reject} }
 
-test('社区推荐使用个性化排序，关注及关键词查询使用最新排序，切换标签保留推荐',async()=>{
+test('社区推荐使用个性化排序，关注使用最新排序，切换标签保留推荐',async()=>{
   const {page:p,state}=page('index');await flush()
   const last=()=>state.calls.filter(row=>row.key==='fetchCommunityArticles').at(-1).args[0]
   assert.equal(last().sort,'RECOMMEND')
@@ -33,8 +33,6 @@ test('社区推荐使用个性化排序，关注及关键词查询使用最新�
   p.onMode({currentTarget:{dataset:{mode:'recommend'}}});await flush()
   p.onTag({currentTarget:{dataset:{code:'diet'}}});await flush()
   assert.equal(last().sort,'RECOMMEND');assert.equal(last().tag,'diet')
-  p.onSearchInput({detail:{value:'早餐'}});p.onSearch();await flush()
-  assert.equal(last().sort,'LATEST');assert.equal(last().keyword,'早餐')
   p.onUnload()
 })
 
@@ -63,13 +61,18 @@ test('减少此类内容在保存后移除当前文章，失败保留，举报�
   const failed=page('index',{hideCommunityArticle:async()=>{throw Error('暂时不可用')}});await flush();failed.page.setData({posts:[{id:'21'}]});await failed.page.onHideArticle('21');assert.equal(failed.page.data.posts.length,1);failed.page.onUnload()
 })
 
-test('社区快捷入口按关注点赞收藏排序，实际入口均能打开对应列表或信息页',async()=>{
-  const {page:p,state}=page('index');await flush()
+test('社区热榜在当前页加载，其他快捷入口打开对应列表或信息页',async()=>{
+  const {page:p,state}=page('index',{fetchHotArticles:async()=>({records:[{id:'8',title:'热帖'}]})});await flush()
   const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
   const shortcuts=template.slice(template.indexOf('<view class="community-shortcuts">'),template.indexOf('<view class="feed-heading">'))
   const modes=Array.from(shortcuts.matchAll(/data-mode="([^"]+)"/g),match=>match[1])
-  assert.deepEqual(modes,['following','likes','collections','messages','profiles'])
-  for(const mode of modes)p.onCommunityEntry({currentTarget:{dataset:{mode}}})
+  assert.deepEqual(modes,['hot','following','likes','collections','messages','profiles'])
+  p.onCommunityEntry({currentTarget:{dataset:{mode:'hot'}}});await flush()
+  assert.equal(p.data.feedMode,'hot');assert.equal(p.data.posts[0].id,'8')
+  assert.equal(p.data.posts[0].hotRank,1);assert.equal(p.data.hasMore,false)
+  assert.equal(state.calls.filter(row=>row.key==='fetchHotArticles').length,1)
+  assert.equal(state.navs.length,0)
+  for(const mode of modes.filter(mode=>mode!=='hot'))p.onCommunityEntry({currentTarget:{dataset:{mode}}})
   assert.deepEqual(state.navs.map(row=>row.url),['/pages/community/community?mode=following','/pages/community/community?mode=likes','/pages/community/community?mode=collections','/pages/information/information','/pages/community/community?mode=profiles'])
   const count=state.navs.length;p.onCommunityEntry({currentTarget:{dataset:{mode:'invalid'}}});assert.equal(state.navs.length,count);p.onUnload()
 })

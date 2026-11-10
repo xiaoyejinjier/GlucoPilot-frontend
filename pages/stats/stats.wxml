@@ -128,7 +128,7 @@
       </view>
       <view wx:else class="day-node-list">
         <block wx:for="{{dayRecords}}" wx:key="id">
-        <view class="day-row day-row-{{item.kind}} {{item.recorded ? 'recorded' : 'missing'}} {{item.kind === 'meal' && item.recorded ? 'meal-clickable' : ''}} ui-interactive" data-id="{{item.id}}" bindtap="onMealDetailTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+        <view id="reminder-node-{{item.id}}" class="day-row day-row-{{item.kind}} {{item.recorded ? 'recorded' : 'missing'}} {{item.kind === 'meal' && item.recorded ? 'meal-clickable' : ''}} {{reminderNodeCode === item.id ? 'reminder-focused' : ''}} ui-interactive" data-id="{{item.id}}" bindtap="onMealDetailTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
           <view class="day-name-wrap">
             <text class="day-status-dot"></text>
             <text class="day-name">{{i18n.t((item.name), locale)}}</text>

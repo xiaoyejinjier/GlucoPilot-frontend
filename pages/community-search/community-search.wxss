@@ -1,0 +1,4 @@
+.search-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+}
