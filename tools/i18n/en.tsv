@@ -134,6 +134,12 @@
 体重	Weight
 体重(kg)	Weight (kg)
 确诊时间	Diagnosis date
+血糖控制目标	Blood glucose target
+一般（默认）	General (default)
+较严格（年轻、无并发症）	Strict (young, no complications)
+较宽松（65 岁以上或容易低血糖）	Relaxed (65+ or prone to hypoglycemia)
+妊娠期（含妊娠糖尿病）	Pregnancy (incl. gestational diabetes)
+如不确定请咨询产科医生	If unsure, consult an obstetrician
 用药	Medication
 运动习惯	Exercise habits
 补充 / 备注	Notes
@@ -600,6 +606,14 @@ g · 热量	g · Calories
 推荐	Recommended
 不建议	Not recommended
 重试预测	Retry estimate
+当前份量已合适，无需调整	Current portions are appropriate; no adjustment needed.
+当前血糖明显偏高，建议暂缓进食并尽快就医	Your glucose is clearly high; pause eating and seek medical care soon.
+当前血糖偏低，请先处理低血糖（如进食含糖食物），再录入本餐	Your glucose is low; treat hypoglycemia first (e.g. eat something sugary), then log this meal.
+当前份量预计超过你的目标上限，推荐份量已为你调整	Current portions may exceed your upper target, so the suggested portions have been adjusted.
+当前份量预计低于目标下限，建议适量加餐	Current portions may fall below your lower target; consider adding a little food.
+当前血糖偏高，建议少量进食并加强监测	Your glucose is elevated; eat lightly and monitor more closely.
+已接近最低建议量，仍可能超标，建议调整食物结构或咨询营养师	Near the minimum suggested amount and may still exceed target; adjust the food mix or consult a dietitian.
+当前预测已超出妊娠期严格目标，请按产科/营养科方案进食并加强监测	The estimate exceeds the strict pregnancy target; follow your obstetric/nutrition plan and monitor closely.
 数据导出	Export data
 导出	Export
 导出范围	Date range

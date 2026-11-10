@@ -85,6 +85,8 @@ function mapFoodCategory(item) {
 /** ---------- 用户 / 健康档案 / 设置 ---------- */
 
 const DIABETES_TYPE_TEXT = ['未填写', '1 型糖尿病', '2 型糖尿病', '妊娠糖尿病', '其他']
+// 血糖控制目标人群（0一般/1较严格/2较宽松/3妊娠期）；独立于糖尿病类型，前端 option 原文同步加入 i18n
+const GOAL_PROFILE_TEXT = ['一般（默认）', '较严格（年轻、无并发症）', '较宽松（65 岁以上或容易低血糖）', '妊娠期（含妊娠糖尿病）']
 const GENDER_TEXT = ['未填写', '男', '女']
 const FEEDBACK_TYPE_TEXT = ['', '产品建议', 'Bug问题', '功能诉求', '其他']
 const FEEDBACK_STATUS_TEXT = ['已收到', '处理中', '已处理', '已关闭']
@@ -129,6 +131,18 @@ function diabetesCode(text) {
   return Number(text) >= 0 && Number(text) <= 4 ? Number(text) : 0
 }
 
+function goalProfileText(code) {
+  return GOAL_PROFILE_TEXT[code] || GOAL_PROFILE_TEXT[0]
+}
+
+/** 中文描述 → 数字枚举；无法识别返回 0（一般）。 */
+function goalProfileCode(text) {
+  const idx = GOAL_PROFILE_TEXT.indexOf(String(text || '').trim())
+  if (idx >= 0) return idx
+  const n = Number(text)
+  return n >= 0 && n <= 3 ? n : 0
+}
+
 function formatDateTime(value) {
   if (!value) return ''
   const s = String(value).replace('T', ' ')
@@ -171,6 +185,8 @@ function mapUserMe(me) {
     exercise: health.exerciseHabit || '',
     targetFasting: health.targetFasting,
     targetPostprandial: health.targetPostprandial,
+    goalProfileCode: health.glucoseGoalProfile == null ? 0 : health.glucoseGoalProfile,
+    goalProfileText: goalProfileText(health.glucoseGoalProfile == null ? 0 : health.glucoseGoalProfile),
     fontSize: settings.fontSize == null ? 2 : settings.fontSize,
     themeCode: settings.themeCode == null ? 1 : settings.themeCode,
     notifyGlucose: !!settings.notifyGlucose,
@@ -292,6 +308,7 @@ module.exports = {
   CHANNEL_CODE_TO_NAME,
   CHANNEL_NAME_TO_CODE,
   DIABETES_TYPE_TEXT,
+  GOAL_PROFILE_TEXT,
   FEEDBACK_TYPE_TEXT,
   FEEDBACK_STATUS_TEXT,
   FONT_CODE_TO_NAME,
@@ -307,6 +324,8 @@ module.exports = {
   mapFeedback,
   diabetesText,
   diabetesCode,
+  goalProfileText,
+  goalProfileCode,
   fontNameOf,
   fontCodeOf,
   themeIdOf,
