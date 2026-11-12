@@ -1,6 +1,6 @@
 const {
   fetchCancellationStatus, fetchCancellationCaptcha, sendCancellationCode,
-  submitCancellation, recoverCancellation, logoutRemote
+  submitCancellation, logoutRemote
 } = require('../../services/api')
 const { clearAccountCache } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
@@ -34,7 +34,6 @@ Page({
     errorText: '注销状态加载失败，请返回重试。',
     deadline: '',
     reasons: CANCEL_REASONS,
-    mode: 1,
     reasonCode: 0,
     agreed: false,
     // 验证方式：1=手机/邮箱验证 3=微信身份验证；0=两者都不可用（异常态）
@@ -59,8 +58,7 @@ Page({
     wechatVerified: false,
     sliderVisible: false,
     sliderHint: '按住滑块，拖动到最右侧',
-    submitting: false,
-    recovering: false
+    submitting: false
   },
 
   onLoad() {
@@ -140,12 +138,6 @@ Page({
   },
 
   /** ---------- 状态 A：申请流 ---------- */
-
-  onSelectMode(e) {
-    const mode = Number(e.currentTarget.dataset.mode)
-    if (mode !== 1 && mode !== 2) return
-    this.setData({ mode })
-  },
 
   onSelectReason(e) {
     const code = Number(e.currentTarget.dataset.code)
@@ -292,7 +284,7 @@ Page({
 
   onSubmit() {
     const {
-      mode, reasonCode, agreed, verifyMode, codeChannel, verifyCode,
+      reasonCode, agreed, verifyMode, codeChannel, verifyCode,
       wechatVerified, submitting, canUseCode, canUseWechat
     } = this.data
     if (submitting) return
@@ -319,19 +311,17 @@ Page({
       return
     }
 
-    const recoverable = mode === 2
+    // 立即注销已下线：固定七天可恢复模式（mode=2）
     wx.showModal({
       title: '确认注销账号',
-      content: recoverable
-        ? '提交后 7 天内可再次登录取消注销，期满后数据将被永久删除。'
-        : '提交后账号立即注销，数据将被永久删除，无法恢复。',
+      content: '提交后 7 天内可再次登录取消注销，期满后数据将被永久删除。',
       confirmText: '确认注销',
       confirmColor: '#fa5151',
       success: (result) => {
         if (!result.confirm) return
         this.setData({ submitting: true })
         submitCancellation(
-          mode,
+          2,
           reasonCode || undefined,
           verifyType,
           verifyType === 3 ? undefined : verifyCode,
@@ -342,7 +332,7 @@ Page({
             const app = getApp()
             if (app && typeof app.resetLoginState === 'function') app.resetLoginState()
             clearAccountCache()
-            wx.showToast({ title: recoverable ? '已提交注销申请' : '账号已注销', icon: 'none' })
+            wx.showToast({ title: '已提交注销申请', icon: 'none' })
             wx.reLaunch({ url: '/pages/login/login' })
           })
           .catch((err) => {
@@ -360,52 +350,6 @@ Page({
   },
 
   /** ---------- 状态 B：注销处理中 ---------- */
-
-  /** 取消注销：登录会话即身份核验，无需验证码；恢复后按申请前状态还原。 */
-  onRecover() {
-    if (this.data.recovering) return
-    wx.showModal({
-      title: '取消注销',
-      content: '取消后将继续使用本账号；7 天期满后数据将被删除且无法恢复。确认取消注销吗？',
-      confirmText: '取消注销',
-      cancelText: '暂不取消',
-      success: (result) => {
-        if (!result.confirm) return
-        this.setData({ recovering: true })
-        wx.showLoading({ title: '正在取消注销...', mask: true })
-        recoverCancellation()
-          .then((res) => {
-            wx.hideLoading()
-            const status = res && res.accountStatus
-            if (status === 0) {
-              // 申请前即为禁用账号：还原后仍禁用，仅可办理注销或退出。
-              wx.showModal({
-                title: '注销已取消',
-                content: '账号已恢复，但仍处于禁用状态，仅可办理注销或退出登录。',
-                confirmText: '继续注销',
-                cancelText: '退出登录',
-                success: (r) => {
-                  if (r.confirm) {
-                    this.setData({ recovering: false, agreed: false })
-                    this.refresh()
-                  } else {
-                    this.onExit()
-                  }
-                }
-              })
-              return
-            }
-            wx.showToast({ title: '注销已取消，欢迎回来', icon: 'success' })
-            wx.switchTab({ url: '/pages/ai/ai' })
-          })
-          .catch((err) => {
-            wx.hideLoading()
-            this.setData({ recovering: false })
-            wx.showToast({ title: (err && err.message) || '取消失败', icon: 'none' })
-          })
-      }
-    })
-  },
 
   /** 退出登录：撤销远程会话、清账号级缓存并回登录页（契约注销章节缓存清单）。 */
   onExit() {

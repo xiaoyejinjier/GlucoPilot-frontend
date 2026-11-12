@@ -12,10 +12,9 @@
     <view class="card status-card">
       <text class="status-title">{{i18n.t("注销申请已提交", locale)}}</text>
       <text class="status-line">{{i18n.t("账号将于", locale)}} {{deadline || i18n.t("7 天期满后", locale)}} {{i18n.t("注销，届时血糖、饮食、健康档案与 AI 对话等数据将被永久删除。", locale)}}</text>
-      <text class="status-line">{{i18n.t("在此之前取消注销，可继续使用账号与全部数据。", locale)}}</text>
+      <text class="status-line">{{i18n.t("在此之前直接登录即可自动终止注销，继续使用账号与全部数据。", locale)}}</text>
     </view>
     <view class="card action-card">
-      <button class="btn-primary btn-block" disabled="{{recovering}}" bindtap="onRecover">{{i18n.t("取消注销，继续使用账号", locale)}}</button>
       <button class="btn-ghost btn-block btn-sm" bindtap="onExit">{{i18n.t("退出登录", locale)}}</button>
     </view>
   </block>
@@ -49,11 +48,7 @@
 
     <view class="card section-card">
       <text class="section-label">{{i18n.t("注销方式", locale)}}</text>
-      <view class="opt-row">
-        <view class="opt-item {{mode === 1 ? 'active' : ''}}" data-mode="1" bindtap="onSelectMode">{{i18n.t("立即注销", locale)}}</view>
-        <view class="opt-item {{mode === 2 ? 'active' : ''}}" data-mode="2" bindtap="onSelectMode">{{i18n.t("7 天内可恢复", locale)}}</view>
-      </view>
-      <text class="section-hint">{{mode === 1 ? i18n.t("提交后立即注销，全部数据将被永久删除。", locale) : i18n.t("提交后 7 天内可再次登录取消注销，期满后数据永久删除。", locale)}}</text>
+      <text class="section-hint">{{i18n.t("提交后 7 天内可再次登录取消注销，期满后数据永久删除。", locale)}}</text>
     </view>
 
     <view class="card section-card">

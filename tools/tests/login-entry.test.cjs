@@ -11,7 +11,7 @@ function createFlow(options = {}) {
     storage: new Map(Object.entries(options.storage || {})),
     route: options.route || 'pages/login/login',
     profile: { disclaimerAgreed: false, disclaimerVersion: '', ...options.profile },
-    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: []
+    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: []
   }
   const token = () => state.storage.get('accessToken') || ''
   const request = { getToken: token, setToken(value) { if (value) state.storage.set('accessToken', value); else state.storage.delete('accessToken') } }
@@ -43,6 +43,7 @@ function createFlow(options = {}) {
     setStorageSync: (key, value) => state.storage.set(key, value),
     showLoading() {}, hideLoading() {},
     showToast: (value) => state.toasts.push(value),
+    showModal: (value) => state.modals.push(value),
     login: (value) => value.success({ code: 'wechat-code' }),
     reLaunch(value) { state.routes.push(value.url); state.route = value.url.split('?')[0].slice(1); if (value.complete) value.complete() },
     switchTab(value) { state.routes.push(value.url); state.route = value.url.slice(1) },
@@ -420,3 +421,80 @@ test('同意失败不启动引导，退出或切换账号后旧引导与跳转�
   app.resetLoginState()
   assert.equal(app.globalData.navigationGuideToken, '')
 })
+
+/** 冷静期内登录：服务端已恢复并带回 recoveredFromCancellation。 */
+function recoveredFlow(profile = {}) {
+  const flow = createFlow({ profile: { disclaimerAgreed: true, disclaimerVersion: 'v1', accountStatus: 1, ...profile } })
+  flow.app.globalData.isLoggedIn = true
+  flow.request.setToken('current-user')
+  flow.app.globalData.recoveredFromCancellation = true
+  return flow
+}
+
+test('登录即恢复：弹一次告知框，点确定后进入主页', async () => {
+  const { app, state } = recoveredFlow()
+  const pending = app.goAfterLogin()
+  await flush()
+  assert.equal(state.modals.length, 1)
+  const modal = state.modals[0]
+  assert.equal(modal.title, '账号已恢复')
+  assert.match(modal.content, /本次登录已自动终止注销申请，账号已恢复正常/)
+  assert.match(modal.content, /本次恢复 24 小时后重新提交/)
+  assert.match(modal.content, /重新提交后 7 天内请勿登录/)
+  assert.equal(modal.confirmText, '我知道了，恢复账号')
+  // 单按钮纯告知：关掉弹窗不影响恢复结果，也不阻断后续路由
+  assert.equal(modal.showCancel, false)
+  assert.equal(state.routes.length, 0)
+  modal.complete({ confirm: true })
+  await pending
+  assert.equal(state.routes.at(-1), '/pages/ai/ai')
+})
+
+test('登录即恢复：直接关闭弹窗同样恢复生效并继续进入主页', async () => {
+  const { app, state } = recoveredFlow()
+  const pending = app.goAfterLogin()
+  await flush()
+  state.modals[0].complete({ confirm: false, cancel: true })
+  await pending
+  assert.equal(state.routes.at(-1), '/pages/ai/ai')
+  assert.equal(app.globalData.isLoggedIn, true)
+})
+
+test('登录即恢复：提示只弹一次，同一次登录后续路由不再重复', async () => {
+  const { app, state } = recoveredFlow()
+  const first = app.goAfterLogin()
+  await flush()
+  state.modals[0].complete({ confirm: true })
+  await first
+  assert.equal(state.modals.length, 1)
+  // 标记已被消费：再次进入登录后流程不再弹恢复提示
+  await app.goAfterLogin()
+  assert.equal(state.modals.length, 1)
+  assert.equal(state.routes.at(-1), '/pages/ai/ai')
+})
+
+test('未触发恢复时不弹恢复提示，直接进入主页', async () => {
+  const flow = createFlow({ profile: { disclaimerAgreed: true, disclaimerVersion: 'v1', accountStatus: 1 } })
+  flow.app.globalData.isLoggedIn = true
+  flow.request.setToken('current-user')
+  flow.app.globalData.recoveredFromCancellation = false
+  await flow.app.goAfterLogin()
+  assert.equal(flow.state.modals.length, 0)
+  assert.equal(flow.state.routes.at(-1), '/pages/ai/ai')
+})
+
+test('恢复后仍为禁用账号：先告知已恢复，再引导注销或退出', async () => {
+  const { app, state } = recoveredFlow({ accountStatus: 0 })
+  const pending = app.goAfterLogin()
+  await flush()
+  assert.equal(state.modals.length, 1)
+  assert.equal(state.modals[0].title, '账号已恢复')
+  state.modals[0].complete({ confirm: true })
+  await flush()
+  assert.equal(state.modals.length, 2)
+  assert.equal(state.modals[1].title, '账号已被禁用')
+  state.modals[1].success({ confirm: true })
+  await pending
+  assert.equal(state.routes.at(-1), '/pages/account-cancellation/cancellation')
+})
+

@@ -1408,8 +1408,7 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 账号将于	Your account will be deleted on
 7 天期满后	the end of the 7-day period
 注销，届时血糖、饮食、健康档案与 AI 对话等数据将被永久删除。	— glucose, meal, health profile and AI chat data will then be permanently deleted.
-在此之前取消注销，可继续使用账号与全部数据。	Cancel before then to keep using your account and all data.
-取消注销，继续使用账号	Cancel deletion and keep using your account
+在此之前直接登录即可自动终止注销，继续使用账号与全部数据。	Log in directly before then to cancel the deletion and keep your account and all data.
 账号已注销或注销正在执行	Account deleted or deletion in progress
 当前账号无法继续使用。	This account can no longer be used.
 注销后，以下内容将被删除	After deletion, the following will be removed
@@ -1420,9 +1419,6 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 · 已发布的社区内容将匿名保留，作者显示为“已注销用户”	· Published community posts remain, shown as "Deleted user"
 注销操作不可撤销，7 天期满后数据将被彻底删除，请谨慎操作。	Deletion cannot be undone; data is permanently removed after 7 days.
 注销方式	Deletion option
-立即注销	Delete now
-7 天内可恢复	Recoverable within 7 days
-提交后立即注销，全部数据将被永久删除。	Your account and all data are deleted immediately.
 提交后 7 天内可再次登录取消注销，期满后数据永久删除。	Log in within 7 days to cancel; data is permanently deleted afterwards.
 注销原因（选填）	Reason (optional)
 身份验证	Identity verification

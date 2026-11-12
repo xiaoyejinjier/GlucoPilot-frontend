@@ -45,8 +45,7 @@ function pageHarness(options={}){
     sendCancellationCode:async(channel)=>({
       channel, maskedTarget: channel===1?'138****0000':'a***@qq.com', cooldownSeconds:60
     }),
-    submitCancellation:async()=>({accountStatus:2,mode:1}),
-    recoverCancellation:async()=>({accountStatus:1}),
+    submitCancellation:async()=>({accountStatus:4,mode:2}),
     logoutRemote:async()=>null,
     ...options
   }
@@ -129,7 +128,7 @@ test('账号安全页：绑定邮箱走 bind scene 并回填脱敏邮箱',async(
   assert.equal(p.data.email,'a***@qq.com')
 })
 
-test('说明页：滑动未完成不取票不发码，完成后带票据发码并按 mode=1 提交',async()=>{
+test('说明页：滑动未完成不取票不发码，完成后带票据固定按 mode=2 提交',async()=>{
   const {p,state}=pageHarness();await flush()
   assert.equal(p.data.page,'applying')
   assert.equal(p.data.verifyMode,1)
@@ -163,19 +162,17 @@ test('说明页：滑动未完成不取票不发码，完成后带票据发码�
   p.onSelectReason({currentTarget:{dataset:{code:2}}})
   p.onSubmit()
   assert.equal(state.modals.length,1)
-  assert.match(state.modals[0].content,/立即注销/)
+  assert.match(state.modals[0].content,/7 天内可再次登录/)
 
   state.modals[0].success({confirm:true});await flush()
-  assert.deepEqual(submitted(state)[0].args,[1,2,1,'123456',undefined])
+  assert.deepEqual(submitted(state)[0].args,[2,2,1,'123456',undefined])
   assert.equal(state.reset,1)
   assert.equal(state.cleared,1)
   assert.match(state.navs[0].url,/pages\/login\/login/)
 })
 
-test('说明页：mode=2 提交前二次确认文案，原因可留空',async()=>{
+test('说明页：提交前二次确认文案为七天可恢复，原因可留空',async()=>{
   const {p,state}=pageHarness();await flush()
-  p.onSelectMode({currentTarget:{dataset:{mode:2}}})
-  assert.equal(p.data.mode,2)
   p.onToggleAgree()
   p.onSendCode()
   p.onSliderUnlock();await flush()
@@ -233,9 +230,9 @@ test('说明页：纯微信账号隐藏手机/邮箱验证，wx.login 后按 ver
 
   p.onToggleAgree()
   p.onSubmit()
-  assert.match(state.modals[0].content,/立即注销/)
+  assert.match(state.modals[0].content,/7 天内可再次登录/)
   state.modals[0].success({confirm:true});await flush()
-  assert.deepEqual(submitted(state)[0].args,[1,undefined,3,undefined,'wx-code-1'])
+  assert.deepEqual(submitted(state)[0].args,[2,undefined,3,undefined,'wx-code-1'])
 })
 
 test('说明页：既无手机/邮箱也无微信时提示无法验证',async()=>{
@@ -260,7 +257,7 @@ test('说明页：既无手机/邮箱也无微信时提示无法验证',async()=
 test('说明页：微信 code 一次性有效，提交失败后须重新验证',async()=>{
   let fail=true
   const {p,state}=pageHarness({
-    submitCancellation:async()=>{if(fail)throw new Error('微信身份验证失败');return {accountStatus:2,mode:1}}
+    submitCancellation:async()=>{if(fail)throw new Error('微信身份验证失败');return {accountStatus:4,mode:2}}
   })
   await flush()
   p.onSwitchVerifyMode({currentTarget:{dataset:{mode:3}}})
@@ -282,46 +279,18 @@ test('说明页：微信 code 一次性有效，提交失败后须重新验证',
   assert.match(state.navs[0].url,/pages\/login\/login/)
 })
 
-test('可恢复窗口：展示到期时间，确认后免验证码恢复并回记录页',async()=>{
-  const flag={recovered:false}
-  const {p,state}=pageHarness({
-    fetchCancellationStatus:async()=>flag.recovered
-      ? {accountStatus:1,cancellation:{mode:2,status:3}}
-      : {accountStatus:4,cancellation:{mode:2,status:0,isolateUntil:String(Date.now()+7*DAY)}},
-    recoverCancellation:async()=>{flag.recovered=true;return {accountStatus:1}}
+test('可恢复窗口：只展示到期时间与"登录即取消"提示，不再提供手动恢复',async()=>{
+  const {p}=pageHarness({
+    fetchCancellationStatus:async()=>({
+      accountStatus:4,cancellation:{mode:2,status:0,isolateUntil:String(Date.now()+7*DAY)}
+    })
   })
   await flush()
   assert.equal(p.data.page,'pending')
   assert.match(p.data.deadline,/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
-
-  p.onRecover()
-  assert.equal(state.calls.filter(c=>c.key==='recoverCancellation').length,0)
-  assert.equal(state.modals.length,1)
-  state.modals[0].success({confirm:true});await flush()
-  assert.deepEqual(state.calls.filter(c=>c.key==='recoverCancellation')[0].args,[])
-  assert.equal(state.switchTabs[0].url,'/pages/ai/ai')
-})
-
-test('可恢复窗口：恢复后仍禁用，仅可继续注销或退出',async()=>{
-  let recovered=false
-  const {p,state}=pageHarness({
-    fetchCancellationStatus:async()=>recovered
-      ? {accountStatus:0,cancellation:{mode:2,status:2},hasPhone:false,hasEmail:false,hasWechat:true}
-      : {accountStatus:4,cancellation:{mode:2,status:0,isolateUntil:String(Date.now()+DAY)}},
-    recoverCancellation:async()=>{recovered=true;return {accountStatus:0}}
-  })
-  await flush()
-  p.onRecover()
-  state.modals[0].success({confirm:true});await flush()
-  const disabled=state.modals[1]
-  assert.equal(disabled.title,'注销已取消')
-  disabled.success({confirm:true});await flush()
-  assert.equal(p.data.page,'applying')
-
-  p.onExit();await flush()
-  assert.equal(state.reset,1)
-  assert.equal(state.cleared,1)
-  assert.match(state.navs[0].url,/pages\/login\/login/)
+  // 手动恢复入口已下线：页面对象上不得再有 onRecover
+  assert.equal(typeof p.onRecover,'undefined')
+  assert.equal(typeof p.onSelectMode,'undefined')
 })
 
 test('禁用账号直达说明页仍走申请流',async()=>{
