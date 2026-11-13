@@ -1415,11 +1415,15 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 · 血糖、饮食记录与健康档案	· Glucose and meal records, health profile
 · AI 会话、消息与个人媒体文件	· AI chats, messages and personal media
 · 设备绑定、设置与反馈记录	· Device bindings, settings and feedback
+· 钱包账户及未提现的余额（请务必提前提现）	· Wallet balance and unwithdrawn funds (withdraw in advance)
 仍会保留的内容	What will be retained
 · 已发布的社区内容将匿名保留，作者显示为“已注销用户”	· Published community posts remain, shown as "Deleted user"
-注销操作不可撤销，7 天期满后数据将被彻底删除，请谨慎操作。	Deletion cannot be undone; data is permanently removed after 7 days.
-注销方式	Deletion option
-提交后 7 天内可再次登录取消注销，期满后数据永久删除。	Log in within 7 days to cancel; data is permanently deleted afterwards.
+· 已发布的问诊贴（含收费贴）将作为医疗记录匿名保留，其他用户仍可查看，但您的个人身份信息将被抹除。	· Published consultation posts (including paid ones) are kept anonymously as medical records and stay visible to others, but your identity is removed.
+冷静期说明：	Cooling-off period:
+提交后 7 天内可再次登录取消注销，期满后数据永久删除。	Log in again within 7 days to cancel; data is permanently deleted afterwards.
+⚠️ 重要提示	⚠️ Important
+· 注销操作不可撤销，7 天期满后数据将被彻底删除，请谨慎操作。	· Deletion cannot be undone; data is permanently removed after 7 days.
+· 注销前，请确保您的钱包余额已全部提现。账号注销后，未提现的资金将无法找回。	· Withdraw your full wallet balance before deleting. Unwithdrawn funds cannot be recovered afterwards.
 注销原因（选填）	Reason (optional)
 身份验证	Identity verification
 手机/邮箱验证	Phone or email

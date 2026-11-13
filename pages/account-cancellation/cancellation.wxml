@@ -33,22 +33,25 @@
   <!-- 正常申请流（QQ 风格说明页） -->
   <block wx:elif="{{page === 'applying'}}">
     <view class="card">
+      <text class="intro-kicker">{{i18n.t("冷静期说明：", locale)}}</text>
+      <text class="intro-lead">{{i18n.t("提交后 7 天内可再次登录取消注销，期满后数据永久删除。", locale)}}</text>
       <text class="intro-title">{{i18n.t("注销后，以下内容将被删除", locale)}}</text>
       <view class="intro-list">
         <text class="intro-item">{{i18n.t("· 血糖、饮食记录与健康档案", locale)}}</text>
         <text class="intro-item">{{i18n.t("· AI 会话、消息与个人媒体文件", locale)}}</text>
         <text class="intro-item">{{i18n.t("· 设备绑定、设置与反馈记录", locale)}}</text>
+        <text class="intro-item">{{i18n.t("· 钱包账户及未提现的余额（请务必提前提现）", locale)}}</text>
       </view>
       <text class="intro-title">{{i18n.t("仍会保留的内容", locale)}}</text>
       <view class="intro-list">
         <text class="intro-item">{{i18n.t("· 已发布的社区内容将匿名保留，作者显示为“已注销用户”", locale)}}</text>
+        <text class="intro-item">{{i18n.t("· 已发布的问诊贴（含收费贴）将作为医疗记录匿名保留，其他用户仍可查看，但您的个人身份信息将被抹除。", locale)}}</text>
       </view>
-      <text class="intro-warn">{{i18n.t("注销操作不可撤销，7 天期满后数据将被彻底删除，请谨慎操作。", locale)}}</text>
-    </view>
-
-    <view class="card section-card">
-      <text class="section-label">{{i18n.t("注销方式", locale)}}</text>
-      <text class="section-hint">{{i18n.t("提交后 7 天内可再次登录取消注销，期满后数据永久删除。", locale)}}</text>
+      <view class="intro-warn">
+        <text class="warn-title">{{i18n.t("⚠️ 重要提示", locale)}}</text>
+        <text class="warn-item">{{i18n.t("· 注销操作不可撤销，7 天期满后数据将被彻底删除，请谨慎操作。", locale)}}</text>
+        <text class="warn-item">{{i18n.t("· 注销前，请确保您的钱包余额已全部提现。账号注销后，未提现的资金将无法找回。", locale)}}</text>
+      </view>
     </view>
 
     <view class="card section-card">

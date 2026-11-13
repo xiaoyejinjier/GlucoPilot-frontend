@@ -5,6 +5,22 @@
   text-align: center;
 }
 
+.intro-kicker {
+  display: block;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4rpx;
+}
+
+.intro-lead {
+  display: block;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+}
+
 .intro-title {
   display: block;
   font-size: var(--fs-body);
@@ -31,7 +47,6 @@
 }
 
 .intro-warn {
-  display: block;
   margin-top: 8rpx;
   padding: 16rpx 20rpx;
   border-radius: 12rpx;
@@ -39,6 +54,17 @@
   color: var(--danger);
   font-size: var(--fs-small);
   line-height: 1.5;
+}
+
+.warn-title {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 6rpx;
+}
+
+.warn-item {
+  display: block;
+  margin-top: 6rpx;
 }
 
 .section-card {
