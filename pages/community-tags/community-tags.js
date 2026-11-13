@@ -3,10 +3,16 @@ const social = require('../../utils/community')
 const publication = require('../../utils/publication')
 const tagHistory = require('../../utils/article-tags')
 const tagImages = require('../../utils/tag-images')
+const customTagCode = require('../../utils/custom-tag-code')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 
 function isUser(tag){return tag && (tag.type==='USER' || String(tag.code||'').startsWith('custom_'))}
 function rowKey(tag){return tag.code ? `c:${tag.code}` : `n:${String(tag.name).toLowerCase()}`}
+function filterCode(tag){
+  if(tag && tag.code) return String(tag.code)
+  if(tag && isUser(tag) && tag.name) return customTagCode.fromName(tag.name)
+  return ''
+}
 
 Page({
   data: {
@@ -247,12 +253,14 @@ Page({
       this.refreshSelection()
       return
     }
-    const code = row.code || (row.type === 'USER' ? 'other' : '')
-    this.emit('filterTag', { code: code || 'other', name: row.name })
+    const code = filterCode(row)
+    if (!code) return
+    this.emit('filterTag', { code, name: row.name })
     wx.navigateBack({ fail:() => wx.switchTab({ url:'/pages/index/index' }) })
   },
   onBrowseAll() {
     if (this.data.mode !== 'browse' || !social.active(this)) return
+    // 「其他」= 无标签文章（与首页 / feed tag=other 一致）
     this.emit('filterTag', { code:'other', name:'其他' })
     wx.navigateBack({ fail:() => wx.switchTab({ url:'/pages/index/index' }) })
   },

@@ -3,6 +3,7 @@ const { mapField } = require('../../utils/remote-image')
 const social = require('../../utils/community')
 const { TAGS, reportUrl } = require('../../utils/publication')
 const tagHistory = require('../../utils/article-tags')
+const customTagCode = require('../../utils/custom-tag-code')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 
 Page({
@@ -20,15 +21,36 @@ Page({
   async loadTags() {
     const version=this._communityVersion,run=this._tagRun=(this._tagRun||0)+1
     try {
-      const choices=await api.fetchCommunityTags()
+      const [catalog, mine] = await Promise.all([api.fetchCommunityTags(), api.fetchMyCommunityTags(true)])
       if(!social.active(this,version)||run!==this._tagRun)return
-      const rows=Array.isArray(choices)?choices:[],isUser=t=>t.type==='USER'||String(t.code).startsWith('custom_')
+      const rows=Array.isArray(catalog)?catalog:[], mineRows=Array.isArray(mine)?mine:[]
+      const isUser=t=>t && (t.type==='USER'||String(t.code||'').startsWith('custom_'))
       const unpinned=new Set(tagHistory.unpinned().map(n=>String(n).toLowerCase()))
+      const hidden=new Set(tagHistory.hidden().map(n=>String(n).toLowerCase()))
       const tags=rows.filter(t=>!isUser(t)).filter(t=>t.code==='other'||!unpinned.has(String(t.name).toLowerCase()))
-      const otherTags=rows.filter(isUser)
-      const removed=!!(this.data.activeTag&&!(
+      const byCode=new Map(), byName=new Map()
+      const put=(t)=>{
+        if(!t)return
+        const name=String(t.name||'').trim()
+        const nameKey=name.toLowerCase()
+        if(!name||hidden.has(nameKey))return
+        let code=String(t.code||'')
+        if(!code) code=customTagCode.fromName(name)
+        if(!code||byCode.has(code))return
+        const row={ code, name, type:'USER', enabled: t.enabled == null ? 1 : t.enabled }
+        byCode.set(code, row)
+        byName.set(nameKey, row)
+      }
+      ;[...rows.filter(isUser), ...mineRows.filter(t=>isUser(t) && t.enabled!==0)].forEach(put)
+      tagHistory.list().forEach(name=>{
+        const key=String(name).toLowerCase()
+        if(hidden.has(key)||byName.has(key))return
+        put({ name, code: customTagCode.fromName(name), type:'USER', enabled:1 })
+      })
+      const otherTags=Array.from(byCode.values())
+      const removed=!!(this.data.activeTag&&this.data.activeTag!=='other'&&!(
         tags.some(t=>t.code===this.data.activeTag)||
-        (this.data.otherSelected&&rows.some(t=>t.code===this.data.activeTag))
+        otherTags.some(t=>t.code===this.data.activeTag)
       ))
       this.setData({tags,otherTags,tagsError:'',...(removed?{activeTag:'',otherSelected:false}: {})})
       if(removed)this.load(true)
@@ -45,7 +67,7 @@ Page({
         filterTag: detail => {
           if (!social.active(this, version)) return
           const code = detail && detail.code ? String(detail.code) : 'other'
-          this.setData({ activeTag:code, otherSelected:true, posts:[] }); this.load(true)
+          this.setData({ activeTag:code, otherSelected:code === 'other', posts:[] }); this.load(true)
         }
       }
     })
@@ -92,9 +114,9 @@ Page({
   },
   onTag(e) {
     const code = e.currentTarget.dataset.code || ''
-    if (code === 'other') return this.openMyTags()
+    if (code === '__manage__') return this.openMyTags()
     if (code === this.data.activeTag) return
-    this.setData({ activeTag: code, otherSelected: false, posts: [], ...(this.data.feedMode === 'hot' ? { feedMode: 'recommend' } : {}) })
+    this.setData({ activeTag: code, otherSelected: code === 'other', posts: [], ...(this.data.feedMode === 'hot' ? { feedMode: 'recommend' } : {}) })
     this.load(true)
   },
   onOpenSearch() {
@@ -125,12 +147,7 @@ Page({
   onCommunityEntry(e) {
     const mode = e.currentTarget.dataset.mode
     if (mode === 'messages') { wx.navigateTo({ url: '/pages/information/information' }); return }
-    if (mode === 'hot') {
-      if (this.data.feedMode !== 'hot') this.setData({ feedMode: 'hot', posts: [], activeTag: '', otherSelected: false })
-      this.load(true)
-      return
-    }
-    if (['following','likes','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` })
+    if (['following','likes','collections','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` })
   },
   onReport(e) {
     const id=String(e.currentTarget.dataset.id),post=this.data.posts.find(row=>String(row.id)===id)
