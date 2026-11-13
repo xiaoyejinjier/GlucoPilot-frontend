@@ -165,6 +165,16 @@ module.exports = {
   canConfigureDevelopment,
   connectionIssue,
   saveDevelopmentBaseUrl,
+  /**
+   * 客服联系方式（封禁申诉、注销咨询）。
+   *
+   * <p>当前为开发阶段测试占位值，仅用于联调；正式上线前必须替换为真实客服邮箱/电话，
+   * 并删除封禁弹窗里的"开发阶段测试信息"提示。两项都为空时只提示"请联系客服"。
+   */
+  supportContact: {
+    email: 'support@example.com',
+    phone: '400-000-0000'
+  },
   /** 提供给日志/排障：当前地址与它来自哪里（storage / devtools 默认 / 开发兜底 / 生产） */
   resolveBaseUrl,
   devicePlatform,

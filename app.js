@@ -241,26 +241,13 @@ App({
     wx.reLaunch({ url: '/pages/login/login' })
   },
 
-  /** 禁用账号登录（accountStatus=0）：仅可办理注销或退出。 */
+  /**
+   * 封禁账号（accountStatus=0）：不可自助注销，进入封禁提示页。
+   * 该页展示客服邮箱/电话（逐行复制）与【关闭】；关闭后撤销会话并回登录页。
+   */
   interceptDisabledLogin() {
-    return new Promise((resolve) => {
-      wx.showModal({
-        title: '账号已被禁用',
-        content: '该账号当前处于禁用状态，仅可申请注销账号或退出登录。',
-        confirmText: '申请注销',
-        cancelText: '退出登录',
-        confirmColor: '#fa5151',
-        success: (result) => {
-          if (result.confirm) {
-            wx.reLaunch({ url: '/pages/account-cancellation/cancellation' })
-            resolve({ disabled: true })
-          } else {
-            this.logoutAndExit().then(resolve)
-          }
-        },
-        fail: () => this.logoutAndExit().then(resolve)
-      })
-    })
+    wx.reLaunch({ url: '/pages/account-disabled/account-disabled' })
+    return Promise.resolve({ disabled: true })
   },
 
   openRequiredDisclaimer() {

@@ -1,0 +1,62 @@
+.disabled-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.disabled-title {
+  display: block;
+  text-align: center;
+  font-size: var(--fs-title);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.disabled-desc {
+  display: block;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.contact-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 20rpx 0;
+  border-top: 1rpx solid var(--line);
+}
+
+.contact-label {
+  flex-shrink: 0;
+  width: 150rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.contact-value {
+  flex: 1;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.copy-btn {
+  flex-shrink: 0;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: var(--fs-small);
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+
+.dev-note {
+  display: block;
+  font-size: var(--fs-tiny);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.submit-area {
+  margin: 16rpx 20rpx 40rpx;
+}

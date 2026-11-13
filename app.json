@@ -37,6 +37,8 @@
     "pages/about/about",
     "pages/account-security/account-security",
     "pages/account-cancellation/cancellation",
+    "pages/account-cancellation-notice/notice",
+    "pages/account-disabled/account-disabled",
     "pages/notifications/notifications",
     "pages/display-settings/display-settings",
     "pages/feedback-list/feedback-list"

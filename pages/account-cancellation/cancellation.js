@@ -1,5 +1,5 @@
 const {
-  fetchCancellationStatus, fetchCancellationCaptcha, sendCancellationCode,
+  fetchCancellationStatus, fetchCancellationPrecheck, fetchCancellationCaptcha, sendCancellationCode,
   submitCancellation, logoutRemote
 } = require('../../services/api')
 const { clearAccountCache } = require('../../utils/storage')
@@ -31,6 +31,8 @@ Page({
     locale: i18n.getLocale(),
     // applying=正常申请流；pending=注销处理中（7 天可恢复窗口）；gone=已注销/执行中兜底；loading/error
     page: 'loading',
+    // intro=说明与勾选；verify=点击申请注销并通过预检后的身份验证步骤
+    step: 'intro',
     errorText: '注销状态加载失败，请返回重试。',
     deadline: '',
     reasons: CANCEL_REASONS,
@@ -58,6 +60,7 @@ Page({
     wechatVerified: false,
     sliderVisible: false,
     sliderHint: '按住滑块，拖动到最右侧',
+    checking: false,
     submitting: false
   },
 
@@ -282,14 +285,100 @@ Page({
     })
   },
 
-  onSubmit() {
+  /** 打开《注销须知》独立页，返回后勾选与原因保持不变。 */
+  onOpenNotice() {
+    wx.navigateTo({ url: '/pages/account-cancellation-notice/notice' })
+  },
+
+  /** 第二步顶部返回：仅切回说明页，不清空已选原因与勾选。 */
+  onBackToIntro() {
+    if (this.data.submitting) return
+    this.setData({ step: 'intro', sliderVisible: false })
+  },
+
+  /** 说明页点击【申请注销】：勾选校验 → 服务端预检 → 进入身份验证或阻断。 */
+  onApply() {
+    const { agreed, checking, submitting } = this.data
+    if (checking || submitting) return
+    if (!agreed) {
+      wx.showToast({ title: '请先阅读并同意《注销须知》', icon: 'none' })
+      return
+    }
+
+    this.setData({ checking: true })
+    fetchCancellationPrecheck()
+      .then((view) => {
+        this.setData({ checking: false })
+        const info = view || {}
+        if (info.canCancel) {
+          this.setData({ step: 'verify' })
+          return
+        }
+        this.handlePrecheckBlock(info)
+      })
+      .catch((err) => {
+        this.setData({ checking: false })
+        wx.showToast({ title: (err && err.message) || '账号状态检查失败，请重试', icon: 'none' })
+      })
+  },
+
+  /** 预检阻断分发：注销态切对应视图，其余弹窗告知，均停留在说明页。 */
+  handlePrecheckBlock(view) {
+    const code = view && view.blockCode
+    if (code === 'ALREADY_APPLIED') {
+      const deadline = formatDeadline(view.isolateUntil)
+      if (deadline) {
+        this.setData({ page: 'pending', step: 'intro', deadline })
+        return
+      }
+      // 凭据缺失兜底：回查状态接口，由 refresh 统一路由
+      this.setData({ step: 'intro' })
+      this.refresh()
+      return
+    }
+    if (code === 'CANCELLING' || code === 'ACCOUNT_CANCELLED') {
+      this.setData({ page: 'gone', step: 'intro' })
+      return
+    }
+    if (code === 'ACCOUNT_DISABLED') {
+      wx.showModal({
+        title: '账号已被封禁',
+        content: '当前账号已被封禁，无法自助注销。请先联系客服申请解冻后再试。',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+      return
+    }
+    if (code === 'RECENTLY_RECOVERED') {
+      wx.showModal({
+        title: '暂不可注销',
+        content: '账号恢复后 24 小时内不可再次注销，请稍后再试。',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+      return
+    }
+    if (code === 'ASSET_PENDING') {
+      wx.showModal({
+        title: '资产未结清',
+        content: view.blockMessage || '存在未结清资产，请先提现或结清后再申请。',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+      return
+    }
+    wx.showToast({ title: (view && view.blockMessage) || '当前账号暂不可注销', icon: 'none' })
+  },
+
+  /** 第二步：校验验证凭证 → 二次确认 → 提交注销。 */
+  onConfirmSubmit() {
     const {
       reasonCode, agreed, verifyMode, codeChannel, verifyCode,
       wechatVerified, submitting, canUseCode, canUseWechat
     } = this.data
     if (submitting) return
     if (!agreed) {
-      wx.showToast({ title: '请先勾选注销须知', icon: 'none' })
+      wx.showToast({ title: '请先阅读并同意《注销须知》', icon: 'none' })
       return
     }
 

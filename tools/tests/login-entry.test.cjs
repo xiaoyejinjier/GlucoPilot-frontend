@@ -483,18 +483,25 @@ test('未触发恢复时不弹恢复提示，直接进入主页', async () => {
   assert.equal(flow.state.routes.at(-1), '/pages/ai/ai')
 })
 
-test('恢复后仍为禁用账号：先告知已恢复，再引导注销或退出', async () => {
+test('恢复后仍为禁用账号：先告知已恢复，再进入封禁提示页', async () => {
   const { app, state } = recoveredFlow({ accountStatus: 0 })
   const pending = app.goAfterLogin()
   await flush()
   assert.equal(state.modals.length, 1)
   assert.equal(state.modals[0].title, '账号已恢复')
   state.modals[0].complete({ confirm: true })
-  await flush()
-  assert.equal(state.modals.length, 2)
-  assert.equal(state.modals[1].title, '账号已被禁用')
-  state.modals[1].success({ confirm: true })
   await pending
-  assert.equal(state.routes.at(-1), '/pages/account-cancellation/cancellation')
+  // 封禁账号不可自助注销：不再弹原生选项，直接进入封禁提示页
+  assert.equal(state.modals.length, 1)
+  assert.equal(state.routes.at(-1), '/pages/account-disabled/account-disabled')
+})
+
+test('封禁账号直接登录进入封禁提示页，不再弹原生注销选项', async () => {
+  const flow = createFlow({ profile: { disclaimerAgreed: true, disclaimerVersion: 'v1', accountStatus: 0 } })
+  flow.app.globalData.isLoggedIn = true
+  flow.request.setToken('current-user')
+  await flow.app.goAfterLogin()
+  assert.equal(flow.state.modals.length, 0)
+  assert.equal(flow.state.routes.at(-1), '/pages/account-disabled/account-disabled')
 })
 

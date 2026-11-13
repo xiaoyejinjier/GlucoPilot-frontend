@@ -554,6 +554,11 @@ function fetchCancellationStatus() {
   return get('/users/me/cancellation', null, { auth: true })
 }
 
+/** 提交前预检：封禁/注销态/恢复后 24h 锁定/资产/已有申请，HTTP 恒 200。 */
+function fetchCancellationPrecheck() {
+  return get('/users/me/cancellation/precheck', null, { auth: true })
+}
+
 /** 取一次性滑动验证票据（绑 userId，180 秒有效，发码时回传）。 */
 function fetchCancellationCaptcha() {
   return get('/users/me/cancellation/captcha', null, { auth: true, timeout: 10000 })
@@ -706,6 +711,7 @@ module.exports = {
   bindPhone,
   bindEmail,
   fetchCancellationStatus,
+  fetchCancellationPrecheck,
   fetchCancellationCaptcha,
   sendCancellationCode,
   submitCancellation,

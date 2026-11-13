@@ -5,20 +5,15 @@
   text-align: center;
 }
 
-.intro-kicker {
-  display: block;
-  font-size: var(--fs-small);
-  font-weight: 700;
-  color: var(--muted);
-  margin-bottom: 4rpx;
+.step-back {
+  display: flex;
+  align-items: center;
+  padding: 0 24rpx 16rpx;
 }
 
-.intro-lead {
-  display: block;
+.step-back-text {
   font-size: var(--fs-small);
   color: var(--muted);
-  line-height: 1.6;
-  margin-bottom: 16rpx;
 }
 
 .intro-title {
@@ -206,7 +201,14 @@
 .agree-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.agree-line {
+  display: flex;
+  align-items: center;
 }
 
 .agree-box {
@@ -223,13 +225,18 @@
 }
 
 .agree-box.checked {
-  background: var(--danger);
-  border-color: var(--danger);
+  background: var(--brand);
+  border-color: var(--brand);
 }
 
 .agree-text {
   font-size: var(--fs-small);
   color: var(--muted);
+}
+
+.agree-link {
+  font-size: var(--fs-small);
+  color: var(--brand-dark);
 }
 
 .submit-area {
@@ -245,10 +252,15 @@
   border-radius: 20rpx;
   font-size: var(--fs-body);
   font-weight: 700;
-  background: var(--danger);
-  color: #fff;
-  border: none;
+  background: #fff;
+  color: var(--ink);
+  border: 1rpx solid var(--line);
   margin: 0;
+}
+
+.btn-cancel[disabled] {
+  background: var(--surface-subtle);
+  color: var(--muted);
 }
 
 .btn-cancel::after {

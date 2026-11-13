@@ -1419,8 +1419,6 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 仍会保留的内容	What will be retained
 · 已发布的社区内容将匿名保留，作者显示为“已注销用户”	· Published community posts remain, shown as "Deleted user"
 · 已发布的问诊贴（含收费贴）将作为医疗记录匿名保留，其他用户仍可查看，但您的个人身份信息将被抹除。	· Published consultation posts (including paid ones) are kept anonymously as medical records and stay visible to others, but your identity is removed.
-冷静期说明：	Cooling-off period:
-提交后 7 天内可再次登录取消注销，期满后数据永久删除。	Log in again within 7 days to cancel; data is permanently deleted afterwards.
 ⚠️ 重要提示	⚠️ Important
 · 注销操作不可撤销，7 天期满后数据将被彻底删除，请谨慎操作。	· Deletion cannot be undone; data is permanently removed after 7 days.
 · 注销前，请确保您的钱包余额已全部提现。账号注销后，未提现的资金将无法找回。	· Withdraw your full wallet balance before deleting. Unwithdrawn funds cannot be recovered afterwards.
@@ -1434,8 +1432,33 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 使用微信身份验证	Verify with WeChat
 微信身份验证已完成	WeChat identity verified
 当前账号未绑定手机号、邮箱或微信，无法完成身份验证，请联系客服处理。	No phone, email or WeChat is linked. Contact support to verify your identity.
-我已了解注销后数据将被永久删除	I understand my data will be permanently deleted
+已阅读并同意	I have read and agree to
+《注销须知》	"Deletion Notice"
+‹ 返回	‹ Back
+提交注销申请	Submit deletion request
+注销须知	Deletion Notice
+1、注销账号是不可恢复的操作。为保护你的合法权益，在开始操作前，请你自行备份账号相关的信息与数据，并务必审慎阅读、充分理解本须知全部内容。如有疑问、意见或建议，可与我们的客服联系，我们会给予必要的帮助。	1. Deleting your account cannot be undone. To protect your rights, back up any account-related information and data before you start, and read and fully understand this notice. If you have questions, comments or suggestions, contact our support team and we will help.
+2、你可在成功提交注销申请后的 7 天内，使用原手机号、邮箱或微信登录本账号，届时我们将自动终止注销流程，账号及数据保持不变。若你在上述期限内未再次登录，账号将被正式注销，此后你将无法再使用本账号，也无法找回与本账号绑定的任何内容和信息（即使你用相同手机号、邮箱或微信再次注册使用），包括但不限于：	2. Within 7 days after submitting the deletion request, log in with your original phone number, email or WeChat to cancel it automatically; your account and data stay unchanged. If you do not log in within that period, the account will be deleted and you will no longer be able to use it or recover any content or information linked to it (even if you register again with the same phone number, email or WeChat), including but not limited to:
+（1）你将无法登录、使用本账号，亲友也将无法通过本账号联系你；	(1) You will be unable to log in or use this account, and others will not be able to reach you through it;
+（2）账号内的个人资料与历史信息（包括昵称、头像、身高体重等健康档案、血糖与饮食记录、AI 对话与消息记录、设备绑定关系、设置项、意见反馈等）将无法找回；	(2) Profile and historical data (nickname, avatar, health profile such as height and weight, glucose and meal records, AI chats and messages, device bindings, settings, feedback, etc.) cannot be recovered;
+（3）账号内的钱包账户将被关闭，未提现的余额将无法找回，请你务必在注销前完成全部提现；	(3) The wallet linked to the account will be closed and unwithdrawn balance cannot be recovered, so withdraw everything before deleting;
+（4）你已获得的权益、优惠、积分、订单及卡券等，将视为你自行放弃，无法继续使用，亦无法找回。	(4) Benefits, discounts, points, orders and coupons you obtained are deemed waived and can no longer be used or recovered.
+3、以下内容在注销后仍会保留：	3. The following content is retained after deletion:
+（1）你已发布的社区内容及互动记录将匿名保留，作者显示为“已注销用户”；	(1) Community content and interactions you published remain anonymized, with the author shown as "Deleted user";
+（2）你已发布的问诊贴（含付费问诊）将作为医疗记录匿名保留，其他用户仍可查看，但你的个人身份信息将被抹除；	(2) Consultation posts you published (including paid ones) are kept anonymously as medical records and stay visible to others, but your identity is removed;
+（3）为履行法律法规规定的义务（如医疗记录留存、财务记账、安全审计），我们可能依法保存必要的日志记录。	(3) We may retain necessary logs as required by law (such as medical record retention, financial bookkeeping and security auditing).
+4、提交注销前，请确认账号处于安全状态，且不存在未结清的资金、未完成的问诊、退款或投诉处理，否则我们可能暂时无法受理你的注销申请。	4. Before submitting, make sure the account is secure and has no unsettled funds, unfinished consultations, refunds or complaints; otherwise we may be unable to process the deletion.
+5、账号处于封禁状态时无法自助注销。请先通过客服申请解冻，待账号恢复正常后再提交注销申请。	5. Banned accounts cannot be deleted via self-service. Contact support to request an unblock, then submit the deletion request once the account is normal.
+6、注销申请提交后，该账号的全部登录会话将立即失效；在 7 天冷静期内登录即视为撤销注销。	6. Once submitted, all sessions of the account are revoked immediately; logging in during the 7-day cooling-off period cancels the deletion.
+7、注销完成后，使用同一手机号、邮箱或微信重新注册将生成全新账号，原账号的数据、权益与记录不会迁移或恢复。	7. After deletion, registering with the same phone number, email or WeChat creates a brand-new account; the old account's data, benefits and records are not migrated or restored.
+8、本须知适用《用户服务协议》与《隐私政策》的相关约定；如你对注销流程或数据处理有异议，可通过客服渠道与我们联系。	8. This notice is subject to the User Service Agreement and Privacy Policy; if you disagree with the deletion process or data handling, contact us through support.
 申请注销	Request deletion
+账号已被封禁	Account banned
+当前账号已被封禁，无法自助注销。请先联系客服申请解冻，解冻后可正常使用或再次申请注销。	This account is banned and cannot be deleted through self-service. Contact support to request an unblock; once unblocked, you can use the account normally or submit a deletion request again.
+客服邮箱	Support email
+客服电话	Support phone
+复制	Copy
+（开发阶段测试信息，正式上线前将替换为真实客服方式）	(Development test information; replaced with real support details before release)
 滑动验证	Slider verification
 拖动滑块到最右侧，完成后才会发送验证码	Drag the slider all the way right to send the code
 不再使用	No longer needed
