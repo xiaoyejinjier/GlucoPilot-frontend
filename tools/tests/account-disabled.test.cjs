@@ -10,7 +10,7 @@ function harness(options={}){
     '../../services/api':{logoutRemote:async()=>{state.logout++}},
     '../../utils/storage':{clearAccountCache(){state.cleared++}},
     '../../utils/display':{applyDisplayToCurrentPage(){}},
-    '../../utils/i18n':{getLocale:()=> 'zh'}
+    '../../utils/i18n':{getLocale:()=> 'zh',t:v=>v}
   }
   const wx={
     setClipboardData:o=>{state.clipboard.push(o.data);if(o.success)o.success()},

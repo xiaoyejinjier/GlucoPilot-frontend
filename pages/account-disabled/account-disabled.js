@@ -38,7 +38,7 @@ Page({
       data: value,
       success: () => {
         wx.showToast({
-          title: type === 'phone' ? '电话复制成功' : '邮箱复制成功',
+          title: type === 'phone' ? i18n.t('电话复制成功') : i18n.t('邮箱复制成功'),
           icon: 'none'
         })
       }

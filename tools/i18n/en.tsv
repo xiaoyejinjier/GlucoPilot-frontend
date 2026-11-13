@@ -1459,6 +1459,8 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 客服电话	Support phone
 复制	Copy
 （开发阶段测试信息，正式上线前将替换为真实客服方式）	(Development test information; replaced with real support details before release)
+邮箱复制成功	Email copied
+电话复制成功	Phone number copied
 滑动验证	Slider verification
 拖动滑块到最右侧，完成后才会发送验证码	Drag the slider all the way right to send the code
 不再使用	No longer needed
