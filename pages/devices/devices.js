@@ -85,11 +85,6 @@ Page({
 
   onShow() {
     this._active = true
-    const tab = typeof this.getTabBar === 'function' && this.getTabBar()
-    if (tab) {
-      tab.setData({ selected: 1 })
-      if (typeof tab.refreshGuide === 'function') tab.refreshGuide()
-    }
     applyDisplayToCurrentPage()
     const token = getToken()
     if (this._token !== token) {

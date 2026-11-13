@@ -528,7 +528,7 @@ test('当前对话不可用（404）时清理旧状态并保留重试入口', as
 test('小语只保留自动恢复，导航与输入功能正常，已移除自选会话入口和路由', () => {
   const appJson = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
   assert.equal(appJson.pages.includes('pages/voice/history'), false)
-  assert.equal(json(appJson.tabBar.list.map(item => item.text)), '["记录","设备管理","社区","我的"]')
+  assert.equal(json(appJson.tabBar.list.map(item => item.text)), '["记录","社区","我的"]')
   const voiceWxml = fs.readFileSync(path.join(root, 'pages/voice/voice.wxml'), 'utf8')
   for (const marker of ['onOpenHistory', 'onNewChat', '历史对话', '新对话', 'wx-head-actions']) {
     assert.equal(voiceWxml.includes(marker), false, marker)

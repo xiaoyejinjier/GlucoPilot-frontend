@@ -1,9 +1,39 @@
-const { fetchMe, fetchGlucoseSummary, logoutRemote } = require('../../services/api')
+const { fetchMe, fetchGlucoseSummary, logoutRemote, fetchMyDevices, fetchDeviceSyncLogs } = require('../../services/api')
 const { getUserInfo, saveUserInfo, logout } = require('../../utils/storage')
 const { getToken } = require('../../utils/request')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 
 const app = getApp()
+const PROVIDER_NAMES = {
+  MOCK: '测试设备',
+  HUAWEI: '华为健康',
+  HEALTH_CONNECT: 'Health Connect',
+  APPLE_HEALTH: '苹果健康',
+  NIGHTSCOUT: 'Nightscout'
+}
+
+function parseSyncTime(value) {
+  if (!value) return 0
+  const time = Date.parse(String(value).replace(' ', 'T'))
+  return Number.isFinite(time) ? time : 0
+}
+
+function formatSyncAt(value) {
+  if (!value) return ''
+  return String(value).replace('T', ' ').slice(0, 19)
+}
+
+function emptyDeviceCover() {
+  return {
+    boundCount: 0,
+    hasSync: false,
+    deviceName: '',
+    providerName: '',
+    syncedAt: '',
+    syncTitle: '暂无同步记录',
+    syncDetail: '绑定设备后，最新一次同步会显示在这里'
+  }
+}
 
 Page({
   data: {
@@ -12,7 +42,8 @@ Page({
     todayCount: '0/9',
     avgGlucose: '--',
     streakDays: 0,
-    loggingOut:false
+    loggingOut: false,
+    deviceCover: emptyDeviceCover()
   },
 
   onShow() {
@@ -21,7 +52,7 @@ Page({
     this.setData({loggingOut:!!this._logoutInFlight})
     const tabBar = typeof this.getTabBar === 'function' && this.getTabBar()
     if (tabBar) {
-      tabBar.setData({ selected: 3 })
+      tabBar.setData({ selected: 2 })
       if (typeof tabBar.refreshGuide === 'function') tabBar.refreshGuide()
     }
     applyDisplayToCurrentPage()
@@ -65,10 +96,71 @@ Page({
         if(!this.sessionActive(token,epoch))return
         this.setData({ todayCount: '0/9', avgGlucose: '--', streakDays: 0 })
       })
+
+    this.loadDeviceCover(token, epoch)
+  },
+
+  async loadDeviceCover(token, epoch) {
+    try {
+      const devices = await fetchMyDevices()
+      if (!this.sessionActive(token, epoch)) return
+      const list = Array.isArray(devices) ? devices : []
+      const boundCount = list.length
+      if (!boundCount) {
+        this.setData({ deviceCover: emptyDeviceCover() })
+        return
+      }
+      let latest = list[0]
+      let latestTs = parseSyncTime(latest && latest.lastSyncAt)
+      list.forEach((device) => {
+        const ts = parseSyncTime(device.lastSyncAt)
+        if (ts > latestTs) {
+          latest = device
+          latestTs = ts
+        }
+      })
+      const providerName = PROVIDER_NAMES[latest.provider] || latest.provider || '设备'
+      const deviceName = latest.deviceName || '我的血糖仪'
+      let syncedAt = formatSyncAt(latest.lastSyncAt)
+      let syncDetail = syncedAt ? `${providerName} · ${deviceName}` : '已绑定设备，尚未同步'
+      let syncTitle = syncedAt ? `最新同步 ${syncedAt}` : '暂无同步记录'
+      try {
+        const logs = await fetchDeviceSyncLogs(latest.id, 1)
+        if (!this.sessionActive(token, epoch)) return
+        const row = Array.isArray(logs) && logs[0]
+        if (row) {
+          syncedAt = formatSyncAt(row.syncedAt) || syncedAt
+          const samples = Number(row.sampleCount) || 0
+          const created = Number(row.createdCount) || 0
+          syncTitle = syncedAt ? `最新同步 ${syncedAt}` : syncTitle
+          syncDetail = `${providerName} · ${deviceName} · 采样 ${samples} · 新写入 ${created}`
+        }
+      } catch (_) { /* 列表时间足够作为封面兜底 */ }
+      if (!this.sessionActive(token, epoch)) return
+      this.setData({
+        deviceCover: {
+          boundCount,
+          hasSync: !!syncedAt,
+          deviceName,
+          providerName,
+          syncedAt,
+          syncTitle,
+          syncDetail
+        }
+      })
+    } catch (_) {
+      if (!this.sessionActive(token, epoch)) return
+      this.setData({ deviceCover: emptyDeviceCover() })
+    }
   },
 
   onMenuTap(e) {
     wx.navigateTo({ url: e.currentTarget.dataset.url })
+  },
+
+  onDevicesTap() {
+    if (!this.sessionActive(getToken(), this._mineEpoch)) return
+    wx.navigateTo({ url: '/pages/devices/devices' })
   },
 
   onEditProfile() {
@@ -92,7 +184,7 @@ Page({
         const current=getToken()
         if(current&&current!==token){if(this._mineVisible)this.setData({loggingOut:false});return}
         wx.hideLoading();app.resetLoginState();logout();this._mineEpoch++
-        this.setData({userInfo:{},todayCount:'0/9',avgGlucose:'--',streakDays:0,unreadCount:0,unreadLabel:'',loggingOut:false})
+        this.setData({userInfo:{},todayCount:'0/9',avgGlucose:'--',streakDays:0,unreadCount:0,unreadLabel:'',deviceCover:emptyDeviceCover(),loggingOut:false})
         wx.reLaunch({url:'/pages/login/login'})
       })
     },fail:()=>{this._logoutPending=false}})

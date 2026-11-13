@@ -12,7 +12,7 @@ Page({
   onShow() {
     if (!getApp().checkLogin()) return
     const tabBar = typeof this.getTabBar === 'function' && this.getTabBar()
-    if (tabBar) { tabBar.setData({ selected: 2 }); if (tabBar.refreshGuide) tabBar.refreshGuide() }
+    if (tabBar) { tabBar.setData({ selected: 1 }); if (tabBar.refreshGuide) tabBar.refreshGuide() }
     const token = this._communityToken; social.begin(this); applyDisplayToCurrentPage()
     if (token && token !== this._communityToken) this.setData({ posts: [], activeTag: '', feedMode: 'recommend',tags:[],otherTags:[],otherSelected:false })
     this._busy = new Set(); this.load(true)

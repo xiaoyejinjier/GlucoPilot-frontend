@@ -60,10 +60,6 @@
         "text": "记录"
       },
       {
-        "pagePath": "pages/devices/devices",
-        "text": "设备管理"
-      },
-      {
         "pagePath": "pages/index/index",
         "text": "社区"
       },

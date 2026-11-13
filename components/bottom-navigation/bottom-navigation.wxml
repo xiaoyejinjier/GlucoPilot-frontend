@@ -13,7 +13,7 @@
       <app-icon name="{{item.icon}}" active="{{selected === item.index}}"
         color="{{selected === item.index ? brandColor : '#647970'}}" size="lg"></app-icon>
       <text class="navigation-label">{{i18n.t((item.text), locale)}}</text>
-      <view wx:if="{{item.index === 2 && unreadCount > 0}}" class="navigation-unread"></view>
+      <view wx:if="{{item.index === 1 && unreadCount > 0}}" class="navigation-unread"></view>
     </view>
   </view>
 </view>
