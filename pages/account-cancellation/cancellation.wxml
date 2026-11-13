@@ -32,7 +32,7 @@
 
   <!-- 正常申请流：第一步 说明与勾选 -->
   <block wx:elif="{{page === 'applying' && step === 'intro'}}">
-    <view class="card">
+    <view class="card intro-card">
       <text class="intro-title">{{i18n.t("注销后，以下内容将被删除", locale)}}</text>
       <view class="intro-list">
         <text class="intro-item">{{i18n.t("· 血糖、饮食记录与健康档案", locale)}}</text>
@@ -52,14 +52,14 @@
       </view>
     </view>
 
-    <view class="card section-card">
+    <view class="card section-card reason-card">
       <text class="section-label">{{i18n.t("注销原因（选填）", locale)}}</text>
       <view class="reason-row">
         <view wx:for="{{reasons}}" wx:key="code" class="reason-item {{reasonCode === item.code ? 'active' : ''}}" data-code="{{item.code}}" bindtap="onSelectReason">{{i18n.t(item.label, locale)}}</view>
       </view>
     </view>
 
-    <view class="submit-area">
+    <view class="submit-area submit-fixed">
       <button class="btn-cancel btn-block" loading="{{checking}}" disabled="{{checking}}" bindtap="onApply">{{i18n.t("申请注销", locale)}}</button>
       <view class="agree-row" bindtap="onToggleAgree">
         <view class="agree-box {{agreed ? 'checked' : ''}}">{{agreed ? '✓' : ''}}</view>
@@ -71,12 +71,8 @@
     </view>
   </block>
 
-  <!-- 正常申请流：第二步 身份验证（预检通过后） -->
+  <!-- 正常申请流：第二步 身份验证（预检通过后，独立栈层，原生返回即回上一步） -->
   <block wx:elif="{{page === 'applying' && step === 'verify'}}">
-    <view class="step-back" bindtap="onBackToIntro">
-      <text class="step-back-text">{{i18n.t("‹ 返回", locale)}}</text>
-    </view>
-
     <view class="card section-card">
       <text class="section-label">{{i18n.t("身份验证", locale)}}</text>
 
@@ -112,7 +108,7 @@
       <text wx:else class="section-hint hint-warn">{{i18n.t("当前账号未绑定手机号、邮箱或微信，无法完成身份验证，请联系客服处理。", locale)}}</text>
     </view>
 
-    <view class="submit-area">
+    <view class="submit-area verify-submit">
       <button class="btn-cancel btn-block" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onConfirmSubmit">{{i18n.t("提交注销申请", locale)}}</button>
     </view>
   </block>

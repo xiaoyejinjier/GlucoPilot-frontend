@@ -64,10 +64,20 @@ Page({
     submitting: false
   },
 
-  onLoad() {
+  onLoad(options) {
     // wx.login code 一次性有效：仅在“微信身份验证”成功后短暂持有，提交时随请求消费。
     this._wechatCode = ''
     this._timers = {}
+    // 身份验证是页面栈里的下一层（?step=verify）：原生返回键自然回到说明/原因页。
+    const opts = options || {}
+    if (opts.step === 'verify') {
+      this.setData({
+        step: 'verify',
+        // 上一页已勾选《注销须知》并通过预检，这里不再重复拦截
+        agreed: true,
+        reasonCode: Number(opts.reasonCode) || 0
+      })
+    }
   },
 
   onShow() {
@@ -290,15 +300,9 @@ Page({
     wx.navigateTo({ url: '/pages/account-cancellation-notice/notice' })
   },
 
-  /** 第二步顶部返回：仅切回说明页，不清空已选原因与勾选。 */
-  onBackToIntro() {
-    if (this.data.submitting) return
-    this.setData({ step: 'intro', sliderVisible: false })
-  },
-
   /** 说明页点击【申请注销】：勾选校验 → 服务端预检 → 进入身份验证或阻断。 */
   onApply() {
-    const { agreed, checking, submitting } = this.data
+    const { agreed, checking, submitting, reasonCode } = this.data
     if (checking || submitting) return
     if (!agreed) {
       wx.showToast({ title: '请先阅读并同意《注销须知》', icon: 'none' })
@@ -311,7 +315,9 @@ Page({
         this.setData({ checking: false })
         const info = view || {}
         if (info.canCancel) {
-          this.setData({ step: 'verify' })
+          // 身份验证独立成栈内下一页：原生返回键即回到本页（原因选择）
+          const query = reasonCode ? `&reasonCode=${reasonCode}` : ''
+          wx.navigateTo({ url: `/pages/account-cancellation/cancellation?step=verify${query}` })
           return
         }
         this.handlePrecheckBlock(info)

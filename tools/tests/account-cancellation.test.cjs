@@ -32,7 +32,7 @@ function securityHarness(options={}){
 }
 
 /** 注销说明页：验证方式切换、滑动取票发码与可恢复窗口。 */
-function pageHarness(options={}){
+function pageHarness(options={},loadOptions={}){
   const state={toasts:[],modals:[],navs:[],notices:[],switchTabs:[],calls:[],reset:0,cleared:0}
   const app={globalData:{isLoggedIn:true,disclaimerRequired:false},resetLoginState(){state.reset++;this.globalData.isLoggedIn=false}}
   const impl={
@@ -72,7 +72,7 @@ function pageHarness(options={}){
   })
   const p={...def,data:JSON.parse(JSON.stringify(def.data))}
   p.setData=function(v){Object.assign(this.data,v)}
-  p.onLoad()
+  p.onLoad(loadOptions||{})
   p.onShow()
   return {p,state,app}
 }
@@ -83,11 +83,26 @@ const captchaCalls=(state)=>state.calls.filter(c=>c.key==='fetchCancellationCapt
 const precheckCalls=(state)=>state.calls.filter(c=>c.key==='fetchCancellationPrecheck')
 const statusCalls=(state)=>state.calls.filter(c=>c.key==='fetchCancellationStatus')
 
-/** 勾选 + 点击申请注销，走过预检进入第二步。 */
-async function enterVerify(p){
-  p.onToggleAgree()
+/** 说明页勾选并点【申请注销】，等预检结果（已勾选时不再重复切换）。 */
+async function applyFromIntro(p){
+  if (!p.data.agreed) p.onToggleAgree()
   p.onApply()
   await flush()
+}
+
+/** 说明页勾选并点【申请注销】：预检通过后应 push 一个 step=verify 的同路由栈层。 */
+async function openVerify(intro){
+  await applyFromIntro(intro.p)
+  const url=intro.state.notices.at(-1)||''
+  assert.match(url,/step=verify/)
+  return url
+}
+
+/** 直接构造身份验证栈层（上一页已勾选并通过预检）。 */
+async function verifyHarness(options={},reasonCode){
+  const h=pageHarness(options,{step:'verify',reasonCode:reasonCode?String(reasonCode):''})
+  await flush()
+  return h
 }
 
 test('账号安全页：注销入口跳转独立说明页',async()=>{
@@ -139,21 +154,28 @@ test('账号安全页：绑定邮箱走 bind scene 并回填脱敏邮箱',async(
   assert.equal(p.data.email,'a***@qq.com')
 })
 
-test('说明页：未勾选不发预检，勾选后预检通过进入验证，滑动完成才取票发码并固定 mode=2',async()=>{
-  const {p,state}=pageHarness();await flush()
-  assert.equal(p.data.page,'applying')
-  assert.equal(p.data.step,'intro')
-  assert.equal(p.data.verifyMode,1)
-  assert.equal(p.data.codeChannel,1)
+test('说明页：未勾选不发预检；勾选后预检通过 push 身份验证栈层，验证内固定 mode=2 提交',async()=>{
+  const intro=pageHarness();await flush()
+  assert.equal(intro.p.data.page,'applying')
+  assert.equal(intro.p.data.step,'intro')
+  assert.equal(intro.p.data.verifyMode,1)
+  assert.equal(intro.p.data.codeChannel,1)
 
-  p.onApply()
-  assert.equal(precheckCalls(state).length,0)
-  assert.match(state.toasts.pop(),/注销须知/)
-  assert.equal(p.data.step,'intro')
+  intro.p.onApply()
+  assert.equal(precheckCalls(intro.state).length,0)
+  assert.match(intro.state.toasts.pop(),/注销须知/)
+  assert.equal(intro.state.notices.length,0)
 
-  await enterVerify(p)
-  assert.equal(precheckCalls(state).length,1)
+  const url=await openVerify(intro)
+  assert.equal(precheckCalls(intro.state).length,1)
+  assert.match(url,/pages\/account-cancellation\/cancellation\?step=verify/)
+  // 说明页自身仍停留在 intro：系统返回后不丢勾选与原因
+  assert.equal(intro.p.data.step,'intro')
+
+  const {p,state}=await verifyHarness({},2)
   assert.equal(p.data.step,'verify')
+  assert.equal(p.data.agreed,true)
+  assert.equal(p.data.reasonCode,2)
 
   p.onSendCode()
   // 只弹滑块：滑动成功前不得取票、不得发码
@@ -175,7 +197,6 @@ test('说明页：未勾选不发预检，勾选后预检通过进入验证，�
   assert.match(state.toasts.pop(),/6 位验证码/)
 
   p.setData({verifyCode:'123456'})
-  p.onSelectReason({currentTarget:{dataset:{code:2}}})
   p.onConfirmSubmit()
   assert.equal(state.modals.length,1)
   assert.match(state.modals[0].content,/7 天内可再次登录/)
@@ -187,9 +208,8 @@ test('说明页：未勾选不发预检，勾选后预检通过进入验证，�
   assert.match(state.navs[0].url,/pages\/login\/login/)
 })
 
-test('说明页：提交前二次确认文案为七天可恢复，原因可留空',async()=>{
-  const {p,state}=pageHarness();await flush()
-  await enterVerify(p)
+test('身份验证页：提交前二次确认文案为七天可恢复，原因可留空',async()=>{
+  const {p,state}=await verifyHarness()
   p.onSendCode()
   p.onSliderUnlock();await flush()
   p.setData({verifyCode:'654321'})
@@ -199,9 +219,8 @@ test('说明页：提交前二次确认文案为七天可恢复，原因可留�
   assert.deepEqual(submitted(state)[0].args,[2,undefined,1,'654321',undefined])
 })
 
-test('说明页：滑块取消不发码',async()=>{
-  const {p,state}=pageHarness();await flush()
-  await enterVerify(p)
+test('身份验证页：滑块取消不发码',async()=>{
+  const {p,state}=await verifyHarness()
   p.onSendCode()
   assert.equal(p.data.sliderVisible,true)
   p.onSliderCancel()
@@ -211,9 +230,8 @@ test('说明页：滑块取消不发码',async()=>{
   assert.equal(p.data.smsCooldown,0)
 })
 
-test('说明页：切换验证方式清空另一模式的输入，不串扰',async()=>{
-  const {p}=pageHarness();await flush()
-  await enterVerify(p)
+test('身份验证页：切换验证方式清空另一模式的输入，不串扰',async()=>{
+  const {p}=await verifyHarness()
   p.onSendCode()
   p.onSliderUnlock();await flush()
   p.setData({verifyCode:'123456'})
@@ -231,19 +249,17 @@ test('说明页：切换验证方式清空另一模式的输入，不串扰',asy
   assert.equal(p.data.cooldownLeft,60)
 })
 
-test('说明页：纯微信账号隐藏手机/邮箱验证，wx.login 后按 verifyType=3 提交',async()=>{
-  const {p,state}=pageHarness({
+test('身份验证页：纯微信账号隐藏手机/邮箱验证，wx.login 后按 verifyType=3 提交',async()=>{
+  const {p,state}=await verifyHarness({
     fetchCancellationStatus:async()=>({
       accountStatus:1,cancellation:null,
       hasPhone:false,hasEmail:false,hasWechat:true,
       phoneMasked:'',emailMasked:''
     })
   })
-  await flush()
   assert.equal(p.data.canUseCode,false)
   assert.equal(p.data.verifyMode,3)
 
-  await enterVerify(p)
   p.onWechatVerify();await flush()
   assert.equal(p.data.wechatVerified,true)
 
@@ -253,32 +269,28 @@ test('说明页：纯微信账号隐藏手机/邮箱验证，wx.login 后按 ver
   assert.deepEqual(submitted(state)[0].args,[2,undefined,3,undefined,'wx-code-1'])
 })
 
-test('说明页：既无手机/邮箱也无微信时提示无法验证',async()=>{
-  const {p,state}=pageHarness({
+test('身份验证页：既无手机/邮箱也无微信时提示无法验证',async()=>{
+  const {p,state}=await verifyHarness({
     fetchCancellationStatus:async()=>({
       accountStatus:0,cancellation:null,
       hasPhone:false,hasEmail:false,hasWechat:false,
       phoneMasked:'',emailMasked:''
     })
   })
-  await flush()
   assert.equal(p.data.verifyMode,0)
   assert.equal(p.data.canUseCode,false)
   assert.equal(p.data.canUseWechat,false)
 
-  await enterVerify(p)
   p.onConfirmSubmit()
   assert.equal(submitted(state).length,0)
   assert.match(state.toasts.pop(),/请联系客服/)
 })
 
-test('说明页：微信 code 一次性有效，提交失败后须重新验证',async()=>{
+test('身份验证页：微信 code 一次性有效，提交失败后须重新验证',async()=>{
   let fail=true
-  const {p,state}=pageHarness({
+  const {p,state}=await verifyHarness({
     submitCancellation:async()=>{if(fail)throw new Error('微信身份验证失败');return {accountStatus:4,mode:2}}
   })
-  await flush()
-  await enterVerify(p)
   p.onSwitchVerifyMode({currentTarget:{dataset:{mode:3}}})
   p.onWechatVerify();await flush()
   assert.equal(p.data.wechatVerified,true)
@@ -327,7 +339,7 @@ test('说明页：封禁账号可进入说明页，点击申请注销被预检�
   assert.equal(p.data.page,'applying')
   assert.equal(p.data.verifyMode,1)
 
-  await enterVerify(p)
+  await applyFromIntro(p)
   assert.equal(p.data.step,'intro')
   assert.equal(state.modals.length,1)
   assert.equal(state.modals[0].title,'账号已被封禁')
@@ -340,7 +352,7 @@ test('说明页：预检 ALREADY_APPLIED 直接切注销处理中并带到期时
     fetchCancellationPrecheck:async()=>({canCancel:false,blockCode:'ALREADY_APPLIED',isolateUntil:deadline})
   })
   await flush()
-  await enterVerify(p)
+  await applyFromIntro(p)
   assert.equal(p.data.page,'pending')
   assert.match(p.data.deadline,/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
 })
@@ -351,7 +363,7 @@ test('说明页：预检 ALREADY_APPLIED 缺时间字段时回查状态接口',a
   })
   await flush()
   const before=statusCalls(state).length
-  await enterVerify(p)
+  await applyFromIntro(p)
   assert.equal(statusCalls(state).length,before+1)
   assert.equal(p.data.page,'applying')
   assert.equal(p.data.step,'intro')
@@ -362,7 +374,7 @@ test('说明页：预检恢复后 24h 锁定，停留在说明页',async()=>{
     fetchCancellationPrecheck:async()=>({canCancel:false,blockCode:'RECENTLY_RECOVERED'})
   })
   await flush()
-  await enterVerify(p)
+  await applyFromIntro(p)
   assert.equal(p.data.step,'intro')
   assert.match(state.modals[0].content,/24 小时/)
 })
@@ -372,7 +384,7 @@ test('说明页：预检资产未结清，停留在说明页',async()=>{
     fetchCancellationPrecheck:async()=>({canCancel:false,blockCode:'ASSET_PENDING',blockMessage:'存在未结清资产'})
   })
   await flush()
-  await enterVerify(p)
+  await applyFromIntro(p)
   assert.equal(p.data.step,'intro')
   assert.match(state.modals[0].content,/未结清资产/)
 })
@@ -382,7 +394,7 @@ test('说明页：预检注销态切 gone 视图，不弹窗',async()=>{
     fetchCancellationPrecheck:async()=>({canCancel:false,blockCode:'CANCELLING'})
   })
   await flush()
-  await enterVerify(cancelling.p)
+  await applyFromIntro(cancelling.p)
   assert.equal(cancelling.p.data.page,'gone')
   assert.equal(cancelling.state.modals.length,0)
 
@@ -390,7 +402,7 @@ test('说明页：预检注销态切 gone 视图，不弹窗',async()=>{
     fetchCancellationPrecheck:async()=>({canCancel:false,blockCode:'ACCOUNT_CANCELLED'})
   })
   await flush()
-  await enterVerify(cancelled.p)
+  await applyFromIntro(cancelled.p)
   assert.equal(cancelled.p.data.page,'gone')
   assert.equal(cancelled.state.modals.length,0)
 })
@@ -400,39 +412,39 @@ test('说明页：预检请求失败只提示，不进入验证步骤',async()=>
     fetchCancellationPrecheck:async()=>{throw new Error('boom')}
   })
   await flush()
-  await enterVerify(p)
+  await applyFromIntro(p)
   assert.equal(p.data.step,'intro')
   assert.equal(p.data.checking,false)
   assert.match(state.toasts.pop(),/boom|失败/)
 })
 
-test('说明页：第二步返回保留勾选与原因，可再次进入',async()=>{
-  const {p}=pageHarness()
+test('说明页：原生返回回到本页时，勾选与原因保持并可再次进入验证',async()=>{
+  const intro=pageHarness()
   await flush()
-  p.onToggleAgree()
-  p.onSelectReason({currentTarget:{dataset:{code:3}}})
-  p.onApply();await flush()
-  assert.equal(p.data.step,'verify')
+  intro.p.onSelectReason({currentTarget:{dataset:{code:3}}})
+  const url=await openVerify(intro)
+  assert.match(url,/reasonCode=3/)
 
-  p.onBackToIntro()
-  assert.equal(p.data.step,'intro')
-  assert.equal(p.data.agreed,true)
-  assert.equal(p.data.reasonCode,3)
+  // 系统返回：说明页重新 onShow，表单状态不丢
+  intro.p.onShow();await flush()
+  assert.equal(intro.p.data.step,'intro')
+  assert.equal(intro.p.data.agreed,true)
+  assert.equal(intro.p.data.reasonCode,3)
 
-  p.onApply();await flush()
-  assert.equal(p.data.step,'verify')
+  const again=await openVerify(intro)
+  assert.match(again,/reasonCode=3/)
 })
 
-test('说明页：须知页可打开，返回触发 onShow 不重置步骤与勾选',async()=>{
+test('说明页：须知页可打开，返回触发 onShow 不重置勾选与原因',async()=>{
   const {p,state}=pageHarness()
   await flush()
   p.onOpenNotice()
   assert.equal(state.notices[0],'/pages/account-cancellation-notice/notice')
 
-  await enterVerify(p)
+  p.onToggleAgree()
   p.onSelectReason({currentTarget:{dataset:{code:2}}})
   p.onShow();await flush()
-  assert.equal(p.data.step,'verify')
+  assert.equal(p.data.step,'intro')
   assert.equal(p.data.agreed,true)
   assert.equal(p.data.reasonCode,2)
 })
