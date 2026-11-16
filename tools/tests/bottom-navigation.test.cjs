@@ -32,13 +32,13 @@ test('小语最后一步显示试用入口，布局就绪后只完成一次，�
   navigation.data.guideActive=true
   definition.properties.guideActive.observer.call(navigation,true)
   navigation.tryAssistant();assert.equal(events.length,0)
-  navigation.data.guideIndex=4;navigation.tryAssistant();assert.equal(events.length,0)
+  navigation.data.guideIndex=3;navigation.tryAssistant();assert.equal(events.length,0)
   definition.lifetimes.ready.call(navigation)
   measurements.at(-1).callback([{left:10,top:650,width:60,height:60},{left:0,width:375}])
   navigation.tryAssistant();navigation.tryAssistant()
   assert.equal(events.length,1);assert.equal(events[0].detail.tryAssistant,true);assert.equal(events[0].detail.skipped,false)
   assert.equal(pages.length,0)
-  assert.doesNotMatch(navigation.data.guideSteps[1].description,/即将上线/)
+  assert.doesNotMatch(navigation.data.guideSteps[2].description,/即将上线/)
   const template=fs.readFileSync(path.join(root,'components/bottom-navigation/bottom-navigation.wxml'),'utf8')
   assert.ok(template.indexOf('bindtap="tryAssistant"')<template.indexOf('bindtap="skipGuide"'))
   assert.ok(template.indexOf('bindtap="skipGuide"')<template.indexOf('bindtap="nextGuide"'))
@@ -60,30 +60,30 @@ test('试用先完成当前账号指引并恢复图表，再打开小语；旧�
   assert.equal(bar.data.guideActive,false);assert.equal(pages[0].url,'/pages/voice/voice')
 })
 
-test('新手引导按五个入口逐步高亮，期间拦截导航并在最后一步完成', () => {
+test('新手引导按四个入口逐步高亮，期间拦截导航并在最后一步完成', () => {
   const { navigation, definition, measurements, requests, pages, events } = createNavigation()
   navigation.data.guideActive = true
   definition.properties.guideActive.observer.call(navigation, true)
   definition.lifetimes.ready.call(navigation)
   assert.equal(measurements.length, 1)
-  for (let index = 0; index < 5; index++) {
+  for (let index = 0; index < 4; index++) {
     assert.equal(navigation.data.guideIndex, index)
     assert.equal(navigation.data.guideReady, false)
     navigation.nextGuide() // 布局未就绪时连续点击不跳过步骤。
     assert.equal(navigation.data.guideIndex, index)
     const measurement = measurements.at(-1)
-    assert.equal(measurement.selectors[0], ['#nav-item-0', '#nav-item-1', '#nav-item-2', '#nav-item-3', '#nav-assistant'][index])
-    measurement.callback([{ left: index === 4 ? 10 : 85 + index * 70, top: 650, width: 60, height: 60 }, { left: 0, width: 375 }])
+    assert.equal(measurement.selectors[0], ['#nav-item-0', '#nav-item-1', '#nav-item-2', '#nav-assistant'][index])
+    measurement.callback([{ left: index === 3 ? 10 : 85 + index * 70, top: 650, width: 60, height: 60 }, { left: 0, width: 375 }])
     assert.equal(navigation.data.guideReady, true)
     assert.match(navigation.data.focusStyle, /top:650px;width:60px;height:60px;/)
     navigation.openAssistant()
     navigation.switchTab({ currentTarget: { dataset: { path: '/pages/ai/ai', index: 0 } } })
     assert.equal(requests.length + pages.length, 0)
     navigation.nextGuide()
-    assert.equal(events.length, index === 4 ? 1 : 0)
+    assert.equal(events.length, index === 3 ? 1 : 0)
   }
   assert.equal(events[0].name, 'guidecomplete')
-  assert.equal(navigation.data.guideSteps.map(step => step.title).join(','), '记录,设备管理,社区,我的,小语')
+  assert.equal(navigation.data.guideSteps.map(step => step.title).join(','), '记录,社区,我的,小语')
   assert.equal(navigation.data.arrowStyle, 'left:30px;')
 })
 
@@ -114,7 +114,7 @@ test('后台恢复不重置步骤，旋转或退出时过期测量不会覆盖�
 })
 
 test('指引任何一步均可跳过，测量未完成时也能退出且不会重复完成', () => {
-  for (const index of [0, 2, 4]) {
+  for (const index of [0, 2, 3]) {
     const { navigation, definition, measurements, events } = createNavigation()
     navigation.data.guideActive = true
     definition.properties.guideActive.observer.call(navigation, true)
@@ -164,15 +164,17 @@ test('原生TabBar读取当前登录的引导状态，完成后通知记录页�
   assert.equal(bar.data.guideActive, false)
 })
 
-test('四个常规入口保持原生Tab路由与选中索引一致，小语为独立页面', () => {
+test('三个常规入口保持原生Tab路由与选中索引一致，小语为独立页面', () => {
   const { navigation, requests, events } = createNavigation()
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
-  assert.equal(navigation.data.items.length, 4)
-  assert.equal(manifest.tabBar.list.length, 4)
-  assert.equal(navigation.data.items.map(item => item.text).join(','), '记录,设备管理,社区,我的')
-  assert.equal(manifest.tabBar.list.map(item => item.text).join(','), '记录,设备管理,社区,我的')
+  assert.equal(navigation.data.items.length, 3)
+  assert.equal(manifest.tabBar.list.length, 3)
+  assert.equal(navigation.data.items.map(item => item.text).join(','), '记录,社区,我的')
+  assert.equal(manifest.tabBar.list.map(item => item.text).join(','), '记录,社区,我的')
+  assert.equal(manifest.tabBar.list.some((item) => item.pagePath === 'pages/devices/devices'), false)
   assert.equal(navigation.data.assistant.text, '小语')
   assert.ok(manifest.pages.includes(navigation.data.assistant.pagePath.slice(1)))
+  assert.ok(manifest.pages.includes('pages/devices/devices'))
   assert.equal(manifest.tabBar.list.some((item) => '/' + item.pagePath === navigation.data.assistant.pagePath), false)
   for (const entry of navigation.data.items) {
     assert.equal('/' + manifest.tabBar.list[entry.index].pagePath, entry.pagePath)
@@ -191,7 +193,7 @@ test('切换未成功时保持原选中项，拒绝不匹配的路径和索引',
   navigation.switchTab({ currentTarget: { dataset: { path: entry.pagePath, index: entry.index } } })
   assert.equal(navigation.data.selected, 0)
   assert.equal(events.length, 0)
-  navigation.switchTab({ currentTarget: { dataset: { path: entry.pagePath, index: 3 } } })
+  navigation.switchTab({ currentTarget: { dataset: { path: entry.pagePath, index: 2 } } })
   navigation.switchTab({ currentTarget: { dataset: { path: '/pages/login/login', index: 0 } } })
   assert.equal(requests.length, 1)
   assert.equal(navigation.data.selected, 0)
@@ -240,7 +242,7 @@ function cachedGuideBars() {
   vm.runInNewContext(fs.readFileSync(path.join(root, 'custom-tab-bar/index.js'), 'utf8'), {
     Component: value => { definition = value }, getApp: () => app, getCurrentPages: () => []
   })
-  const bars = ['ai', 'devices', 'index', 'mine'].map(() => {
+  const bars = ['ai', 'index', 'mine'].map(() => {
     const bar = { ...definition.methods, data: { ...definition.data },
       setData(value) { Object.assign(this.data, value) } }
     definition.lifetimes.attached.call(bar)
@@ -264,22 +266,23 @@ test('跳过沿用全局完成状态，切换缓存Tab后不重现遮罩并恢�
   navigation.skipGuide()
   assert.equal(completed(), 1)
   assert.equal(navigation.data.guideActive, false)
-  const { page } = pageForNavigation('devices', bars[1])
+  const { page } = pageForNavigation('index', bars[1])
+  page.load = page.loadData = page.loadTags = page.refresh = () => {}
   page.onShow()
   assert.equal(bars[1].data.guideActive, false)
-  navigation.switchTab({ currentTarget: { dataset: { path: '/pages/devices/devices', index: 1 } } })
-  assert.equal(requests[0].url, '/pages/devices/devices')
+  navigation.switchTab({ currentTarget: { dataset: { path: '/pages/index/index', index: 1 } } })
+  assert.equal(requests[0].url, '/pages/index/index')
 })
 
-test('完成指引后切换设备管理等缓存Tab时清除旧遮罩，不依赖组件show事件', () => {
+test('完成指引后切换缓存Tab时清除旧遮罩，不依赖组件show事件', () => {
   const { bars, definition, completed } = cachedGuideBars()
   bars[0].onGuideComplete()
   assert.equal(completed(), 1)
   // 模拟各Tab提前创建，但切换时只触发页面onShow的真机时序。
-  const names = ['ai', 'devices', 'index', 'mine']
-  for (const index of [1, 2, 3, 0, 1]) {
+  const names = ['ai', 'index', 'mine']
+  for (const index of [1, 2, 0, 1]) {
     const { page } = pageForNavigation(names[index], bars[index])
-    page.load = page.loadData = page.syncTodayFromServer = page.startRecordWindowTimer = page.loadRemote = page.refresh = () => {}
+    page.load = page.loadData = page.syncTodayFromServer = page.startRecordWindowTimer = page.loadRemote = page.refresh = page.loadTags = page.loadDeviceCover = () => {}
     page.onShow()
     assert.equal(bars[index].data.selected, index)
     assert.equal(bars[index].data.guideActive, false, names[index])
@@ -298,18 +301,27 @@ test('已完成的指引在其他缓存实例再次触发完成时仍能关闭�
   assert.equal(completed(), 1)
 })
 
-test('四个Tab页面选中索引同步，社区沿用现有首页，设备管理加载实际设备', () => {
-  for (const [name, selected] of [['ai', 0], ['devices', 1], ['index', 2], ['mine', 3]]) {
+test('三个Tab页面选中索引同步，设备管理仅从我的进入', () => {
+  for (const [name, selected] of [['ai', 0], ['index', 1], ['mine', 2]]) {
     const { page, state } = pageForNavigation(name)
-    page.load = page.loadData = page.syncTodayFromServer = page.startRecordWindowTimer = page.loadRemote = page.refresh = () => {}
+    page.load = page.loadData = page.syncTodayFromServer = page.startRecordWindowTimer = page.loadRemote = page.refresh = page.loadTags = page.loadDeviceCover = () => {}
     page.onShow()
     assert.equal(state.selected[0], selected)
     assert.equal(state.display, 1)
   }
+  const { page, state } = pageForNavigation('mine')
+  page._mineVisible = true
+  page._mineEpoch = 1
+  page.data.loggingOut = false
+  page.onDevicesTap()
+  assert.equal(state.pages[0].url, '/pages/devices/devices')
+  assert.equal(state.tabs.length, 0)
   const device = fs.readFileSync(path.join(root, 'pages/devices/devices.js'), 'utf8')
   assert.match(device, /fetchMyDevices/)
+  assert.doesNotMatch(device, /getTabBar|selected:\s*1/)
   assert.equal(/device-discovery|startBluetooth|openBluetooth|wx\.request/.test(device), false)
   assert.match(fs.readFileSync(path.join(root, 'pages/devices/devices.wxml'), 'utf8'), /已绑定设备/)
+  assert.match(fs.readFileSync(path.join(root, 'pages/mine/mine.wxml'), 'utf8'), /onDevicesTap/)
   for (const name of ['confirm', 'food-analysis']) {
     assert.match(fs.readFileSync(path.join(root, `pages/${name}/${name}.wxml`), 'utf8'), /<tab-bar selected="\{\{0\}\}"/)
   }

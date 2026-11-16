@@ -14,9 +14,9 @@ function setup(){
 }
 const device={id:'1',deviceSn:'SN-A',deviceName:'我的设备',provider:'HUAWEI',deviceStatus:1,lastSyncAt:''}
 const event=id=>({currentTarget:{dataset:{id}}})
-test('设备管理刷新真实列表并刷新缓存导航指引，没有同步时间也仍为已绑定',async()=>{
+test('设备管理刷新真实列表，没有同步时间也仍为已绑定',async()=>{
   const {page,calls}=setup();const loading=page.onShow();calls.list[0].resolve([device]);await loading
-  assert.equal(calls.guide,1);assert.equal(page.data.boundDevices[0].statusText,'已绑定');assert.equal(page.data.boundDevices[0].syncText,'尚未同步 · 可同步演示读数')
+  assert.equal(calls.guide,0);assert.equal(page.data.boundDevices[0].statusText,'已绑定');assert.equal(page.data.boundDevices[0].syncText,'尚未同步 · 可同步演示读数')
   const refresh=page.onSync(event('1'));assert.equal(calls.sync.length,1);assert.equal(calls.sync[0].payload.provider,'HUAWEI');assert.equal(calls.sync[0].payload.deviceSn,'SN-A')
   calls.sync[0].resolve({createdCount:2});await new Promise(setImmediate);assert.equal(calls.list.length,2);calls.list[1].resolve([device]);await refresh
   assert.equal(calls.toasts.at(-1).title,'同步完成');assert.equal(calls.bind.length,0)

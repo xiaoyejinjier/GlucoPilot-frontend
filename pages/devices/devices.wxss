@@ -1,6 +1,6 @@
 .device-page {
   min-height: 100vh;
-  padding: 32rpx 28rpx calc(var(--tab-bar-h) + 36rpx + env(safe-area-inset-bottom));
+  padding: 32rpx 28rpx calc(36rpx + env(safe-area-inset-bottom));
   background: var(--bg);
   color: var(--navy);
   box-sizing: border-box;
