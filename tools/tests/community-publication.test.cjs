@@ -66,13 +66,15 @@ test('社区热榜在当前页加载，其他快捷入口打开对应列表或�
   const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
   const shortcuts=template.slice(template.indexOf('<view class="community-shortcuts">'),template.indexOf('<view class="feed-heading">'))
   const modes=Array.from(shortcuts.matchAll(/data-mode="([^"]+)"/g),match=>match[1])
-  assert.deepEqual(modes,['hot','following','likes','collections','messages','profiles'])
-  p.onCommunityEntry({currentTarget:{dataset:{mode:'hot'}}});await flush()
+  assert.deepEqual(modes,['following','likes','collections','messages','profiles'])
+  const feedTabs=Array.from(template.matchAll(/class="feed-tab[^"]*"[^>]*data-mode="([^"]+)"/g),match=>match[1])
+  assert.deepEqual(feedTabs,['hot','recommend','following'])
+  p.onMode({currentTarget:{dataset:{mode:'hot'}}});await flush()
   assert.equal(p.data.feedMode,'hot');assert.equal(p.data.posts[0].id,'8')
   assert.equal(p.data.posts[0].hotRank,1);assert.equal(p.data.hasMore,false)
   assert.equal(state.calls.filter(row=>row.key==='fetchHotArticles').length,1)
   assert.equal(state.navs.length,0)
-  for(const mode of modes.filter(mode=>mode!=='hot'))p.onCommunityEntry({currentTarget:{dataset:{mode}}})
+  for(const mode of modes)p.onCommunityEntry({currentTarget:{dataset:{mode}}})
   assert.deepEqual(state.navs.map(row=>row.url),['/pages/community/community?mode=following','/pages/community/community?mode=likes','/pages/community/community?mode=collections','/pages/information/information','/pages/community/community?mode=profiles'])
   const count=state.navs.length;p.onCommunityEntry({currentTarget:{dataset:{mode:'invalid'}}});assert.equal(state.navs.length,count);p.onUnload()
 })
@@ -104,7 +106,7 @@ function page(name, overrides={}, options={}) {
   const defaults={fetchMyCommunityTags:async()=>[],createDraft:async p=>({...p,id:'101',revision:1}),updateDraft:async(id,p)=>({...p,id,revision:p.revision+1}),fetchDrafts:async()=>({records:[],pages:0}),publishDraft:async()=>({id:'8',state:'AI_PENDING',title:'分享'}),fetchCommunityTags:async()=>publication.TAGS,fetchCommunityArticles:async()=>({records:[],pages:0}),fetchMyArticles:async()=>({records:[],pages:0}),submitCommunityArticle:async()=>({id:'8',state:'AI_PENDING',title:'分享'}),reportCommunityContent:async()=>({id:'9',state:'OPEN'}),...overrides}
   const api=new Proxy({}, {get:(_target,key)=>(...args)=>{state.calls.push({key,args});return defaults[key] ? defaults[key](...args) : Promise.resolve({})}})
   const media={ BIZ_TYPE:{ARTICLE_IMAGE:7,ARTICLE_VIDEO:8},MAX_IMAGE_BYTES:5*1024*1024,uploadMediaFile:async(...args)=>{state.calls.push({key:'uploadMediaFile',args});return overrides.uploadMediaFile?overrides.uploadMediaFile(...args):{id:'101'}} }
-  const dependencies={'../../utils/media':media,'../../services/api':api,'../../utils/community':socialModule.exports,'../../utils/publication':publication,'../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>url}, '../../utils/display':{applyDisplayToCurrentPage(){}},'../../utils/request':request,'../../utils/tag-images':require('../../utils/tag-images')}
+  const dependencies={'../../utils/media':media,'../../services/api':api,'../../utils/community':socialModule.exports,'../../utils/publication':publication,'../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>url}, '../../utils/display':{applyDisplayToCurrentPage(){}},'../../utils/request':request,'../../utils/tag-images':require('../../utils/tag-images'),'../../utils/custom-tag-code':require('../../utils/custom-tag-code')}
   const history={exports:{}}
   vm.runInNewContext(fs.readFileSync(path.join(root,'utils/article-tags.js'),'utf8'),{module:history,wx,require:key=>key==='./storage'?{getUserInfo:()=>({communityKey:state.token==='one'?'u1':'u2'})}:publication})
   dependencies['../../utils/article-tags']=history.exports
@@ -331,12 +333,13 @@ test('后台新增分类立即成为社区和发文选项，其他改为＋并�
  const tags=[{code:'topic_new',name:'控糖早餐',type:'OFFICIAL'},{code:'other',name:'其他',type:'OFFICIAL'},{code:'custom_breakfast',name:'早餐搭配',type:'USER'}]
  const feed=page('index',{fetchCommunityTags:async()=>tags});await flush();assert.deepEqual(Array.from(feed.page.data.tags,t=>t.code),['topic_new','other']);assert.equal(feed.page.data.otherTags[0].code,'custom_breakfast')
  const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
- assert.match(template,/item\.code === 'other' \? '＋'/)
+ assert.match(template,/data-code="__manage__"/)
+ assert.match(template,/\{\{otherTags\}\}/)
  assert.equal(template.includes('other-topic-list'),false)
- feed.page.onTag({currentTarget:{dataset:{code:'other'}}});await flush()
+ feed.page.onTag({currentTarget:{dataset:{code:'__manage__'}}});await flush()
  assert.match(feed.state.navs.at(-1).url,/community-tags\?mode=browse/)
  feed.state.navs.at(-1).events.filterTag({code:'custom_breakfast'});await flush()
- assert.equal(feed.page.data.otherSelected,true);assert.equal(feed.state.calls.filter(c=>c.key==='fetchCommunityArticles').at(-1).args[0].tag,'custom_breakfast');feed.page.onUnload()
+ assert.equal(feed.page.data.activeTag,'custom_breakfast');assert.equal(feed.page.data.otherSelected,false);assert.equal(feed.state.calls.filter(c=>c.key==='fetchCommunityArticles').at(-1).args[0].tag,'custom_breakfast');feed.page.onUnload()
  const editor=page('community-compose',{fetchCommunityTags:async()=>tags});await flush()
  editor.page.applyPickedTags({tagCodes:['topic_new'],customTags:[]})
  assert.equal(editor.page.data.tagCodes[0],'topic_new');assert.equal(editor.page.data.selectedTags[0].code,'topic_new')
