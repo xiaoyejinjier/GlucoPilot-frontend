@@ -1906,3 +1906,7 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 清空本类	Clear this category
 记忆按类别归置，每类可有多条；小语会自己整理，觉得不准可以删	Memories are grouped by category and each category can hold several entries. Xiaoyu curates them; delete anything that looks wrong.
 清空这一类记忆	Clear this category
+这一类还没有记忆	No memories in this category yet
+点上面的「全部」看看小语都记住了什么	Tap All above to see everything Xiaoyu remembers
+只会删掉这一类的全部记忆，其他类不受影响。	Only this category will be cleared. Other categories stay as they are.
+加载失败，请重试	Load failed, please retry

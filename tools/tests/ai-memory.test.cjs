@@ -32,12 +32,24 @@ function makeWx(state) {
   }
 }
 
-/** 一页记忆的默认夹具：两类共 3 条，其中 diet_taboo 有两条（V63 之后一类可多条）。 */
+/** 一页记忆的默认夹具：两类共 3 条，其中 diet_taboo 有两条（一类可多条）。 */
 const DEFAULT_ROWS = [
   { id: 1, memoryKey: 'diet_taboo', memoryText: '最近不能吃香菜', confidence: 85, updatedAt: '2026-11-17T09:12:33' },
   { id: 2, memoryKey: 'diet_taboo', memoryText: '海鲜过敏', confidence: 80, updatedAt: '2026-11-16T09:12:33' },
   { id: 3, memoryKey: 'unknown_key', memoryText: '未来的新类型', confidence: 70, updatedAt: '2026-11-16T08:00:00' }
 ]
+
+/** 后端每次加载都会带回五类的条数（没有记忆的类是 0）。 */
+const DEFAULT_COUNTS = {
+  diet_taboo: 2,
+  glucose_goal: 0,
+  health_context: 0,
+  habit: 1,
+  preference: 0
+}
+
+/** 分类入口的固定顺序：全部 + 五类，不随"哪类先有记忆"跳动。 */
+const TILE_KEYS = ['', 'diet_taboo', 'glucose_goal', 'health_context', 'habit', 'preference']
 
 /**
  * 加载「小语记住的事」页。
@@ -46,8 +58,8 @@ function createMemoryPage(options = {}) {
   let definition
   const state = { calls: [], toasts: [], modals: [], pullDownStops: 0, confirmNext: true }
   const api = {
-    fetchAiMemories: (params) =>
-      Promise.resolve({ records: DEFAULT_ROWS, total: DEFAULT_ROWS.length, pageNum: (params && params.pageNum) || 1 }),
+    fetchAiMemories: () =>
+      Promise.resolve({ records: DEFAULT_ROWS, total: DEFAULT_ROWS.length, pageNum: 1, counts: DEFAULT_COUNTS }),
     deleteAiMemoryById: () => Promise.resolve({ deleted: 1 }),
     deleteAiMemoriesByKey: () => Promise.resolve({ deleted: 2 }),
     deleteAllAiMemories: () => Promise.resolve({ deleted: 3 }),
@@ -97,40 +109,104 @@ function calls(state, name) {
   return state.calls.filter((item) => item.name === name)
 }
 
-test('首屏加载：按类分组、同类多条都保留、时间截到分钟', async () => {
+function tileOf(page, key) {
+  return page.data.tiles.find((tile) => tile.key === key)
+}
+
+test('首屏加载：入口列出全部与五类，条目平铺并带类名标签', async () => {
   const { page, state } = createMemoryPage()
   page.onShow()
   await flush()
 
-  // 分页参数必须显式传，否则后端按默认值返回、前端算不出下一页
-  assert.equal(json(calls(state, 'fetchAiMemories')[0].args[0]), json({ pageNum: 1, pageSize: 20 }))
-  assert.equal(page.data.groups.length, 2)
-  assert.equal(page.data.groups[0].key, 'diet_taboo')
-  assert.equal(page.data.groups[0].label, '饮食忌口')
-  assert.equal(page.data.groups[0].count, 2)
-  assert.equal(json(page.data.groups[0].items), json([
-    { id: 1, text: '最近不能吃香菜', timeText: '2026-11-17 09:12' },
-    { id: 2, text: '海鲜过敏', timeText: '2026-11-16 09:12' }
-  ]))
-  // 未知键不丢数据，退回原始键名，便于发现「后端加了新类型而前端没跟上」
-  assert.equal(page.data.groups[1].label, 'unknown_key')
-  assert.equal(page.data.loaded, 3)
+  // 首屏不带 memoryKey：多带一个空串会让后端多一次"等于空"的判断，日志也不干净
+  assert.equal(json(calls(state, 'fetchAiMemories')[0].args[0]), json({ pageNum: 1, pageSize: 20, memoryKey: '' }))
+  assert.equal(json(page.data.tiles.map((tile) => tile.key)), json(TILE_KEYS))
+  // 「全部」的数字是五类之和，而不是当前页的行数
+  assert.equal(tileOf(page, '').count, 3)
+  assert.equal(tileOf(page, 'diet_taboo').count, 2)
+  assert.equal(tileOf(page, 'habit').count, 1)
+  assert.equal(tileOf(page, 'preference').count, 0)
+  assert.equal(page.data.activeKey, '')
+  assert.equal(page.data.showTag, true, '混合列表要标出每条属于哪一类')
+  assert.equal(json(page.data.items.map((item) => item.id)), json([1, 2, 3]))
+  assert.equal(page.data.items[0].label, '饮食忌口')
+  assert.equal(page.data.items[0].timeText, '2026-11-17 09:12')
   assert.equal(page.data.hasMore, false)
   assert.equal(page.data.error, '')
 })
 
-test('空列表：进空态而不是错误态', async () => {
-  const { page } = createMemoryPage({ api: { fetchAiMemories: () => Promise.resolve({ records: [], total: 0 }) } })
+test('未知类：不丢数据，退回原始键名', async () => {
+  const { page } = createMemoryPage()
   page.onShow()
   await flush()
 
-  assert.equal(page.data.groups.length, 0)
-  assert.equal(page.data.loaded, 0)
-  assert.equal(page.data.error, '')
-  assert.equal(page.data.loading, false)
+  assert.equal(page.data.items[2].label, 'unknown_key')
+  // 入口只列已知五类；未知类靠列表里的标签暴露出来（后端加了新类型时一眼能看到）
+  assert.equal(page.data.tiles.length, 6)
 })
 
-test('删除单条：确认后按 id 调接口，只移除那一条，同类其他条目还在', async () => {
+test('空列表：进空态，入口仍然六个（没有记忆的类给 0）', async () => {
+  const { page } = createMemoryPage({
+    api: { fetchAiMemories: () => Promise.resolve({ records: [], total: 0, counts: {} }) }
+  })
+  page.onShow()
+  await flush()
+
+  assert.equal(page.data.items.length, 0)
+  assert.equal(page.data.loaded, 0)
+  assert.equal(page.data.error, '')
+  assert.equal(page.data.tiles.length, 6)
+  assert.equal(tileOf(page, '').count, 0)
+})
+
+test('点某一类：带 memoryKey 从第一页重取，标题与标签随之切换', async () => {
+  const { page, state } = createMemoryPage({
+    api: {
+      fetchAiMemories: (params) =>
+        Promise.resolve(
+          params && params.memoryKey
+            ? {
+                records: [
+                  { id: 1, memoryKey: 'diet_taboo', memoryText: '最近不能吃香菜', confidence: 85, updatedAt: '2026-11-17T09:12:33' }
+                ],
+                total: 1,
+                pageNum: 1,
+                counts: DEFAULT_COUNTS
+              }
+            : { records: DEFAULT_ROWS, total: 3, pageNum: 1, counts: DEFAULT_COUNTS }
+        )
+    }
+  })
+  page.onShow()
+  await flush()
+
+  page.onPickCategory({ currentTarget: { dataset: { key: 'diet_taboo' } } })
+  await flush()
+
+  const second = calls(state, 'fetchAiMemories')[1].args[0]
+  assert.equal(second.memoryKey, 'diet_taboo')
+  assert.equal(second.pageNum, 1, '切分类必须回到第 1 页，否则会从旧页码接着取空页')
+  assert.equal(page.data.activeKey, 'diet_taboo')
+  assert.equal(page.data.activeLabel, '饮食忌口')
+  assert.equal(page.data.showTag, false, '只看某一类时卡片上不再重复类名')
+  assert.equal(page.data.items.length, 1)
+  // 入口数字不随筛选变化：点进去之后别类的条数仍然在
+  assert.equal(tileOf(page, 'diet_taboo').count, 2)
+  assert.equal(tileOf(page, 'habit').count, 1)
+})
+
+test('再点当前分类不重复请求', async () => {
+  const { page, state } = createMemoryPage()
+  page.onShow()
+  await flush()
+
+  page.onPickCategory({ currentTarget: { dataset: { key: '' } } })
+  await flush()
+
+  assert.equal(calls(state, 'fetchAiMemories').length, 1)
+})
+
+test('删除单条：确认后按 id 调接口，条目与入口数字同步减少', async () => {
   const { page, state } = createMemoryPage()
   page.onShow()
   await flush()
@@ -140,8 +216,9 @@ test('删除单条：确认后按 id 调接口，只移除那一条，同类其�
 
   assert.equal(state.modals.length, 1)
   assert.equal(json(calls(state, 'deleteAiMemoryById').map((item) => item.args[0])), json([2]))
-  assert.equal(page.data.groups[0].count, 1)
-  assert.equal(json(page.data.groups[0].items.map((item) => item.id)), json([1]))
+  assert.equal(json(page.data.items.map((item) => item.id)), json([1, 3]))
+  assert.equal(tileOf(page, 'diet_taboo').count, 1, '这一类少一条')
+  assert.equal(tileOf(page, '').count, 2, '「全部」跟着少一条')
   assert.equal(state.toasts.at(-1).title, '已删除')
 })
 
@@ -158,7 +235,7 @@ test('删除单条：取消二次确认时不调接口、列表不变', async ()
   assert.equal(page.data.loaded, 3)
 })
 
-test('清空本类：按 key 调接口，只移除该类，其他类保留', async () => {
+test('清空本类：按 key 调接口，只移除该类并把入口归零', async () => {
   const { page, state } = createMemoryPage()
   page.onShow()
   await flush()
@@ -166,13 +243,14 @@ test('清空本类：按 key 调接口，只移除该类，其他类保留', asy
   page.onClearGroup({ currentTarget: { dataset: { key: 'diet_taboo' } } })
   await flush()
 
-  assert.equal(state.modals.length, 1)
   assert.equal(json(calls(state, 'deleteAiMemoriesByKey').map((item) => item.args[0])), json(['diet_taboo']))
-  assert.equal(json(page.data.groups.map((group) => group.key)), json(['unknown_key']))
+  assert.equal(json(page.data.items.map((item) => item.id)), json([3]))
+  assert.equal(tileOf(page, 'diet_taboo').count, 0)
+  assert.equal(tileOf(page, '').count, 1)
   assert.equal(state.toasts.at(-1).title, '已清空')
 })
 
-test('清空全部：确认后调接口并清空分组', async () => {
+test('清空全部：确认后调接口，列表与入口全部清零', async () => {
   const { page, state } = createMemoryPage()
   page.onShow()
   await flush()
@@ -181,13 +259,17 @@ test('清空全部：确认后调接口并清空分组', async () => {
   await flush()
 
   assert.equal(calls(state, 'deleteAllAiMemories').length, 1)
-  assert.equal(page.data.groups.length, 0)
+  assert.equal(page.data.items.length, 0)
   assert.equal(page.data.total, 0)
+  assert.equal(tileOf(page, '').count, 0)
+  assert.equal(tileOf(page, 'habit').count, 0)
   assert.equal(state.toasts.at(-1).title, '已清空')
 })
 
 test('清空全部：一条都没有时不弹确认框', async () => {
-  const { page, state } = createMemoryPage({ api: { fetchAiMemories: () => Promise.resolve({ records: [], total: 0 }) } })
+  const { page, state } = createMemoryPage({
+    api: { fetchAiMemories: () => Promise.resolve({ records: [], total: 0, counts: {} }) }
+  })
   page.onShow()
   await flush()
 
@@ -198,38 +280,36 @@ test('清空全部：一条都没有时不弹确认框', async () => {
   assert.equal(calls(state, 'deleteAllAiMemories').length, 0)
 })
 
-test('触底分页：还有下一页时追加，没有更多时不再请求', async () => {
-  let page1 = true
+test('触底分页：沿用同一个筛选条件，追加后不再重复请求', async () => {
+  let served = 0
   const { page, state } = createMemoryPage({
     api: {
       fetchAiMemories: (params) => {
-        if (params.pageNum === 1) {
-          return Promise.resolve({ records: DEFAULT_ROWS, total: 4, pageNum: 1 })
+        served += 1
+        if (served === 1) {
+          return Promise.resolve({ records: DEFAULT_ROWS, total: 4, pageNum: 1, counts: DEFAULT_COUNTS })
         }
-        const hasNext = page1
-        page1 = false
         return Promise.resolve({
-          records: hasNext
-            ? [{ id: 4, memoryKey: 'habit', memoryText: '晚饭后散步', confidence: 90, updatedAt: '2026-11-15T20:00:00' }]
-            : [],
+          records: [{ id: 4, memoryKey: 'habit', memoryText: '晚饭后散步', confidence: 90, updatedAt: '2026-11-15T20:00:00' }],
           total: 4,
-          pageNum: 2
+          pageNum: 2,
+          counts: DEFAULT_COUNTS
         })
       }
     }
   })
   page.onShow()
   await flush()
-  assert.equal(page.data.hasMore, true)
+  assert.equal(page.data.hasMore, true, 'total 比已加载多，说明还有下一页')
 
   page.onReachBottom()
   await flush()
 
   assert.equal(json(calls(state, 'fetchAiMemories').map((item) => item.args[0].pageNum)), json([1, 2]))
+  assert.equal(calls(state, 'fetchAiMemories')[1].args[0].memoryKey, '', '翻页不能丢筛选条件')
   assert.equal(page.data.loaded, 4)
   assert.equal(page.data.hasMore, false)
 
-  // 已经没有更多：再触底不应再发请求
   page.onReachBottom()
   await flush()
   assert.equal(calls(state, 'fetchAiMemories').length, 2)
@@ -244,7 +324,8 @@ test('加载失败：给出错误态，重试成功后清掉错误', async () =>
         if (attempt === 1) return Promise.reject(new Error('网络异常'))
         return Promise.resolve({
           records: [{ id: 9, memoryKey: 'habit', memoryText: '晚饭后散步', confidence: 90, updatedAt: '2026-11-17T20:00:00' }],
-          total: 1
+          total: 1,
+          counts: DEFAULT_COUNTS
         })
       }
     }
@@ -259,8 +340,8 @@ test('加载失败：给出错误态，重试成功后清掉错误', async () =>
   await flush()
 
   assert.equal(page.data.error, '')
-  assert.equal(page.data.groups.length, 1)
-  assert.equal(page.data.groups[0].label, '生活习惯')
+  assert.equal(page.data.items.length, 1)
+  assert.equal(page.data.items[0].label, '生活习惯')
 })
 
 test('下拉刷新：重新拉取并收起刷新动画', async () => {

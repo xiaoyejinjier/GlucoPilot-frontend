@@ -346,12 +346,17 @@ function sendChatMessage(sessionId, payload) {
  * ①必须分页——被记了上百条时一次拉回来会让低端机卡住；
  * ②必须带 id——只给键没法表达"删哪一条"。
  *
- * @param {object} params { pageNum, pageSize }
+ * @param {object} params { pageNum, pageSize, memoryKey }
  */
 function fetchAiMemories(params) {
   const pageNum = (params && params.pageNum) || 1
   const pageSize = (params && params.pageSize) || 20
-  return get('/users/me/ai-memories', { pageNum, pageSize }, { auth: true })
+  const memoryKey = params && params.memoryKey
+  const query = { pageNum, pageSize }
+  // 只在真的筛某一类时才带 memoryKey：传空串会让后端多一次"等于空"的判断，
+  // 而且日志里会出现一串无意义的 memoryKey= 参数。
+  if (memoryKey) query.memoryKey = memoryKey
+  return get('/users/me/ai-memories', query, { auth: true })
 }
 
 /**

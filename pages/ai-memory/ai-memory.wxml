@@ -4,10 +4,56 @@
     <text class="page-intro-text">{{i18n.t("这些是小语在聊天里记住的关于你的事，只用来让回答更贴合你。觉得不对可以直接删。", locale)}}</text>
   </view>
 
+  <!--
+    分类入口：全部 + 五类。
+    数字来自后端 counts（与当前筛选无关），所以点进某一类之后，别类的条数仍然在。
+  -->
+  <view class="memory-tiles">
+    <view
+      wx:for="{{tiles}}"
+      wx:for-item="tile"
+      wx:key="key"
+      class="memory-tile {{tile.key === activeKey ? 'is-active' : ''}}"
+      data-key="{{tile.key}}"
+      bindtap="onPickCategory"
+      hover-class="ui-pressed"
+      hover-start-time="0"
+      hover-stay-time="90"
+      hover-stop-propagation="{{true}}"
+    >
+      <view class="memory-tile-icon {{tile.tint}}">
+        <text class="memory-tile-glyph">{{tile.glyph}}</text>
+      </view>
+      <view class="memory-tile-body">
+        <text class="memory-tile-label">{{i18n.t(tile.label, locale)}}</text>
+        <text class="memory-tile-count">{{tile.count}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="memory-section-head">
+    <text class="memory-section-title">{{i18n.t(activeLabel, locale)}}</text>
+    <view
+      wx:if="{{activeKey && total > 0}}"
+      class="memory-group-clear ui-interactive"
+      data-key="{{activeKey}}"
+      bindtap="onClearGroup"
+      hover-class="ui-pressed"
+      hover-start-time="0"
+      hover-stay-time="90"
+      hover-stop-propagation="{{true}}"
+    >{{i18n.t("清空本类", locale)}}</view>
+  </view>
+
   <view wx:if="{{error && loaded === 0}}" class="card empty-card">
     <text class="empty-text">{{i18n.t("记忆加载失败", locale)}}</text>
     <text class="empty-hint">{{i18n.t("请检查网络后点击刷新", locale)}}</text>
     <view class="empty-action ui-interactive" bindtap="onRetry" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重试", locale)}}</view>
+  </view>
+
+  <view wx:elif="{{!loading && loaded === 0 && activeKey}}" class="card empty-card">
+    <text class="empty-text">{{i18n.t("这一类还没有记忆", locale)}}</text>
+    <text class="empty-hint">{{i18n.t("点上面的「全部」看看小语都记住了什么", locale)}}</text>
   </view>
 
   <view wx:elif="{{!loading && loaded === 0}}" class="card empty-card">
@@ -15,44 +61,29 @@
     <text class="empty-hint">{{i18n.t("多聊几句，重要的事小语会自己记下来", locale)}}</text>
   </view>
 
-  <view wx:for="{{groups}}" wx:for-item="group" wx:key="key" class="memory-group">
-    <view class="memory-group-head">
-      <text class="memory-group-label">{{i18n.t(group.label, locale)}} · {{group.count}}</text>
+  <view wx:for="{{items}}" wx:for-item="item" wx:key="id" class="card memory-card">
+    <view class="memory-head">
+      <text wx:if="{{showTag}}" class="memory-tag">{{i18n.t(item.label, locale)}}</text>
+      <text class="memory-time">{{item.timeText}}</text>
+    </view>
+    <text class="memory-text">{{item.text}}</text>
+    <view class="memory-actions">
       <view
-        class="memory-group-clear ui-interactive"
-        data-key="{{group.key}}"
-        data-label="{{group.label}}"
-        bindtap="onClearGroup"
+        class="memory-delete ui-interactive"
+        data-id="{{item.id}}"
+        bindtap="onDeleteTap"
         hover-class="ui-pressed"
         hover-start-time="0"
         hover-stay-time="90"
         hover-stop-propagation="{{true}}"
-      >{{i18n.t("清空本类", locale)}}</view>
-    </view>
-
-    <view wx:for="{{group.items}}" wx:for-item="item" wx:key="id" class="card memory-card">
-      <view class="memory-head">
-        <text class="memory-time">{{i18n.t("最近更新", locale)}} {{item.timeText}}</text>
-      </view>
-      <text class="memory-text">{{item.text}}</text>
-      <view class="memory-actions">
-        <view
-          class="memory-delete ui-interactive"
-          data-id="{{item.id}}"
-          bindtap="onDeleteTap"
-          hover-class="ui-pressed"
-          hover-start-time="0"
-          hover-stay-time="90"
-          hover-stop-propagation="{{true}}"
-        >{{i18n.t("删除", locale)}}</view>
-      </view>
+      >{{i18n.t("删除", locale)}}</view>
     </view>
   </view>
 
   <view wx:if="{{loadingMore}}" class="memory-loading">{{i18n.t("正在加载…", locale)}}</view>
   <view wx:elif="{{loaded > 0 && !hasMore}}" class="memory-loading">{{i18n.t("已经是全部记录了", locale)}}</view>
 
-  <view wx:if="{{loaded > 0}}" class="memory-footer">
+  <view wx:if="{{total > 0}}" class="memory-footer">
     <text class="memory-footer-hint">{{i18n.t("记忆按类别归置，每类可有多条；小语会自己整理，觉得不准可以删", locale)}}</text>
     <view
       class="memory-clear ui-interactive"
