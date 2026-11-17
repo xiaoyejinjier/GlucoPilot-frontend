@@ -1903,3 +1903,6 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 清空后小语会忘记之前记住的所有事，操作不可撤销。	Xiaoyu will forget everything remembered so far. This cannot be undone.
 已清空	Cleared
 清空失败，请重试	Clear failed, please retry
+清空本类	Clear this category
+记忆按类别归置，每类可有多条；小语会自己整理，觉得不准可以删	Memories are grouped by category and each category can hold several entries. Xiaoyu curates them; delete anything that looks wrong.
+清空这一类记忆	Clear this category
