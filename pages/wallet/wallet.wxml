@@ -1,0 +1,30 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="wallet-page" style="{{displayStyle}}">
+  <view class="wallet-balance">
+    <view class="wallet-between"><text>{{i18n.t('我的钱包',locale)}}</text><text class="wallet-chip">{{i18n.t(activated ? '已开通' : '未开通',locale)}}</text></view>
+    <text class="wallet-balance-caption">{{i18n.t('沙箱测试余额（元）',locale)}}</text>
+    <text class="wallet-balance-value">{{balance}}</text>
+    <text class="wallet-balance-note">{{i18n.t(activated ? '仅测试资金，不是真实钱包余额' : '每位糖友都有钱包，需要时再开通',locale)}}</text>
+  </view>
+  <view class="wallet-shortcuts">
+    <view wx:if="{{withdrawalEligible}}" bindtap="onWithdrawals" hover-class="ui-pressed"><text class="wallet-shortcut-icon">¥</text><text>{{i18n.t('医生提现',locale)}}</text><text>›</text></view>
+    <view data-type="RECHARGE" bindtap="onOrders" hover-class="ui-pressed"><text class="wallet-shortcut-icon">↗</text><text>{{i18n.t('充值记录',locale)}}</text><text>›</text></view>
+    <view data-type="CONSULTATION" bindtap="onOrders" hover-class="ui-pressed"><text class="wallet-shortcut-icon">≡</text><text>{{i18n.t('我的订单',locale)}}</text><text>›</text></view>
+  </view>
+  <view wx:if="{{!activated}}" class="wallet-card wallet-activation">
+    <text class="wallet-activation-icon">▣</text>
+    <text class="wallet-title">{{i18n.t('按需开通，轻松管理',locale)}}</text>
+    <text class="wallet-muted wallet-block">{{i18n.t('所有用户均可免费开通，开通状态跟随账号保存。',locale)}}</text>
+    <button class="wallet-primary" bindtap="onActivate" disabled="{{!ready || loading || activating}}" loading="{{activating}}">{{i18n.t('开通钱包',locale)}}</button>
+  </view>
+  <view wx:else class="wallet-card">
+    <text class="wallet-title">{{i18n.t('选择充值金额',locale)}}</text>
+    <text class="wallet-muted wallet-block">{{i18n.t('单次充值1～1000元',locale)}}</text>
+    <view class="wallet-amounts"><view wx:for="{{amounts}}" wx:key="*this" class="wallet-amount {{!useCustom && selected === item ? 'selected' : ''}}" data-amount="{{item}}" bindtap="onAmount" hover-class="ui-pressed"><text>¥ {{item}}</text><text>{{i18n.t('充值',locale)}}</text></view></view>
+    <view class="wallet-custom {{useCustom ? 'selected' : ''}}"><text>{{i18n.t('其他金额',locale)}}</text><input type="digit" maxlength="7" value="{{custom}}" placeholder="{{i18n.t('输入金额',locale)}}" bindinput="onCustom" /><text>{{i18n.t('元',locale)}}</text></view>
+    <view class="wallet-channel"><view class="wallet-channel-icon">A</view><view><text>{{i18n.t('支付宝沙箱',locale)}}</text><text class="wallet-muted wallet-block">{{i18n.t('使用沙箱买家账号扫码付款',locale)}}</text></view><text class="wallet-muted">{{i18n.t(rechargeEnabled ? '已配置' : '未配置',locale)}}</text></view>
+    <button class="wallet-primary" disabled="{{!ready || loading || creating}}" loading="{{loading || creating}}" bindtap="onRecharge">{{i18n.t(rechargeEnabled ? '沙箱充值' : '支付宝沙箱尚未配置',locale)}}</button>
+  </view>
+  <view wx:if="{{error}}" class="wallet-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('重试',locale)}}</view>
+  <view class="wallet-note"><text class="wallet-title">{{i18n.t('钱包说明',locale)}}</text><text>{{i18n.t('当前为沙箱测试，医生提现仅模拟发放，不涉及真实转账。',locale)}}</text><text>{{i18n.t('可用沙箱余额查看问诊单，医生问诊收入同样计入沙箱余额。',locale)}}</text></view>
+</view>

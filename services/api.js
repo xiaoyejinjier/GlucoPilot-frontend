@@ -224,6 +224,9 @@ function fetchCommunityArticles(params = {}) {
   return get('/community/articles', params, { auth: true })
     .then(page => ({ ...page, records: (page.records || []).map(mapCommunityArticle) }))
 }
+function recordRecommendationExposures(newsIds) {
+  return post('/community/recommendation/exposures', { newsIds }, { auth: true })
+}
 function fetchHotArticles(params = {}) {
   return get('/community/hot-articles', { limit: (params && params.limit) || 10 }, { auth: true })
     .then(body => ({
@@ -645,7 +648,7 @@ module.exports = {
   readAllUserReminders,
   fetchDrafts, fetchDraft, createDraft, updateDraft, deleteDraft, publishDraft,
   createExportTask, fetchExportTasks, generateExportTask, deleteExportTask,
-  fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchHotArticles, fetchMyArticles, fetchCommunityArticle,
+  recordRecommendationExposures, fetchMyCommunityTags, fetchProfileArticles, fetchCommunityTags, fetchCommunityArticles, fetchHotArticles, fetchMyArticles, fetchCommunityArticle,
   submitCommunityArticle, editCommunityArticle, retryArticleAi, reportCommunityContent,
   fetchCommunityProfile, setCommunityFollowing, fetchCommunityList, fetchMyReports, fetchReportFeedback, readReportFeedback,
   fetchNewsComments, fetchCommentContext, fetchCommentReplies, addNewsComment, deleteNewsComment, fetchMyComments,

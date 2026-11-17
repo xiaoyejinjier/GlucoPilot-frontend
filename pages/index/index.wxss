@@ -25,3 +25,5 @@
 @media (prefers-reduced-motion: reduce){
   .search-overlay-mask,.search-overlay-sheet{transition:none}
 }
+
+.shortcut-comment{position:relative;width:38rpx;height:30rpx;border:3rpx solid currentColor;border-radius:11rpx;box-sizing:border-box;margin:6rpx 0}.shortcut-comment::before{content:"";position:absolute;left:6rpx;bottom:-8rpx;width:10rpx;height:10rpx;background:#fff;border-left:3rpx solid currentColor;border-bottom:3rpx solid currentColor;transform:skewY(-30deg)}.shortcut-comment::after{content:"···";position:absolute;left:0;right:0;top:-13rpx;font-size:32rpx;line-height:40rpx;text-align:center}

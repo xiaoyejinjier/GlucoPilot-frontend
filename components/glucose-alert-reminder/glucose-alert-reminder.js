@@ -161,7 +161,8 @@ Component({
         const fresh = page.records.filter((item) => item && typeof item.userReply === 'string' && item.userReply.trim())
           .map((item) => ({ kind: 'REPLY', id: item.id, revision: item.revision, nodeCode: item.nodeCode, recordId: item.recordId, recordDate: item.recordDate,
             nodeName: item.nodeName, glucoseValue: item.glucoseValue, recordedAtText: formatTime(item.recordedAt),
-            userReply: item.userReply, repliedAtText: formatTime(item.repliedAt) }))
+            userReply: item.userReply, repliedAtText: formatTime(item.repliedAt),
+            recordUpdated: !!item.recordUpdated, currentGlucoseValue: item.currentGlucoseValue }))
         const combined = append ? this.data.replies.concat(fresh) : fresh
         const replies = combined.filter((item, index) => combined.findIndex((other) => other.id === item.id) === index)
         this._replyPage = pageNum

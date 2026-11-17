@@ -138,5 +138,5 @@ Page({
     if (!this.ensureSession()) return
     this.setData({ drafts: removeDeviceDraft(this._token, e.currentTarget.dataset.id) })
   },
-  onBack() { wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/ai/ai' }) }) }
+  onBack() { wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/mine/mine' }) }) }
 })

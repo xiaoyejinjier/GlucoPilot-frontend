@@ -25,6 +25,9 @@
     <view class="device-case"></view>
     <view class="device-indicator"></view>
   </view>
+  <view wx:elif="{{name === 'consultation'}}" class="glyph">
+    <view class="consultation-outline"><view class="consultation-plus"></view></view>
+  </view>
   <view wx:elif="{{name === 'community'}}" class="glyph">
     <view class="community-back"></view>
     <view class="community-front"></view>

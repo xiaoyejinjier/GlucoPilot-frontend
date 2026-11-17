@@ -1,0 +1,3 @@
+@import "/styles/consultation.wxss";
+.doctor-wallet-card{margin-top:24rpx;background:#f7faff;border-color:#cfddf1}
+.doctor-wallet-card .consult-button{margin-top:24rpx}

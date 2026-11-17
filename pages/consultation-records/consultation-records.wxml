@@ -1,0 +1,10 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="consult-page" style="{{displayStyle}}">
+  <view class="consult-heading"><text class="consult-title">{{i18n.t('我的问诊',locale)}}</text><text class="consult-muted">{{i18n.t('求助、回应与查看记录',locale)}}</text></view>
+  <view class="consult-segment"><view class="{{tab === 'requests' ? 'selected' : ''}}" data-tab="requests" bindtap="onTab">{{i18n.t('我的求助',locale)}}</view><view class="{{tab === 'orders' ? 'selected' : ''}}" data-tab="orders" bindtap="onTab">{{i18n.t('订单记录',locale)}}</view></view>
+  <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('点击重试',locale)}}</view>
+  <view wx:if="{{loading && !records.length}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
+  <view wx:elif="{{!records.length && !error}}" class="consult-card consult-empty"><view class="consult-paper" aria-hidden="true"></view><text class="consult-empty-title">{{i18n.t(tab === 'orders' ? '还没有问诊订单' : '还没有求助记录',locale)}}</text><text class="consult-empty-note">{{i18n.t(tab === 'orders' ? '问诊单的查看订单会保存在这里。' : '你的求助和医生回复会保存在这里。',locale)}}</text><button class="consult-button" bindtap="onCompose" hover-class="ui-pressed">{{i18n.t('整理我的问题',locale)}} ↗</button></view>
+  <view wx:for="{{records}}" wx:key="id" class="consult-card" data-id="{{item.id}}" bindtap="onOpen" hover-class="ui-pressed"><view class="consult-heading"><text class="consult-pill">{{i18n.t(item.statusLabel,locale)}}</text><text wx:if="{{tab === 'orders'}}" class="consult-muted">¥{{item.price}}</text><text wx:else class="consult-muted">{{i18n.t(item.topicLabel,locale)}}</text></view><text class="consult-list-title">{{item.title}}</text><text class="consult-muted">{{item.timeLabel || item.createdAt}}</text></view>
+  <view wx:if="{{loading && records.length}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
+</view>

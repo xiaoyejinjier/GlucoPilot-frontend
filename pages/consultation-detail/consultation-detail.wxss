@@ -1,0 +1,45 @@
+@import "../../styles/consultation.wxss";
+.claim-card{border-color:#c9daf2;box-shadow:0 8rpx 26rpx rgba(42,97,186,.05)}
+.claim-title{display:flex;align-items:center;gap:14rpx}
+.doctor-identity-mark{display:flex;align-items:center;justify-content:center;width:62rpx;height:62rpx;background:#e9f1ff;border-radius:18rpx;color:#3264a9;font-size:28rpx;font-weight:600;flex:none}
+.claim-wallet-status{margin-top:24rpx;padding:24rpx;border-radius:20rpx;background:#f4f8ff;border:1rpx solid #e0eafb}
+.claim-wallet-title{display:block;margin-bottom:10rpx;font-size:28rpx;font-weight:600;color:#294e84}
+.claim-wallet-status .consult-button{margin-top:24rpx}
+.claim-ready{display:flex;align-items:center;gap:12rpx;color:#3e6497;font-size:25rpx}
+.claim-ready-dot{width:12rpx;height:12rpx;border-radius:50%;background:#487ec7}
+.doctor-task-card{margin-bottom:24rpx;padding:30rpx;border-radius:26rpx;background:#244978;color:#fff}
+.doctor-task-top{display:flex;justify-content:space-between;align-items:center;gap:20rpx;margin-bottom:16rpx}
+.doctor-task-kicker{font-size:23rpx;color:#c8ddf7}
+.doctor-task-badge{padding:5rpx 16rpx;background:#355b8b;color:#dcecff;font-size:22rpx;border-radius:12rpx}
+.doctor-task-title{display:block;font-size:36rpx;line-height:1.5;font-weight:600}
+.doctor-task-note{display:block;font-size:25rpx;line-height:1.8;color:#c8dbf3;margin-top:12rpx}
+.doctor-write-link{display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;margin:24rpx 0 0;padding:19rpx 24rpx;border-radius:16rpx;background:#fff;color:#244978;font-size:27rpx;line-height:1.5;font-weight:600}
+.doctor-write-link::after{border:0}
+.patient-section-label{display:block;font-size:26rpx;font-weight:600;color:#36577f;margin-bottom:12rpx}
+.patient-card .consult-list-title{margin-top:6rpx;margin-bottom:22rpx}
+.patient-note{margin-top:24rpx;padding:22rpx 24rpx;background:#f5f8fd;border-radius:17rpx}
+.report-waiting{display:flex;flex-direction:column;align-items:center;gap:12rpx;padding:22rpx 16rpx 12rpx;text-align:center}
+.report-waiting-title{font-size:29rpx;color:#36577f;font-weight:550}
+.report-waiting .consult-body{font-size:25rpx;color:#8595a9}
+.report-waiting-mark{position:relative;width:56rpx;height:68rpx;border:2rpx solid #a9c0df;border-radius:12rpx;background:#f2f6fc;margin-bottom:12rpx}
+.report-waiting-mark::after{content:'';position:absolute;left:12rpx;right:12rpx;top:22rpx;height:3rpx;border-radius:3rpx;background:#b9cde8;box-shadow:0 13rpx 0 #c7d7ec}
+.report-section{margin-top:24rpx;padding-top:24rpx;border-top:1rpx solid #edf2f8}
+.report-editor{border-color:#c9daf2}
+.report-editor .consult-heading{align-items:flex-start;flex-wrap:wrap;gap:10rpx;margin-bottom:30rpx}
+.report-field-heading{display:flex;align-items:center;gap:14rpx;margin-bottom:16rpx}
+.report-field-heading .consult-field-title{margin:0}
+.report-field-number{display:flex;align-items:center;justify-content:center;width:40rpx;height:40rpx;flex:none;border-radius:13rpx;background:#eaf2ff;color:#3e6eae;font-size:23rpx;font-weight:600}
+.report-editor .report-input{height:auto;min-height:180rpx;background:#f9fbff;line-height:1.8}
+.report-placeholder{font-size:25rpx;color:#9aa9bd}
+.report-count{display:block;text-align:right;margin-top:10rpx;color:#97a6b9;font-size:21rpx}
+.report-submit-note{margin:6rpx 0 24rpx;color:#7f90a7;font-size:23rpx;line-height:1.8}
+.report-editor>.consult-button{width:100%}
+.consultation-chat-row{display:flex;flex-direction:column;align-items:flex-start;gap:8rpx;margin:22rpx 0}
+.consultation-chat-row.mine{align-items:flex-end}
+.consultation-chat-bubble{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:16rpx;padding:18rpx 22rpx;background:#f1f5fb;color:#3f5878;font-size:27rpx}
+.mine .consultation-chat-bubble{background:#e6efff;color:#2b5289}
+.consultation-chat-compose{padding-top:22rpx;border-top:1rpx solid #e5edf7}
+.consultation-chat-compose textarea{height:auto;min-height:140rpx;margin-bottom:18rpx}
+.consultation-chat-compose button{width:100%}
+.chat-history{font-size:23rpx;line-height:1.6;padding:12rpx;border:0;background:#f3f7fd;color:#5f7fa9}
+.chat-history::after{border:0}

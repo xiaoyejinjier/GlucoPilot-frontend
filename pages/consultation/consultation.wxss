@@ -1,0 +1,8 @@
+@import "../../styles/consultation.wxss";
+
+.square-heading { gap: 16rpx; flex-wrap: wrap; }
+.hide-mine-button { display: flex; align-items: center; gap: 10rpx; margin: 0; padding: 12rpx 18rpx; min-height: 64rpx; border: 1rpx solid #d5e2f5; border-radius: 32rpx; background: #fff; color: #526b90; font-size: 24rpx; line-height: 1.4; transition: background-color .18s, color .18s, border-color .18s; }
+.hide-mine-button::after { border: none; }
+.hide-mine-button.is-selected { background: #e8f1ff; border-color: #a7c5f2; color: #285b9c; }
+.hide-mine-check { display: flex; align-items: center; justify-content: center; width: 24rpx; height: 24rpx; border: 2rpx solid #b4c6df; border-radius: 7rpx; font-size: 20rpx; }
+.is-selected .hide-mine-check { background: #3c71b8; border-color: #3c71b8; color: #fff; }

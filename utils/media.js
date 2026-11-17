@@ -21,7 +21,7 @@ const BIZ_TYPE = {
   CHAT_IMAGE: 4,
   CMS: 5,
   CHAT_VOICE: 6,
-  ARTICLE_IMAGE: 7, ARTICLE_VIDEO:8
+  ARTICLE_IMAGE: 7, ARTICLE_VIDEO:8, CONSULTATION_IMAGE:9
 }
 
 /** 会话图片的客户端上限：5MB，与后端 `ai.vision.max-image-bytes` 对齐。

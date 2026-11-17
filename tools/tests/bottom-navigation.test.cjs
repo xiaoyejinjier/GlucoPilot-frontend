@@ -83,7 +83,7 @@ test('新手引导按五个入口逐步高亮，期间拦截导航并在最后�
     assert.equal(events.length, index === 4 ? 1 : 0)
   }
   assert.equal(events[0].name, 'guidecomplete')
-  assert.equal(navigation.data.guideSteps.map(step => step.title).join(','), '记录,设备管理,社区,我的,小语')
+  assert.equal(navigation.data.guideSteps.map(step => step.title).join(','), '记录,问诊,社区,我的,小语')
   assert.equal(navigation.data.arrowStyle, 'left:30px;')
 })
 
@@ -169,8 +169,8 @@ test('四个常规入口保持原生Tab路由与选中索引一致，小语为�
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
   assert.equal(navigation.data.items.length, 4)
   assert.equal(manifest.tabBar.list.length, 4)
-  assert.equal(navigation.data.items.map(item => item.text).join(','), '记录,设备管理,社区,我的')
-  assert.equal(manifest.tabBar.list.map(item => item.text).join(','), '记录,设备管理,社区,我的')
+  assert.equal(navigation.data.items.map(item => item.text).join(','), '记录,问诊,社区,我的')
+  assert.equal(manifest.tabBar.list.map(item => item.text).join(','), '记录,问诊,社区,我的')
   assert.equal(navigation.data.assistant.text, '小语')
   assert.ok(manifest.pages.includes(navigation.data.assistant.pagePath.slice(1)))
   assert.equal(manifest.tabBar.list.some((item) => '/' + item.pagePath === navigation.data.assistant.pagePath), false)
@@ -216,6 +216,8 @@ function pageForNavigation(name, tabBar) {
       '../../utils/display': { applyDisplayToCurrentPage: () => state.display++ },
       '../../utils/community': { begin() {}, active: () => false },
       '../../utils/publication': { TAGS: [] },
+      '../../utils/consultation': { TOPICS: [] },
+      '../../services/consultation': { PREVIEW_CAPABILITIES: {} },
       '../../utils/request': { getToken: () => 'navigation-test-account' },
       '../../utils/device-drafts': { listDeviceDrafts: () => [] },
       '../../services/api': { fetchCommunityTags: async () => [], fetchMyDevices: async () => [] }
@@ -240,7 +242,7 @@ function cachedGuideBars() {
   vm.runInNewContext(fs.readFileSync(path.join(root, 'custom-tab-bar/index.js'), 'utf8'), {
     Component: value => { definition = value }, getApp: () => app, getCurrentPages: () => []
   })
-  const bars = ['ai', 'devices', 'index', 'mine'].map(() => {
+  const bars = ['ai', 'consultation', 'index', 'mine'].map(() => {
     const bar = { ...definition.methods, data: { ...definition.data },
       setData(value) { Object.assign(this.data, value) } }
     definition.lifetimes.attached.call(bar)
@@ -264,19 +266,19 @@ test('跳过沿用全局完成状态，切换缓存Tab后不重现遮罩并恢�
   navigation.skipGuide()
   assert.equal(completed(), 1)
   assert.equal(navigation.data.guideActive, false)
-  const { page } = pageForNavigation('devices', bars[1])
+  const { page } = pageForNavigation('consultation', bars[1])
   page.onShow()
   assert.equal(bars[1].data.guideActive, false)
-  navigation.switchTab({ currentTarget: { dataset: { path: '/pages/devices/devices', index: 1 } } })
-  assert.equal(requests[0].url, '/pages/devices/devices')
+  navigation.switchTab({ currentTarget: { dataset: { path: '/pages/consultation/consultation', index: 1 } } })
+  assert.equal(requests[0].url, '/pages/consultation/consultation')
 })
 
-test('完成指引后切换设备管理等缓存Tab时清除旧遮罩，不依赖组件show事件', () => {
+test('完成指引后切换问诊等缓存Tab时清除旧遮罩，不依赖组件show事件', () => {
   const { bars, definition, completed } = cachedGuideBars()
   bars[0].onGuideComplete()
   assert.equal(completed(), 1)
   // 模拟各Tab提前创建，但切换时只触发页面onShow的真机时序。
-  const names = ['ai', 'devices', 'index', 'mine']
+  const names = ['ai', 'consultation', 'index', 'mine']
   for (const index of [1, 2, 3, 0, 1]) {
     const { page } = pageForNavigation(names[index], bars[index])
     page.load = page.loadData = page.syncTodayFromServer = page.startRecordWindowTimer = page.loadRemote = page.refresh = () => {}
@@ -298,8 +300,8 @@ test('已完成的指引在其他缓存实例再次触发完成时仍能关闭�
   assert.equal(completed(), 1)
 })
 
-test('四个Tab页面选中索引同步，社区沿用现有首页，设备管理加载实际设备', () => {
-  for (const [name, selected] of [['ai', 0], ['devices', 1], ['index', 2], ['mine', 3]]) {
+test('四个Tab页面选中索引同步，社区沿用现有首页，设备管理保留真实接口', () => {
+  for (const [name, selected] of [['ai', 0], ['consultation', 1], ['index', 2], ['mine', 3]]) {
     const { page, state } = pageForNavigation(name)
     page.load = page.loadData = page.syncTodayFromServer = page.startRecordWindowTimer = page.loadRemote = page.refresh = () => {}
     page.onShow()

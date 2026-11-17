@@ -44,7 +44,7 @@ async function refresh(force = false) {
     const noticeId = String(state.latestNotificationId || '')
     if (noticeId && (!latestNotice || noticeId.length > latestNotice.length || (noticeId.length === latestNotice.length && noticeId > latestNotice))) {
       latestNotice = noticeId
-      if (!newer && (!page || page.route !== 'pages/information/information')) wx.showToast({title:'有新的互动提醒，可在信息中查看',icon:'none',duration:2500})
+      if (!newer && (!page || page.route !== 'pages/information/information')) wx.showToast({title:'有新的互动提醒，可在社区对应入口查看',icon:'none',duration:2500})
     }
     const reportId=String(state.latestReportId||'')
     const reportNew=reportId&&(!latestReport||reportId.length>latestReport.length||(reportId.length===latestReport.length&&reportId>latestReport))

@@ -3,6 +3,17 @@ const root=path.resolve(__dirname,'../..')
 const flush=async()=>{for(let i=0;i<20;i++)await Promise.resolve()}
 const item={kind:'REPLY',id:'100',revision:'a'.repeat(64),recordDate:'2026-11-05',nodeCode:'before_breakfast',nodeName:'早餐前',glucoseValue:12.6,userReply:'公开回复',repliedAt:'2026-11-05T09:00:00',read:false}
 
+test('血糖变更后的旧建议保留原值及新值，读取新快照后才提交已读',async()=>{
+  const updated={...item,recordUpdated:true,currentGlucoseValue:12.5,currentRecordedAt:'2026-11-05T09:15:00',revision:'b'.repeat(64)}
+  const {page,state}=harness({fetchUserReminder:async()=>updated})
+  await flush()
+  assert.equal(page.data.item.glucoseValue,12.6)
+  assert.equal(page.data.item.currentGlucoseValue,12.5)
+  assert.equal(page.data.item.recordUpdated,true)
+  assert.equal(page.data.item.userReply,'公开回复')
+  assert.equal(state.reads[0][2],updated.revision)
+})
+
 function harness(overrides={}){
   let definition
   const state={token:'A',reads:[],navs:[]}

@@ -1,6 +1,11 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm')
 const root=path.resolve(__dirname,'../..'),catalog=require('../../utils/locales/en')
 const flush=()=>new Promise(resolve=>setImmediate(resolve))
+test('分类入口的我的点赞和收藏继续收集文章英文标题，不翻译私信正文',()=>{
+  const env=harness()
+  const rows=env.content.collect({list:[{rowType:'ARTICLE',id:'10',title:'科学控糖'},{rowType:'MESSAGE',id:'11',title:'私信内容'}]},'pages/information/information')
+  assert.equal(rows.size,1);assert.equal(rows.get('ARTICLE_PREVIEW:10').id,'10');assert.equal(rows.get('ARTICLE_PREVIEW:10').kind,'ARTICLE_PREVIEW')
+})
 function harness(response){
   const calls=[],timers=new Map();let timerId=0,token='account-a',titleUpdates=0
   const api={fetchEnglishLocalizations:async(items,retry)=>{calls.push({items:structuredClone(items),retry});return response?response(items,retry,calls.length):items.map(item=>({...item,status:'PENDING',source:{},translated:{}}))},mapNewsItem:({contentBody})=>({contentHtml:contentBody.includes('<p>')?contentBody.replace('/api/v1/cms/images/','https://api.example/api/v1/cms/images/'):''})}

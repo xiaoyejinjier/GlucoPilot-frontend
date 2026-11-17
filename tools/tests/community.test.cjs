@@ -263,13 +263,13 @@ test('私信表情插入光标位置，语音先按住再确认，超过上限�
 
 test('信息中心分类加载保持未读，打开具体目标成功后才标记该条',async()=>{
   const {page:p,state}=harness('information',{route:{tab:'likes'},api:{fetchInteractionNotices:async kind=>({records:[{id:'90',kind,actor:{key:'u2',nickname:'糖友'},newsId:'10',newsTitle:'我的文章',createdAt:'2026-10-20T12:00:00',read:false}],pages:1})}})
-  await flush();assert.equal(p.data.tabs.map(t=>t.label).join(','),'私信,点赞,收藏,收到的评论,新关注我的,我的评论');assert.equal(p.data.list[0].action,'赞了你的文章')
+  await flush();assert.equal(p.data.tabs.map(t=>t.label).join(','),'我的点赞,收到的点赞');assert.equal(p.data.list[0].action,'赞了你的文章')
   assert.equal(state.calls.filter(c=>c.name==='readInteractionNotices'||c.name==='readInteractionNotice').length,0)
   p.onOpen({currentTarget:{dataset:{id:'90'}}});assert.match(state.navs[0].url,/news-detail.*id=10/)
   assert.equal(state.calls.filter(c=>c.name==='readInteractionNotice').length,0)
   state.navs[0].success();await flush()
   assert.deepEqual(state.calls.find(c=>c.name==='readInteractionNotice').args,['90'])
-  p.onTab({currentTarget:{dataset:{key:'follows'}}});await flush();p.onOpen({currentTarget:{dataset:{id:'90'}}});assert.match(state.navs[1].url,/community-profile.*key=u2/)
+  const follow=harness('information',{route:{tab:'follows'},api:{fetchInteractionNotices:async kind=>({records:[{id:'91',kind,actor:{key:'u2'},read:false}],pages:1})}});await flush();follow.page.onOpen({currentTarget:{dataset:{id:'91'}}});assert.match(follow.state.navs[0].url,/community-profile.*key=u2/);follow.page.onUnload()
   assert.equal(state.intervals.size,1);p.onHide();assert.equal(state.intervals.size,0)
 })
 
@@ -293,7 +293,49 @@ test('我的评论只取自己的、标出被隐藏的，并跳到文章定位�
 
 test('切换信息分类时丢弃旧请求，离页后的提醒不能回填',async()=>{
   const slow=deferred();const {page:p}=harness('information',{route:{tab:'likes'},api:{fetchInteractionNotices:kind=>kind==='LIKE'?slow.promise:Promise.resolve({records:[],pages:0})}})
-  p.onTab({currentTarget:{dataset:{key:'collections'}}});await flush();slow.resolve({records:[{id:'1',actor:{key:'u2'}}],pages:1});await flush();assert.equal(p.data.activeTab,'collections');assert.equal(p.data.list.length,0);p.onUnload()
+  p.onTab({currentTarget:{dataset:{key:'myLikes'}}});await flush();slow.resolve({records:[{id:'1',actor:{key:'u2'}}],pages:1});await flush();assert.equal(p.data.activeTab,'myLikes');assert.equal(p.data.list.length,0);p.onUnload()
+})
+
+test('分类入口各自只加载相关内容，信息仅有私信，评论包含收到的评论和我的评论', async()=>{
+  const messages=harness('information',{route:{group:'messages'}});await flush()
+  assert.equal(messages.page.data.tabs.map(t=>t.key).join(','),'messages')
+  assert.equal(messages.state.calls.some(call=>call.name==='fetchInteractionNotices'),false)
+  messages.page.onTab({currentTarget:{dataset:{key:'likes'}}});assert.equal(messages.page.data.activeTab,'messages');messages.page.onUnload()
+  const comments=harness('information',{route:{group:'comments'}});await flush()
+  assert.equal(comments.page.data.tabs.map(t=>t.key).join(','),'comments,myComments')
+  assert.equal(comments.state.calls.find(call=>call.name==='fetchInteractionNotices').args[0],'COMMENT')
+  comments.page.onTab({currentTarget:{dataset:{key:'myComments'}}});await flush()
+  assert.equal(comments.state.calls.some(call=>call.name==='fetchMyComments'),true);comments.page.onUnload()
+})
+
+test('点赞收藏关注同时保留我的列表和收到的互动，搜索条件跨分页保持',async()=>{
+  for(const [group,mode,tab,kind] of [['likes','likes','likes','LIKE'],['collections','collections','collections','COLLECT'],['follows','following','follows','FOLLOW']]) {
+    const h=harness('information',{route:{group},api:{fetchCommunityList:async(_mode,query)=>({records:[mode==='following'?{key:'u2',nickname:'糖友'}:{id:String(query.pageNum),title:'控糖'}],pages:2})}})
+    await flush();h.page.onInput({detail:{value:' 糖 '}});await h.page.onSearch();await h.page.onMore()
+    const calls=h.state.calls.filter(c=>c.name==='fetchCommunityList')
+    assert.equal(calls.at(-1).args[0],mode);assert.equal(calls.at(-1).args[1].keyword,'糖');assert.equal(calls.at(-1).args[1].pageNum,2)
+    h.page.onTab({currentTarget:{dataset:{key:tab}}});await flush()
+    assert.equal(h.page.data.searchable,false);assert.equal(h.page.data.keyword,'')
+    assert.equal(h.state.calls.find(c=>c.name==='fetchInteractionNotices').args[0],kind)
+    assert.equal(h.state.calls.some(c=>c.name==='readInteractionNotice'),false);h.page.onUnload()
+  }
+})
+
+test('分类快捷按钮红点只显示自身类别，热榜仍保留为信息流标签',()=>{
+  const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+  const shortcuts=template.slice(template.indexOf('community-shortcuts'),template.indexOf('feed-heading'))
+  assert.doesNotMatch(shortcuts,/unreadCount|unreadLabel/)
+  for(const key of ['comments','follows','likes','collections','messages']) assert.ok(shortcuts.includes('informationCounts.'+key))
+  assert.match(template.slice(template.indexOf('feed-heading')),/data-mode="hot"/)
+})
+
+test('无效分类参数回退到私信，已有全局提醒tab链接仍定位到收到的类别',async()=>{
+  for(const group of ['constructor','__proto__','missing']) {
+    const h=harness('information',{route:{group}});await flush();assert.equal(h.page.data.group,'messages');h.page.onUnload()
+  }
+  for(const [tab,group] of [['likes','likes'],['collections','collections'],['comments','comments'],['follows','follows']]) {
+    const h=harness('information',{route:{tab}});await flush();assert.equal(h.page.data.activeTab,tab);assert.equal(h.page.data.group,group);h.page.onUnload()
+  }
 })
 
 test('字符串0未读计数规范为数字0，正数显示角标并封顶99+',async()=>{

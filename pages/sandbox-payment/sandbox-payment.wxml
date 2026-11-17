@@ -1,0 +1,21 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="wallet-page" style="{{displayStyle}}">
+  <view class="sandbox-label">{{i18n.t('支付宝沙箱 · 仅测试资金',locale)}}</view>
+  <view class="wallet-card sandbox-card">
+    <text class="wallet-title">{{i18n.t(paid ? '沙箱充值已到账' : closed ? '订单已关闭' : expired ? '支付码已过期' : '请扫码完成沙箱付款',locale)}}</text>
+    <text class="wallet-detail-amount">¥{{price}}</text>
+    <view wx:if="{{loading}}" class="sandbox-state"><view class="wallet-loading"></view><text>{{i18n.t('正在生成支付码…',locale)}}</text></view>
+    <view wx:elif="{{paid}}" class="sandbox-success">✓</view>
+    <view wx:elif="{{expired}}" class="sandbox-expired">{{i18n.t('已过期',locale)}}</view>
+    <image wx:elif="{{qrPath}}" class="sandbox-qr" src="{{qrPath}}" data-generation="{{qrGeneration}}" binderror="onQrError" mode="aspectFit" />
+    <text wx:if="{{qrPath}}" class="wallet-muted wallet-block">{{i18n.t('有效期至',locale)}} {{expires}}</text>
+    <text class="wallet-muted wallet-block">{{i18n.t('订单编号',locale)}}：{{orderNo}}</text>
+    <view wx:if="{{error}}" class="wallet-error">{{i18n.t(error,locale)}}</view>
+    <button wx:if="{{error && !expired && !paid && !closed}}" class="wallet-primary" disabled="{{loading || checking}}" bindtap="onRetry">{{i18n.t('重新加载支付码',locale)}}</button>
+    <button wx:if="{{expired && !paid && !closed}}" class="wallet-primary" disabled="{{checking}}" bindtap="onRecharge">{{i18n.t('重新充值',locale)}}</button>
+    <button wx:if="{{!paid && !closed}}" class="wallet-primary" disabled="{{checking || loading}}" loading="{{checking}}" bindtap="onRefresh">{{i18n.t('我已付款，查询结果',locale)}}</button>
+    <button wx:else class="wallet-primary" bindtap="onDetails">{{i18n.t('查看订单',locale)}}</button>
+    <text wx:if="{{paused}}" class="wallet-muted wallet-block">{{i18n.t('自动查询已暂停，可手动查询结果',locale)}}</text>
+  </view>
+  <view class="wallet-note"><text>{{i18n.t('请使用支付宝沙箱钱包和买家测试账号扫码。可在电脑开发者工具展示二维码，用手机沙箱钱包付款。',locale)}}</text><text>{{i18n.t('余额仅以后端验签或查单确认为准。请勿使用真实资金。',locale)}}</text></view>
+</view>

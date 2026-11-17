@@ -5,10 +5,20 @@
     "pages/voice/voice",
     "pages/ai/ai",
     "pages/devices/devices",
+    "pages/consultation/consultation",
+    "pages/consultation-compose/consultation-compose",
+    "pages/consultation-detail/consultation-detail",
+    "pages/consultation-checkout/consultation-checkout",
+    "pages/consultation-records/consultation-records",
+    "pages/consultation-doctor/consultation-doctor",
     "pages/device-add/device-add",
     "pages/stats/stats",
     "pages/glucose-reply/glucose-reply",
     "pages/mine/mine",
+    "pages/order-detail/order-detail",
+    "pages/my-orders/my-orders",
+    "pages/wallet/wallet",
+    "pages/doctor-withdrawals/doctor-withdrawals",
     "pages/news-detail/news-detail",
     "pages/community/community",
     "pages/community-search/community-search",
@@ -38,7 +48,8 @@
     "pages/account-cancellation/cancellation",
     "pages/notifications/notifications",
     "pages/display-settings/display-settings",
-    "pages/feedback-list/feedback-list"
+    "pages/feedback-list/feedback-list",
+    "pages/sandbox-payment/sandbox-payment"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
@@ -59,8 +70,8 @@
         "text": "记录"
       },
       {
-        "pagePath": "pages/devices/devices",
-        "text": "设备管理"
+        "pagePath": "pages/consultation/consultation",
+        "text": "问诊"
       },
       {
         "pagePath": "pages/index/index",

@@ -119,7 +119,7 @@ test('附近设备登记需确认、不是配对成功，账号变化时旧确�
   state.token = 'user-b'; page.onShow(); state.modal.success({ confirm: true })
   assert.equal(page.data.drafts.length, 0)
   page.onBack()
-  assert.equal(state.nav[0].url, '/pages/ai/ai')
+  assert.equal(state.nav[0].url, '/pages/mine/mine')
 })
 
 test('入口沿用主题色且与九时段标题同排，独立全屏页原生标题和返回，无血糖写入依赖', () => {

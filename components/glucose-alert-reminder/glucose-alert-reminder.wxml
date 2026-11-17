@@ -61,6 +61,7 @@
           </view>
           <view wx:for="{{replies}}" wx:key="id" class="reply-item" data-kind="REPLY" data-id="{{item.id}}" bindtap="onOpenReminder">
             <view class="reply-item-heading"><text class="reply-author">{{i18n.t("管理端", locale)}}</text><text class="reply-time">{{i18n.t((item.repliedAtText), locale)}}</text></view>
+            <text wx:if="{{item.recordUpdated}}" class="reply-updated">{{i18n.t('记录已更新，建议对应旧测量',locale)}} · {{i18n.t('当前测量',locale)}} {{item.currentGlucoseValue}} mmol/L</text>
             <text class="reply-content">{{item.userReply}}</text>
             <view class="reply-record">
               <text class="reply-record-label">{{i18n.t("关联测量", locale)}}</text>

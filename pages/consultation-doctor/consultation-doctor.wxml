@@ -1,0 +1,35 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="consult-page" style="{{displayStyle}}">
+  <view class="consult-hero"><text class="consult-hero-title">{{i18n.t('医生工作台',locale)}}</text><text class="consult-hero-note">{{i18n.t('完成身份审核后，可接诊并出具问诊单。',locale)}}</text></view>
+  <view wx:if="{{loading}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
+  <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('重试',locale)}}</view>
+  <view wx:if="{{!loading && !error}}" class="consult-card">
+    <view class="consult-heading"><text class="consult-title">{{i18n.t('医生资质申请',locale)}}</text><text class="consult-pill">{{i18n.t(statusLabel,locale)}}</text></view>
+    <text class="consult-field-note">{{i18n.t('资质资料仅本人及审核管理员可见。',locale)}}</text>
+    <text wx:if="{{profile && !canEdit}}" class="consult-body">{{profile.realName}} · {{profile.hospital}} · {{profile.specialty}}</text>
+    <text wx:if="{{profile.reviewNote}}" class="consult-body">{{i18n.t('审核意见',locale)}}：{{profile.reviewNote}}</text>
+  </view>
+  <view wx:if="{{canEdit && !loading}}" class="consult-card">
+    <view class="consult-field"><text class="consult-field-title">{{i18n.t('真实姓名',locale)}}</text><input class="consult-input" maxlength="50" value="{{form.realName}}" data-field="realName" bindinput="onField" disabled="{{saving}}" /></view>
+    <view class="consult-field"><text class="consult-field-title">{{i18n.t('执业机构',locale)}}</text><input class="consult-input" maxlength="120" value="{{form.hospital}}" data-field="hospital" bindinput="onField" disabled="{{saving}}" /></view>
+    <view class="consult-field"><text class="consult-field-title">{{i18n.t('专业科室',locale)}}</text><input class="consult-input" maxlength="80" value="{{form.specialty}}" data-field="specialty" bindinput="onField" disabled="{{saving}}" /></view>
+    <view class="consult-field"><text class="consult-field-title">{{i18n.t('执业证号',locale)}}</text><input class="consult-input" maxlength="80" value="{{form.licenseNumber}}" data-field="licenseNumber" bindinput="onField" disabled="{{saving}}" /></view>
+    <view class="consult-field"><text class="consult-field-title">{{i18n.t('资质说明',locale)}}</text><textarea class="consult-textarea" maxlength="1000" value="{{form.qualificationNote}}" data-field="qualificationNote" bindinput="onField" disabled="{{saving}}" /></view>
+    <text class="consult-field-note">{{i18n.t('资质资料仅本人及审核管理员可见。',locale)}}</text>
+    <button class="consult-button primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onApply">{{i18n.t('提交医生审核',locale)}}</button>
+  </view>
+  <block wx:if="{{profile.status === 'APPROVED'}}">
+    <view class="consult-card doctor-wallet-card">
+      <view class="consult-heading"><text class="consult-title">{{i18n.t('接诊准备',locale)}}</text><text wx:if="{{walletReady}}" class="consult-pill">{{i18n.t(walletActivated ? '钱包已开通' : '钱包未开通',locale)}}</text></view>
+      <text wx:if="{{walletLoading}}" class="consult-body">{{i18n.t('正在检查钱包状态…',locale)}}</text>
+      <block wx:elif="{{walletError}}"><text class="consult-body">{{i18n.t(walletError,locale)}}</text><button class="consult-button" bindtap="onWalletRetry">{{i18n.t('重试',locale)}}</button></block>
+      <block wx:elif="{{walletReady && !walletActivated}}"><text class="consult-body">{{i18n.t('接诊前请先开通钱包，用于接收问诊收入。开通免费，无需充值。',locale)}}</text><button class="consult-button primary" bindtap="onWallet" hover-class="ui-pressed">{{i18n.t('去开通钱包',locale)}} ›</button></block>
+      <text wx:elif="{{walletActivated}}" class="consult-body">{{i18n.t('已准备就绪，可以前往求助广场接诊。',locale)}}</text>
+      <view class="consult-row" bindtap="onWithdrawals"><text class="consult-link">{{i18n.t('问诊收入与提现记录',locale)}} ›</text></view>
+    </view>
+    <view class="consult-hero-actions"><button class="consult-button primary" bindtap="onFind">{{i18n.t('前往接诊',locale)}}</button><button class="consult-button" bindtap="onWallet">{{i18n.t('我的钱包',locale)}}</button></view>
+    <view class="consult-heading"><text class="consult-title">{{i18n.t('我接诊的求助',locale)}}</text></view>
+    <view wx:for="{{records}}" wx:key="id" class="consult-card" data-id="{{item.id}}" bindtap="onOpen"><text class="consult-list-title">{{item.title}}</text><view class="consult-list-meta"><text>{{i18n.t(item.statusLabel,locale)}}</text><text>{{item.timeLabel}}</text></view></view>
+    <view wx:if="{{!records.length && !loading}}" class="consult-state">{{i18n.t('暂无接诊记录',locale)}}</view>
+  </block>
+</view>

@@ -97,3 +97,4 @@
 }
 
 .social-notice-row{display:flex;justify-content:space-between;align-items:center;gap:24rpx;padding:24rpx 0;border-top:1rpx solid var(--surface-subtle);color:#516b88;font-size:var(--fs-body,28rpx)}.social-notice-count{display:inline-block;padding:2rpx 14rpx;border-radius:20rpx;background:var(--brand-soft);color:var(--brand);font-size:24rpx}
+.reply-updated{display:block;margin:12rpx 0;padding:14rpx 18rpx;border-radius:14rpx;background:#fff5df;color:#8a5516;font-size:24rpx;line-height:1.6}

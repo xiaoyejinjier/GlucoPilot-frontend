@@ -28,7 +28,7 @@ Component({
     arrowStyle: '',
     guideSteps: [
       { target: '#nav-item-0', title: '记录', description: '在这里记录血糖、饮食，查看每日记录和统计。' },
-      { target: '#nav-item-1', title: '设备管理', description: '添加和绑定设备，查看设备详情与同步状态。' },
+      { target: '#nav-item-1', title: '问诊', description: '发布健康求助，查看医生回复与问诊单。设备管理已移至我的。' },
       { target: '#nav-item-2', title: '社区', description: '在这里浏览健康资讯和社区内容。' },
       { target: '#nav-item-3', title: '我的', description: '在这里管理个人资料、健康档案和设置。' },
       { target: '#nav-assistant', title: '小语', description: '和小语打字或语音交流，帮你记录、分析和答疑。' }
@@ -36,7 +36,7 @@ Component({
     assistant: { pagePath: '/pages/voice/voice', text: '小语' },
     items: [
       { pagePath: '/pages/ai/ai', text: '记录', icon: 'ai', index: 0 },
-      { pagePath: '/pages/devices/devices', text: '设备管理', icon: 'devices', index: 1 },
+      { pagePath: '/pages/consultation/consultation', text: '问诊', icon: 'consultation', index: 1 },
       { pagePath: '/pages/index/index', text: '社区', icon: 'community', index: 2 },
       { pagePath: '/pages/mine/mine', text: '我的', icon: 'mine', index: 3 }
     ]

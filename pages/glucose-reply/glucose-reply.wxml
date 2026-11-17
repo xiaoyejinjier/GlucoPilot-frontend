@@ -3,8 +3,9 @@
   <view wx:if="{{loading}}" class="reply-state">{{i18n.t('正在加载…',locale)}}</view>
   <view wx:elif="{{error}}" class="reply-state"><text>{{i18n.t(error,locale)}}</text><button bindtap="onRetry">{{i18n.t('重试',locale)}}</button></view>
   <block wx:elif="{{item}}">
+    <view wx:if="{{item.recordUpdated}}" class="measurement-update"><text>{{i18n.t('该血糖记录已更新，以下建议对应之前的测量。',locale)}}</text><text>{{i18n.t('当前测量',locale)}}：{{item.currentGlucoseValue}} mmol/L</text><text>{{i18n.t('新记录需要重新核对，旧建议不会自动成为新记录的处理结果。',locale)}}</text></view>
     <view class="reply-card"><view class="reply-meta"><text class="reply-author">{{i18n.t('管理端回复',locale)}}</text><text>{{item.timeText}}</text></view><text class="reply-body">{{item.userReply}}</text></view>
-    <view class="measurement-card"><text class="measurement-title">{{i18n.t('关联测量',locale)}}</text><text class="measurement-date">{{item.recordDate}} · {{i18n.t(item.nodeName,locale)}}</text><view class="measurement-value">{{item.glucoseValue}} <text>mmol/L</text></view><text class="measurement-note">{{i18n.t('回复对应当时的测量，当前记录可能已有更新。',locale)}}</text><button bindtap="onRecord">{{i18n.t('查看记录 ›',locale)}}</button></view>
+    <view class="measurement-card"><text class="measurement-title">{{i18n.t(item.recordUpdated ? '建议对应的旧测量' : '关联测量',locale)}}</text><text class="measurement-date">{{item.recordDate}} · {{i18n.t(item.nodeName,locale)}}</text><view class="measurement-value">{{item.glucoseValue}} <text>mmol/L</text></view><text class="measurement-note">{{i18n.t('回复对应当时的测量，当前记录可能已有更新。',locale)}}</text><button bindtap="onRecord">{{i18n.t('查看记录 ›',locale)}}</button></view>
     <view wx:if="{{readError}}" class="reply-state"><text>{{i18n.t(readError,locale)}}</text><button bindtap="markRead" disabled="{{reading}}">{{i18n.t('标为已读',locale)}}</button></view>
   </block>
 </view>

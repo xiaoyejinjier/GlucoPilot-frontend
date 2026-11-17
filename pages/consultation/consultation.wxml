@@ -1,0 +1,39 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="consult-page consult-tab-page" style="{{displayStyle}}">
+  <view class="consult-hero">
+    <text class="consult-kicker">{{i18n.t('糖友问诊',locale)}}</text>
+    <text class="consult-hero-title">{{i18n.t('有疑问，向医生问一问',locale)}}</text>
+    <text class="consult-hero-note">{{i18n.t('说清你的困扰，等待医生回应。问诊单出具后，可按需查看完整建议。',locale)}}</text>
+    <view class="consult-hero-actions">
+      <button class="consult-button hero-primary" bindtap="onCompose" hover-class="ui-pressed">＋ {{i18n.t('发布求助',locale)}}</button>
+      <button class="consult-button hero-secondary" bindtap="onRecords" hover-class="ui-pressed">{{i18n.t('我的问诊',locale)}} ›</button>
+    </view>
+  </view>
+  <view class="consult-row" bindtap="onDoctor"><text class="consult-link">{{i18n.t('医生工作台',locale)}} ›</text></view>
+  <view class="consult-card">
+    <view class="consult-heading"><text class="consult-title">{{i18n.t('从求助到问诊单',locale)}}</text><text class="consult-pill">{{i18n.t('1元查看问诊单',locale)}}</text></view>
+    <view class="consult-steps"><view class="consult-step"><view class="consult-step-number">1</view><text>{{i18n.t('描述健康问题',locale)}}</text></view><view class="consult-step"><view class="consult-step-number">2</view><text>{{i18n.t('等待医生回复',locale)}}</text></view><view class="consult-step"><view class="consult-step-number">3</view><text>{{i18n.t('按需付费查看',locale)}}</text></view></view>
+    <view class="consult-row" bindtap="onPreview" hover-class="ui-pressed"><text class="consult-muted">{{i18n.t('问诊单包含哪些内容？',locale)}}</text><text class="consult-link">{{i18n.t('查看预览',locale)}} ↗</text></view>
+  </view>
+  <view wx:if="{{!capabilities.submissionEnabled}}" class="consult-notice">{{i18n.t('问诊服务正在筹备，开放后可发布求助并由医生接诊。',locale)}}</view>
+  <view class="consult-heading square-heading">
+    <text class="consult-title">{{i18n.t('求助广场',locale)}}</text>
+    <button class="hide-mine-button {{hideMine ? 'is-selected' : ''}}" bindtap="onToggleHideMine" hover-class="ui-pressed" aria-label="{{i18n.t(hideMine ? '显示全部求助' : '隐藏我的求助',locale)}}">
+      <text class="hide-mine-check" aria-hidden="true">{{hideMine ? '✓' : ''}}</text><text>{{i18n.t('隐藏我的求助',locale)}}</text>
+    </button>
+  </view>
+  <scroll-view class="consult-topic-scroll" scroll-x show-scrollbar="{{false}}"><text wx:for="{{topics}}" wx:key="code" class="consult-chip {{topic === item.code ? 'selected' : ''}}" data-code="{{item.code}}" bindtap="onTopic">{{i18n.t(item.name,locale)}}</text></scroll-view>
+  <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('点击重试',locale)}}</view>
+  <view wx:if="{{loading && !records.length}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
+  <view wx:elif="{{!records.length && !error}}" class="consult-card consult-empty">
+    <view class="consult-paper" aria-hidden="true"></view><text class="consult-empty-title">{{i18n.t(hideMine ? '暂时没有其他糖友的求助' : '这里会出现糖友的求助',locale)}}</text>
+    <text class="consult-empty-note">{{i18n.t(hideMine ? '可以关闭“隐藏我的求助”查看全部内容。' : '可以先整理你的问题，看看求助表单和问诊单的样子。',locale)}}</text>
+    <button class="consult-button" bindtap="onCompose" hover-class="ui-pressed">{{i18n.t('写下我的问题',locale)}} ↗</button>
+  </view>
+  <view wx:for="{{records}}" wx:key="id" class="consult-card" data-id="{{item.id}}" bindtap="onOpen" hover-class="ui-pressed">
+    <view class="consult-heading"><text class="consult-pill">{{i18n.t(item.topicLabel,locale)}}</text><text class="consult-muted">{{i18n.t(item.statusLabel,locale)}}</text></view>
+    <text class="consult-list-title">{{item.title}}</text>
+    <view class="consult-list-meta"><text>{{item.patientName}}</text><text>{{item.timeLabel}}</text></view>
+  </view>
+  <text class="consult-fine-print">{{i18n.t('问诊用于健康咨询，处方须由具备资质的医生按规范开具。',locale)}}</text>
+</view>

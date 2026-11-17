@@ -1,0 +1,64 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="consult-page {{showPaymentFooter ? 'consult-with-footer' : ''}}" style="{{displayStyle}}">
+  <view wx:if="{{previewMode}}" class="consult-notice">{{i18n.t('页面预览，求助尚未发布，医生接诊与出单服务待开放。',locale)}}</view>
+  <view wx:if="{{loading}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
+  <view wx:elif="{{error}}" class="consult-card consult-empty"><text class="consult-empty-note">{{i18n.t(error,locale)}}</text><button class="consult-button" bindtap="onRetry">{{i18n.t('重试',locale)}}</button></view>
+  <block wx:elif="{{item}}">
+    <view wx:if="{{doctorView && item.canReply}}" class="doctor-task-card">
+      <view class="doctor-task-top"><text class="doctor-task-kicker">{{i18n.t('我的接诊',locale)}}</text><text class="doctor-task-badge">{{i18n.t('接诊中',locale)}}</text></view>
+      <text class="doctor-task-title">{{i18n.t('为患者填写问诊单',locale)}}</text>
+      <text class="doctor-task-note">{{i18n.t('先查看患者描述，再填写评估、用药及复查建议。',locale)}}</text>
+      <button class="doctor-write-link" bindtap="onWriteReport" hover-class="ui-pressed">{{i18n.t('开始填写',locale)}} ↓</button>
+    </view>
+    <view class="consult-card patient-card">
+      <view class="consult-heading"><text class="consult-pill">{{i18n.t(item.topicLabel,locale)}}</text><text class="consult-muted">{{i18n.t(item.statusLabel,locale)}}</text></view>
+      <text class="consult-list-title">{{previewMode && !item.symptoms ? i18n.t('问诊单预览',locale) : item.title}}</text>
+      <text wx:if="{{doctorView}}" class="patient-section-label">{{i18n.t('患者描述',locale)}}</text>
+      <text class="consult-body">{{item.symptoms || i18n.t('健康详情仅向本人及接诊医生开放。',locale)}}</text>
+      <view wx:if="{{item.glucoseNote}}" class="patient-note"><text class="patient-section-label">{{i18n.t('相关血糖情况',locale)}}</text><text class="consult-body">{{item.glucoseNote}}</text></view>
+      <view wx:if="{{item.medicationNote}}" class="patient-note"><text class="patient-section-label">{{i18n.t('用药与过敏情况',locale)}}</text><text class="consult-body">{{item.medicationNote}}</text></view>
+      <view wx:if="{{photos.length}}" class="patient-note"><text class="patient-section-label">{{i18n.t('补充图片',locale)}}</text><view class="consult-photo-grid"><image wx:for="{{photos}}" wx:key="mediaId" class="consult-photo-cell" src="{{item.url}}" mode="aspectFill" data-url="{{item.url}}" bindtap="onPreviewPhoto" /></view></view>
+      <view wx:if="{{photosError}}" class="consult-error" bindtap="loadPhotos">{{i18n.t(photosError,locale)}} · {{i18n.t('点击重试',locale)}}</view>
+    </view>
+    <view wx:if="{{(item.report || previewMode) && !item.canReply}}" class="consult-card report-card">
+      <view class="consult-heading"><text class="consult-title">{{i18n.t('医生问诊单',locale)}}</text><text class="consult-pill">{{i18n.t(doctorView ? '已出具' : unlocked ? '已解锁' : report.ready ? '待查看' : '待医生出具',locale)}}</text></view>
+      <view wx:if="{{report.ready || previewMode}}" class="consult-doctor"><view class="doctor-identity-mark" aria-hidden="true">{{i18n.t('医',locale)}}</view><view class="consult-doctor-copy"><text>{{report.doctorName || i18n.t('接诊医生',locale)}}</text><text>{{report.specialty || i18n.t('医生接诊后展示身份与专业信息',locale)}}</text></view></view>
+      <view wx:if="{{!previewMode && !report.ready}}" class="report-waiting"><view class="report-waiting-mark" aria-hidden="true"></view><text class="report-waiting-title">{{i18n.t('等待医生出具问诊单',locale)}}</text><text class="consult-body">{{i18n.t('医生出具问诊单后，可在这里查看。',locale)}}</text></view>
+      <view wx:elif="{{!unlocked}}" class="consult-lock"><view class="consult-lock-symbol" aria-hidden="true"></view><text class="consult-empty-note">{{i18n.t('医生出具后，支付1元可查看完整问诊单',locale)}}</text><view class="consult-unlock-items"><text>{{i18n.t('医生评估',locale)}}</text><text>{{i18n.t('用药建议',locale)}}</text><text>{{i18n.t('复查与就医建议',locale)}}</text></view><view class="consult-lock-line"></view><view class="consult-lock-line"></view><view class="consult-lock-line short"></view></view>
+      <block wx:else>
+        <view class="report-section"><text class="patient-section-label">{{i18n.t('医生评估',locale)}}</text><text class="consult-body">{{report.assessment}}</text></view>
+        <view class="report-section"><text class="patient-section-label">{{i18n.t('用药建议',locale)}}</text><text class="consult-body">{{report.medicationAdvice}}</text></view>
+        <view class="report-section"><text class="patient-section-label">{{i18n.t('复查与就医建议',locale)}}</text><text class="consult-body">{{report.followUpAdvice}}</text></view>
+      </block>
+    </view>
+
+    <view wx:if="{{item.canClaim}}" class="consult-card claim-card">
+      <view class="consult-heading"><view class="claim-title"><view class="doctor-identity-mark" aria-hidden="true">{{i18n.t('医',locale)}}</view><text class="consult-title">{{i18n.t('医生接诊',locale)}}</text></view><text wx:if="{{walletReady}}" class="consult-pill">{{i18n.t(walletActivated ? '已准备就绪' : '需开通钱包',locale)}}</text></view>
+      <text class="consult-body">{{i18n.t('审核通过的医生可接诊并查看健康详情。',locale)}}</text>
+      <view class="claim-wallet-status">
+        <text wx:if="{{walletLoading}}" class="consult-body">{{i18n.t('正在检查钱包状态…',locale)}}</text>
+        <block wx:elif="{{walletError}}"><text class="consult-body">{{i18n.t(walletError,locale)}}</text><button class="consult-button" bindtap="onWalletRetry">{{i18n.t('重试',locale)}}</button></block>
+        <block wx:elif="{{walletReady && !walletActivated}}"><text class="claim-wallet-title">{{i18n.t('开通钱包后即可接诊',locale)}}</text><text class="consult-body">{{i18n.t('用于接收问诊收入，开通免费，无需充值。',locale)}}</text><button class="consult-button primary" bindtap="onWallet" hover-class="ui-pressed">{{i18n.t('去开通钱包',locale)}} ›</button><text class="consult-field-note">{{i18n.t('开通后返回本页，即可继续接诊。',locale)}}</text></block>
+        <block wx:elif="{{walletReady && walletActivated}}"><view class="claim-ready"><view class="claim-ready-dot"></view><text>{{i18n.t('钱包已开通',locale)}}</text></view><button class="consult-button primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onClaim" hover-class="ui-pressed">{{i18n.t('我要接诊',locale)}}</button></block>
+      </view>
+    </view>
+    <view wx:if="{{chatEnabled}}" class="consult-card consultation-chat">
+      <view class="consult-heading"><text class="consult-title">{{i18n.t('问诊交流',locale)}}</text><text class="consult-muted">{{i18n.t('仅本人和接诊医生可见',locale)}}</text></view>
+      <button wx:if="{{chatHasEarlier}}" class="chat-history" bindtap="onChatMore" loading="{{chatLoading}}">{{i18n.t('查看更早的交流',locale)}}</button>
+      <view wx:if="{{!messages.length}}" class="consult-state">{{i18n.t('可以在这里补充情况或回复对方。',locale)}}</view>
+      <view wx:for="{{messages}}" wx:key="id" class="consultation-chat-row {{item.mine ? 'mine' : ''}}"><text class="consult-muted">{{i18n.t(item.mine ? '我' : item.senderRole === 'DOCTOR' ? '接诊医生' : '患者',locale)}} · {{item.timeLabel}}</text><text class="consultation-chat-bubble">{{item.content}}</text></view>
+      <view wx:if="{{chatError}}" class="consult-error" bindtap="onChatRetry">{{i18n.t(chatError,locale)}} · {{i18n.t('重试',locale)}}</view>
+      <view wx:if="{{chatCanSend}}" class="consultation-chat-compose"><textarea class="consult-textarea" auto-height maxlength="2000" value="{{chatText}}" bindinput="onChatInput" disabled="{{chatSending}}" cursor-spacing="30" placeholder="{{i18n.t('输入回复或补充情况',locale)}}"/><button class="consult-button primary" loading="{{chatSending}}" disabled="{{chatSending || !chatText}}" bindtap="onSendChat">{{i18n.t('发送回复',locale)}}</button></view>
+    </view>
+    <view wx:if="{{item.canReply}}" id="consultation-report-editor" class="consult-card report-editor">
+      <view class="consult-heading"><text class="consult-title">{{i18n.t('填写问诊单',locale)}}</text><text class="consult-muted">{{i18n.t('以下内容均需填写',locale)}}</text></view>
+      <view class="consult-field"><view class="report-field-heading"><text class="report-field-number">1</text><text class="consult-field-title">{{i18n.t('医生评估',locale)}}</text></view><textarea class="consult-textarea report-input" auto-height maxlength="3000" cursor-spacing="24" show-confirm-bar="{{false}}" placeholder="{{i18n.t('结合患者描述，填写评估意见',locale)}}" placeholder-class="report-placeholder" value="{{form.assessment}}" data-field="assessment" bindinput="onField" disabled="{{saving}}" /><text class="report-count">{{form.assessment.length}} / 3000</text></view>
+      <view class="consult-field"><view class="report-field-heading"><text class="report-field-number">2</text><text class="consult-field-title">{{i18n.t('用药建议',locale)}}</text></view><textarea class="consult-textarea report-input" auto-height maxlength="2000" cursor-spacing="24" show-confirm-bar="{{false}}" placeholder="{{i18n.t('填写用药相关建议及注意事项',locale)}}" placeholder-class="report-placeholder" value="{{form.medicationAdvice}}" data-field="medicationAdvice" bindinput="onField" disabled="{{saving}}" /><text class="report-count">{{form.medicationAdvice.length}} / 2000</text></view>
+      <view class="consult-field"><view class="report-field-heading"><text class="report-field-number">3</text><text class="consult-field-title">{{i18n.t('复查与就医建议',locale)}}</text></view><textarea class="consult-textarea report-input" auto-height maxlength="2000" cursor-spacing="24" show-confirm-bar="{{false}}" placeholder="{{i18n.t('填写后续观察、复查或就医建议',locale)}}" placeholder-class="report-placeholder" value="{{form.followUpAdvice}}" data-field="followUpAdvice" bindinput="onField" disabled="{{saving}}" /><text class="report-count">{{form.followUpAdvice.length}} / 2000</text></view>
+      <view class="report-submit-note">{{i18n.t('提交后患者可支付查看，问诊单不能修改，请仔细核对。',locale)}}</view>
+      <button class="consult-button primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onSubmitReport" hover-class="ui-pressed">{{i18n.t('确认出具问诊单',locale)}}</button>
+    </view>
+    <text class="consult-fine-print">{{i18n.t('问诊用于健康咨询，处方须由具备资质的医生按规范开具。',locale)}}</text>
+  </block>
+  <view wx:if="{{showPaymentFooter && !loading && !error}}" class="consult-footer"><view class="consult-footer-actions"><view class="consult-payment-price"><text class="consult-price">¥{{price}}</text><text class="consult-muted">{{i18n.t('问诊单查看费用',locale)}}</text></view><button class="consult-button primary" bindtap="onCheckout" hover-class="ui-pressed">{{i18n.t(previewMode || !report.ready ? '查看支付页' : '查看完整问诊单',locale)}} ›</button></view><text class="consult-footer-note">{{i18n.t('费用归属出具问诊单的医生',locale)}}</text></view>
+</view>

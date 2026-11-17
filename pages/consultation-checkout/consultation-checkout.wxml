@@ -1,0 +1,25 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="consult-page consult-with-footer" style="{{displayStyle}}">
+  <view class="consult-payment-head">
+    <text class="consult-muted">{{i18n.t('问诊单查看服务',locale)}}</text>
+    <text class="consult-price">¥{{price}}</text>
+    <text class="consult-pill">{{i18n.t('仅使用沙箱测试余额',locale)}}</text>
+  </view>
+  <view class="consult-card">
+    <view class="consult-heading"><text class="consult-title">{{i18n.t('确认服务信息',locale)}}</text></view>
+    <view class="consult-row"><text>{{i18n.t('出单医生',locale)}}</text><text>{{doctorName || '—'}}</text></view>
+    <view class="consult-row"><text>{{i18n.t('费用归属',locale)}}</text><text>{{i18n.t('出具问诊单的医生',locale)}}</text></view>
+    <view class="consult-row"><text>{{i18n.t('支付方式',locale)}}</text><text>{{i18n.t('沙箱钱包余额',locale)}}</text></view>
+    <view class="consult-row" bindtap="onWallet"><text>{{i18n.t('可用余额',locale)}}</text><text>{{activated ? '¥' + balance : i18n.t('前往开通钱包',locale)}} ›</text></view>
+    <view wx:if="{{orderNo}}" class="consult-body">{{i18n.t('订单编号',locale)}}：{{orderNo}}</view>
+  </view>
+  <view class="consult-notice">{{i18n.t('付款成功后可查看完整问诊单，同一份问诊单不会重复扣款。',locale)}}</view>
+  <view wx:if="{{previewMode && !loading}}" class="consult-notice">{{i18n.t('当前为页面预览，未创建订单或扣款。',locale)}}</view>
+  <view wx:if="{{loading}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
+  <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('重试',locale)}}</view>
+  <view class="consult-row" bindtap="onRecords"><text>{{i18n.t('我的问诊',locale)}}</text><text>›</text></view>
+  <view class="consult-footer">
+    <button class="consult-button primary" loading="{{creating}}" disabled="{{loading || creating || previewMode || !ready || !!error}}" bindtap="onPay">{{i18n.t(activated ? '支付1元并查看' : '前往开通钱包',locale)}}</button>
+    <text class="consult-footer-note">{{i18n.t('费用归属出具问诊单的医生',locale)}}</text>
+  </view>
+</view>

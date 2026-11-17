@@ -1,0 +1,2 @@
+@import "../../styles/consultation.wxss";
+.short-input{height:160rpx}

@@ -54,6 +54,10 @@ Page({
     if (!social.active(this) || (!reset && (this.data.loading || !this.data.hasMore))) return
     const version = this._communityVersion, run = this._loadRun = (this._loadRun || 0) + 1
     const pageNum = reset ? 1 : this.data.pageNum + 1
+    const recommend = this.data.feedMode === 'recommend'
+    if (recommend && (reset || !this._recommendationSeed)) this._recommendationSeed = social.requestId()
+    const refreshSeed = this._recommendationSeed
+    const excludeIds = recommend && !reset ? this.data.posts.map(post => String(post.id)).slice(0,200).join(',') : ''
     this.setData({ loading: true, error: '' })
     try {
       const hot = this.data.feedMode === 'hot'
@@ -61,7 +65,8 @@ Page({
         ? await api.fetchHotArticles({ limit: 10 })
         : await api.fetchCommunityArticles({ pageNum, pageSize: 15, tag: this.data.activeTag,
             following: this.data.feedMode === 'following',
-            sort: this.data.feedMode === 'following' ? 'LATEST' : 'RECOMMEND' })
+            sort: this.data.feedMode === 'following' ? 'LATEST' : 'RECOMMEND',
+            ...(recommend ? { refreshSeed, excludeIds } : {}) })
       if (!social.active(this, version) || run !== this._loadRun) return
       const records = (await mapField(page.records || [], 'cover')).map((post, index) => ({
         ...post,
@@ -74,6 +79,10 @@ Page({
       if (!social.active(this, version) || run !== this._loadRun) return
       const map = new Map((reset || hot ? [] : this.data.posts).map(post => [post.id, post])); records.forEach(post => map.set(post.id, post))
       this.setData({ posts: Array.from(map.values()), pageNum: hot ? 1 : pageNum, hasMore: hot ? false : pageNum < Number(page.pages), loading: false })
+      // 单独记录列表下发，不当作真实阅读；迟到响应及其他账号不登记。
+      if (recommend && records.length && typeof api.recordRecommendationExposures === 'function') {
+        api.recordRecommendationExposures(records.map(post => String(post.id))).catch(() => {})
+      }
     } catch (error) {
       if (!social.active(this, version, error) || run !== this._loadRun) return
       this.setData({ loading: false, error: error.message || '社区加载失败，请重试', ...(reset ? { posts: [], hasMore: false } : {}) })
@@ -124,13 +133,14 @@ Page({
   onProfile(e) { const key = e.currentTarget.dataset.key; if (/^[ub][1-9]\d{0,18}$/.test(String(key || ''))) wx.navigateTo({ url: `/pages/community-profile/community-profile?key=${key}` }) },
   onCommunityEntry(e) {
     const mode = e.currentTarget.dataset.mode
-    if (mode === 'messages') { wx.navigateTo({ url: '/pages/information/information' }); return }
+    const groups = { comments: 'comments', following: 'follows', likes: 'likes', collections: 'collections', messages: 'messages' }
+    if (groups[mode]) { wx.navigateTo({ url: `/pages/information/information?group=${groups[mode]}` }); return }
     if (mode === 'hot') {
       if (this.data.feedMode !== 'hot') this.setData({ feedMode: 'hot', posts: [], activeTag: '', otherSelected: false })
       this.load(true)
       return
     }
-    if (['following','likes','collections','messages','profiles'].includes(mode)) wx.navigateTo({ url: `/pages/community/community?mode=${mode}` })
+    if (mode === 'profiles') wx.navigateTo({ url: '/pages/community/community?mode=profiles' })
   },
   onReport(e) {
     const id=String(e.currentTarget.dataset.id),post=this.data.posts.find(row=>String(row.id)===id)

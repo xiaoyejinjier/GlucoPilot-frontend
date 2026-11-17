@@ -1468,3 +1468,353 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 热帖加载失败	Unable to load trending posts
 请输入搜索词	Enter a search term
 搜索失败，请重试	Search failed. Please try again.
+该血糖记录已更新，以下建议对应之前的测量。	This glucose record has changed. The advice below refers to the previous measurement.
+当前测量	Current measurement
+新记录需要重新核对，旧建议不会自动成为新记录的处理结果。	The new record needs a fresh review. Previous advice does not apply automatically.
+建议对应的旧测量	Previous measurement associated with this advice
+记录已更新，建议对应旧测量	Record updated; advice refers to the previous measurement
+问诊	Consultations
+发布健康求助，查看医生回复与问诊单。设备管理已移至我的。	Ask health questions and view doctor replies and consultation reports. Devices are now under Me.
+糖友问诊	Community consultations
+有疑问，向医生问一问	Questions? Ask a doctor
+说清你的困扰，等待医生回应。问诊单出具后，可按需查看完整建议。	Describe your concern and await a doctor’s response. View the complete advice when a report is available.
+发布求助	Post a question
+我的问诊	My consultations
+从求助到问诊单	From question to consultation report
+1元查看问诊单	View a report for CNY 1
+描述健康问题	Describe your concern
+等待医生回复	Await a doctor’s response
+按需付费查看	Pay to view if needed
+问诊单包含哪些内容？	What does a consultation report include?
+查看预览	View preview
+问诊服务正在筹备，开放后可发布求助并由医生接诊。	Consultations are being prepared. Posting questions and doctor consultations will be available when the service opens.
+求助广场	Questions
+把问题说清，让回应更有帮助	Clear questions help others respond
+这里会出现糖友的求助	Community questions will appear here
+可以先整理你的问题，看看求助表单和问诊单的样子。	You can prepare your question and preview the form and consultation report.
+写下我的问题	Write my question
+匿名糖友	Anonymous member
+问诊用于健康咨询，处方须由具备资质的医生按规范开具。	Consultations provide health information. Prescriptions must be issued by qualified doctors under the applicable process.
+全部求助	All questions
+血糖波动	Glucose changes
+饮食咨询	Diet questions
+用药疑问	Medication questions
+复查解读	Follow-up results
+问诊内容加载失败，请重试	Unable to load consultations. Please try again.
+把你的问题告诉医生	Tell the doctor about your concern
+建议描述持续时间、最近变化及希望了解的问题，请勿填写身份证号或联系方式。	Describe how long it has lasted, recent changes and your questions. Leave out identity numbers and contact details.
+问题标题	Question title
+例如：想了解最近餐后血糖的变化	For example: I would like to understand my recent post-meal glucose changes
+问题分类	Topic
+详细描述	Description
+描述你的困扰、出现多久，以及想请医生解答什么。	Describe your concern, how long it has lasted, and what you would like to ask.
+相关血糖情况（选填）	Related glucose readings (optional)
+可填写测量时间、餐前或餐后及血糖数值	Include the measurement time, whether before or after meals, and the glucose reading
+当前用药与过敏情况（选填）	Current medication and allergies (optional)
+填写你正在使用的药品及已知过敏情况	List your current medicines and known allergies
+匿名展示求助	Post anonymously
+广场不展示你的昵称和联系方式	Your nickname and contact details are not shown in the question feed
+完整健康资料仅用于本人及获准接诊医生查看。	Full health details are for you and the doctor authorised to handle your consultation.
+预览求助	Preview question
+医生出具问诊单后，再按需支付查看	Pay to view only after a doctor has issued a report
+请用至少4个字概括你的问题	Summarise your question using at least 4 characters
+请补充至少10个字的问题描述	Describe your concern using at least 10 characters
+问诊服务筹备中	Consultations are being prepared
+发布功能开放后即可提交求助。当前内容尚未发布，你可以先查看预览。	You can post your question when the service opens. This content has not been posted; you can preview it first.
+发布暂不可用，填写内容已保留	Posting is unavailable. Your content is kept on this page.
+页面预览，求助尚未发布，医生接诊与出单服务待开放。	Preview only. This question has not been posted; doctor consultations and reports are not open yet.
+问诊详情	Consultation details
+问诊单预览	Consultation report preview
+发布求助后，可在这里查看问题详情及接诊进度。	After posting, view your question and consultation progress here.
+相关血糖情况	Related glucose readings
+用药与过敏情况	Medication and allergies
+医生问诊单	Doctor’s consultation report
+已解锁	Unlocked
+待查看	Ready to view
+待医生出具	Awaiting a doctor’s report
+接诊医生	Consulting doctor
+医生接诊后展示身份与专业信息	Doctor identity and specialty will be shown after accepting the consultation
+医生出具后，支付1元可查看完整问诊单	After a doctor issues a report, pay CNY 1 to view it in full
+医生评估	Doctor’s assessment
+用药建议	Medication advice
+复查与就医建议	Follow-up and care advice
+问诊单查看费用	Report viewing fee
+查看支付页	View payment page
+查看完整问诊单	View full report
+费用归属出具问诊单的医生	The fee is intended for the doctor who issues the report
+请重新打开问诊记录	Please reopen the consultation record
+问诊记录不存在或尚未发布	This consultation does not exist or has not been posted
+问诊记录加载失败	Unable to load consultation records
+问诊单查看服务	Consultation report viewing
+支付服务待开放	Payment service not open yet
+确认服务信息	Confirm service details
+服务内容	Service
+出单医生	Issuing doctor
+医生出具问诊单后显示	Shown after a doctor issues a report
+费用归属	Fee beneficiary
+出具问诊单的医生	The doctor who issues the report
+订单编号	Order number
+服务开放后生成	Generated when the service opens
+合计	Total
+支付方式	Payment method
+支付宝沙箱	Alipay sandbox
+支付渠道正在准备中	The payment channel is being prepared
+待开放	Coming soon
+当前仅展示支付流程。支付与订单服务开放后，核对收款医生和金额再付款。	Payment flow preview only. Check the doctor and amount before paying when the service opens.
+查看问诊与订单记录	View consultations and orders
+服务开放后可支付	Payment available when the service opens
+尚未创建订单或产生扣款	No order has been created and no payment has been taken
+支付宝沙箱与订单服务正在准备中。开放后可核对医生与订单，再支付查看问诊单。	Alipay sandbox and order services are being prepared. Once open, check the doctor and order before paying to view a report.
+订单服务暂不可用	Order service unavailable
+确认支付	Confirm payment
+求助、回应与查看记录	Questions, responses and viewing records
+我的求助	My questions
+订单记录	Orders
+还没有问诊订单	No consultation orders yet
+还没有求助记录	No questions yet
+支付服务开放后，问诊单的查看订单会保存在这里。	Report viewing orders will appear here when payment is available.
+服务开放后，你的求助和医生回复会保存在这里。	Your questions and doctor replies will appear here when the service opens.
+整理我的问题	Prepare my question
+健康咨询	Health consultation
+尚未发布	Not posted
+等待医生	Awaiting a doctor
+医生已回复	Doctor replied
+问诊单已出具	Report available
+待支付	Awaiting payment
+已支付	Paid
+已退款	Refunded
+问诊与设备	Consultations & devices
+健康服务，一处管理	Health services in one place
+求助进度与问诊单	Question progress and consultation reports
+绑定设备与同步记录	Link devices and sync readings
+查看完整医生问诊单	View the full doctor’s consultation report
+问诊记录不存在或服务尚未开放	This consultation does not exist or the service is not open yet
+求助发布暂未开放，内容尚未提交	Posting questions is not open yet. Your content has not been submitted.
+订单服务暂未开放，未创建订单或扣款	Orders are not available yet. No order or charge has been created.
+支付宝沙箱支付尚未接入，未扣款或解锁问诊单	Alipay sandbox is not connected. No payment has been taken and no report has been unlocked.
+钱包与订单	Wallet & orders
+费用与服务，一目了然	Your payments and services at a glance
+钱包管理	Wallet
+余额与充值记录	Balance and recharge history
+我的订单	My orders
+充值与问诊订单	Recharge and consultation orders
+订单详情	Order details
+我的钱包	My wallet
+可用余额（元）	Available balance (CNY)
+钱包与支付服务正在准备中	Wallet and payment services are being prepared
+充值记录	Recharge history
+选择充值金额	Choose an amount
+单次充值1～1000元	CNY 1–1,000 per recharge
+充值	Recharge
+其他金额	Custom amount
+输入金额	Enter amount
+充值服务待开放	Recharge coming soon
+钱包说明	About your wallet
+后续可使用钱包支付问诊单查看费用，每份1元。	Wallet payments for consultation reports will be available later at CNY 1 each.
+本期仅展示页面，不产生真实充值、扣款或医生结算。	Preview only. No recharge, charge or doctor settlement is made.
+充值与问诊，记录清清楚楚	Your recharge and consultation history in one place
+问诊订单	Consultation orders
+充值订单	Recharge orders
+退款中	Refunding
+钱包充值	Wallet recharge
+正在加载订单…	Loading orders…
+暂无相关订单	No matching orders
+服务开放后，真实订单会显示在这里	Your orders will appear here when the service opens
+问诊单查看费用为1元，支付与医生结算服务待开放。	Report access costs CNY 1. Payments and doctor settlement are coming later.
+订单信息	Order information
+关闭时间	Closed at
+入账时间	Credited at
+尚未入账	Not credited
+问诊单编号	Report number
+出单医生编号	Doctor ID
+实际到账以钱包账本确认为准，当前充值服务待开放。	Funds are available only after ledger confirmation. Recharge is not available yet.
+问诊单查看和医生结算服务待开放，订单状态不会自动解锁问诊单。	Report access and settlement are not available yet. An order status does not unlock a report.
+钱包加载失败，请重试	Unable to load wallet. Please retry.
+订单加载失败，请重试	Unable to load orders. Please retry.
+订单不存在	Order not found
+请输入1～1000元，最多两位小数	Enter CNY 1–1,000 with up to two decimal places
+金额已选择，支付服务接入后才可充值。本次未创建订单或扣款。	Amount selected. Recharge will be available after payment integration. No order or charge was made.
+元	CNY
+创建时间	Created at
+已经到底了	No more orders
+待开通	Coming soon
+支付时间	Paid at
+查看详情	View details
+收到的点赞	Likes received
+收到的收藏	Saves received
+和糖友聊聊，看看新的私信	Chat with friends and read new messages
+收到的回应与自己的留言	Replies received and comments you wrote
+喜欢的内容与收到的认可	Articles you liked and appreciation received
+珍藏的内容与收到的收藏	Your saved articles and saves received
+关注的糖友与新关注你的朋友	People you follow and your new followers
+搜索文章标题	Search article titles
+和糖友的私信会话	Your private conversations
+已开通	Activated
+未开通	Not activated
+钱包已开通，支付服务待开放	Wallet activated. Payments are coming soon
+每位糖友都有钱包，需要时再开通	Everyone has a wallet. Activate it when needed
+按需开通，轻松管理	Activate when you need it
+所有用户均可免费开通，开通状态跟随账号保存。	Activation is free for all users and saved to your account.
+开通钱包	Activate wallet
+开通我的钱包	Activate my wallet
+开通免费，不会充值或扣款。支付功能开放后，可用于充值和支付问诊单。	Activation is free and does not charge you. Recharge and report payments will be available later.
+确认开通	Activate
+钱包已开通	Wallet activated
+有新的互动提醒，可在社区对应入口查看	New activity is available in its community category
+沙箱测试余额（元）	Sandbox test balance (CNY)
+仅测试资金，不是真实钱包余额	Test funds only, not a real wallet balance
+使用沙箱买家账号扫码付款	Scan using a sandbox buyer account
+已配置	Configured
+未配置	Not configured
+沙箱充值	Sandbox recharge
+支付宝沙箱尚未配置	Alipay sandbox is not configured
+请先完成后端沙箱应用配置。本次未创建订单或扣款。	Configure the backend sandbox application first. No order or charge was made.
+确认沙箱充值	Confirm sandbox recharge
+仅使用支付宝沙箱测试资金，不会充值真实钱包。	Only sandbox test funds are used. No real wallet is credited.
+当前仅接入支付宝沙箱充值，不支持提现或真实资金交易。	Sandbox recharge only. Withdrawals and real payments are not supported.
+问诊支付与医生结算将在问诊业务就绪后开放。	Consultation payments and doctor settlements will open when the consultation service is ready.
+支付宝沙箱 · 仅测试资金	Alipay sandbox · Test funds only
+沙箱充值已到账	Sandbox recharge credited
+订单已关闭	Order closed
+请扫码完成沙箱付款	Scan to complete sandbox payment
+正在生成支付码…	Generating payment code…
+有效期至	Valid until
+我已付款，查询结果	I have paid — check status
+查看订单	View order
+自动查询已暂停，可手动查询结果	Automatic checks paused. You can check manually.
+请使用支付宝沙箱钱包和买家测试账号扫码。可在电脑开发者工具展示二维码，用手机沙箱钱包付款。	Scan using the Alipay sandbox wallet and a test buyer. You can show the code in desktop developer tools and scan it with your phone.
+余额仅以后端验签或查单确认为准。请勿使用真实资金。	The backend verifies payment before crediting the balance. Do not use real funds.
+暂未确认付款，请稍后再查	Payment is not confirmed yet. Please check again later.
+支付码加载失败，请重试	Unable to load payment code. Please retry.
+继续沙箱付款	Continue sandbox payment
+本订单为沙箱充值，仅计入测试余额，不涉及真实资金。	This recharge credits test balance only. No real funds are involved.
+支付码已过期	Payment code expired
+已过期	Expired
+支付码已过期，请查询付款结果或重新充值	The payment code expired. Check the payment status or start another recharge.
+重新加载支付码	Reload payment code
+重新充值	Recharge again
+支付码有效期异常，请重试	Invalid payment code expiry. Please retry.
+支付码图片加载失败，请重试	Unable to display the payment code. Please retry.
+
+# Consultation workflow 2026-11-16
+接诊中	Consultation in progress
+医生工作台	Doctor workspace
+健康详情仅向本人及接诊医生开放。	Health details are visible only to the patient and assigned doctor.
+审核通过的医生可接诊并查看健康详情。	Approved doctors can accept the request to view health details.
+我要接诊	Accept request
+出具问诊单	Issue consultation report
+确认出具问诊单	Confirm report
+仅使用沙箱测试余额	Sandbox test balance only
+沙箱钱包余额	Sandbox wallet balance
+可用余额	Available balance
+前往开通钱包	Activate wallet
+付款成功后可查看完整问诊单，同一份问诊单不会重复扣款。	Pay to unlock the complete report. Each report is charged only once.
+当前为页面预览，未创建订单或扣款。	Preview only. No order or charge has been created.
+支付1元并查看	Pay CNY 1 to view
+完成身份审核后，可接诊并出具问诊单。	After identity approval, accept requests and issue consultation reports.
+审核意见	Review comments
+真实姓名	Full legal name
+执业机构	Medical institution
+专业科室	Specialty
+执业证号	Medical license number
+资质说明	Qualification details
+资质资料仅本人及审核管理员可见。	Qualification details are visible only to you and reviewing administrators.
+提交医生审核	Submit for doctor verification
+前往接诊	Find requests
+我接诊的求助	My accepted requests
+暂无接诊记录	No accepted requests yet
+未通过	Not approved
+身份申请与接诊	Doctor verification and consultations
+继续支付问诊单	Continue consultation payment
+问诊费用使用沙箱钱包余额支付，付款成功后可查看问诊单。	Consultations use sandbox wallet balance. View the report after successful payment.
+可用沙箱余额查看问诊单，医生问诊收入同样计入沙箱余额。	Use sandbox balance to unlock reports. Doctor earnings are also credited as sandbox balance.
+问诊单的查看订单会保存在这里。	Your consultation report orders appear here.
+你的求助和医生回复会保存在这里。	Your requests and doctor responses appear here.
+确认接诊	Confirm acceptance
+接诊后可查看健康详情并出具问诊单。请先确保医生沙箱钱包已开通。	Accept to view health details and issue a report. Activate your sandbox wallet first.
+请填写完整问诊单	Please complete the consultation report
+提交后不能修改，请核对评估与建议。	Reports cannot be edited after submission. Check the assessment and advice.
+确认支付1元	Confirm CNY 1 payment
+使用沙箱钱包余额支付，费用转入出单医生的沙箱钱包。	Pay from sandbox balance. The issuing doctor receives the fee in their sandbox wallet.
+付款尚未完成，请重试	Payment is incomplete. Please retry.
+付款状态确认中，请重试	Payment confirmation is pending. Please retry.
+医生资料加载失败，请重试	Unable to load doctor details. Please retry.
+请填写完整医生资料	Please complete all doctor details
+开通免费，不会充值或扣款。开通后可用于沙箱充值、问诊支付和接收问诊收入。	Activation is free. Use it for sandbox top-ups, consultation payments and doctor earnings.
+未提交	Not submitted
+医生资质申请	Doctor verification application
+接诊准备	Consultation readiness
+钱包未开通	Wallet not activated
+正在检查钱包状态…	Checking wallet status…
+钱包状态加载失败，请重试	Unable to check wallet status. Please retry.
+接诊前请先开通钱包，用于接收问诊收入。开通免费，无需充值。	Activate your wallet to receive consultation earnings. It is free and no top-up is required.
+去开通钱包	Activate wallet
+已准备就绪，可以前往求助广场接诊。	You are ready to accept a consultation from the help feed.
+医生接诊	Accept consultation
+已准备就绪	Ready
+需开通钱包	Wallet activation required
+开通钱包后即可接诊	Activate your wallet to accept consultations
+用于接收问诊收入，开通免费，无需充值。	Receive consultation earnings. Activation is free and no top-up is required.
+开通后返回本页，即可继续接诊。	Return here after activation to accept the consultation.
+接诊后可查看健康详情并出具问诊单。	After accepting, you can view health details and issue a consultation report.
+医	Dr
+我的接诊	My consultation
+为患者填写问诊单	Prepare the patient's consultation report
+先查看患者描述，再填写评估、用药及复查建议。	Review the patient's details, then add your assessment, medication and follow-up advice.
+开始填写	Start writing
+患者描述	Patient's description
+已出具	Issued
+等待医生出具问诊单	Waiting for the consultation report
+医生出具问诊单后，可在这里查看。	The report will be available here once the doctor has issued it.
+填写问诊单	Write consultation report
+以下内容均需填写	Complete all sections
+结合患者描述，填写评估意见	Write your assessment based on the patient's description
+填写用药相关建议及注意事项	Add medication advice and precautions
+填写后续观察、复查或就医建议	Add monitoring, follow-up or medical care advice
+提交后患者可支付查看，问诊单不能修改，请仔细核对。	Patients can pay to view the submitted report. Please check carefully; it cannot be edited afterwards.
+接诊成功，请填写问诊单	Consultation accepted. Please prepare the report.
+补充图片（选填）	Additional photos (optional)
+最多6张，每张不超过5MB，仅本人及接诊医生可见。	Up to 6 photos, 5 MB each. Only you and your assigned doctor can view them.
+问诊图片	Consultation photo
+问诊图片地址无效	Invalid consultation photo address
+问诊图片加载失败	Unable to load consultation photo
+补充图片	Additional photos
+问诊交流	Consultation conversation
+仅本人和接诊医生可见	Only you and your assigned doctor can view this
+查看更早的交流	Earlier messages
+可以在这里补充情况或回复对方。	Add details or reply here.
+患者	Patient
+交流记录加载失败，请重试	Unable to load the conversation. Please retry.
+输入回复或补充情况	Reply or add details
+回复发送失败，请重试	Unable to send your reply. Please retry.
+医生提现	Doctor withdrawals
+沙箱模拟	Sandbox simulation
+可提现问诊收入（元）	Withdrawable consultation earnings (CNY)
+冻结金额	Frozen amount
+申请提现	Request withdrawal
+仅问诊收入可提现，充值金额不计入。	Only consultation earnings can be withdrawn. Top-ups do not count.
+全部提现	Withdraw all
+提交提现申请	Submit withdrawal request
+仅审核通过的医生可申请提现。	Only verified doctors can request withdrawals.
+审核与发放	Review and payout
+审核通过后5个工作日模拟发放，节假日和调休以后台工作日历为准。	Simulated payout occurs on the fifth business day after approval, following the configured work calendar.
+当前为沙箱测试，不会向支付宝或银行卡真实转账。	Sandbox testing only. No real transfers to Alipay or bank accounts.
+当前为沙箱测试，医生提现仅模拟发放，不涉及真实转账。	Sandbox testing only. Doctor withdrawals are simulated; no real transfers occur.
+提现记录	Withdrawal history
+预计发放日期	Expected payout date
+沙箱模拟流水	Simulated payout reference
+暂无提现记录	No withdrawals yet
+待发放	Awaiting payout
+已拒绝	Rejected
+已模拟发放	Simulated payout completed
+请输入可提现范围内的金额，最多两位小数	Enter an amount within your withdrawable earnings, up to 2 decimal places
+确认沙箱提现	Confirm sandbox withdrawal
+提交后冻结对应问诊收入，审核通过后5个工作日模拟发放，不涉及真实转账。	The requested earnings will be frozen. A simulated payout will occur on the fifth business day after approval. No real transfer occurs.
+提交申请	Submit request
+提现申请已提交	Withdrawal request submitted
+提现记录加载失败，请重试	Unable to load withdrawals. Please retry.
+问诊收入与提现记录	Consultation earnings and withdrawals
+隐藏我的求助	Hide my requests
+显示全部求助	Show all requests
+暂时没有其他糖友的求助	No requests from others yet
+可以关闭“隐藏我的求助”查看全部内容。	Turn off Hide my requests to see everything.

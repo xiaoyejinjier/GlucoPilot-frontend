@@ -22,6 +22,7 @@ function collect(data,route){
   for(const value of data.posts||[])article(value)
   if(data.mode!=='drafts')for(const value of data.articles||[])article(value)
   if(route==='pages/community/community'&&(data.mode==='collections'||data.mode==='likes'))for(const value of data.list||[])article(value)
+  if(route==='pages/information/information')for(const value of data.list||[])if(value.rowType==='ARTICLE')article(value)
   const seen=new Set()
   function names(value,depth){
     if(!value||typeof value!=='object'||depth>8||seen.has(value))return

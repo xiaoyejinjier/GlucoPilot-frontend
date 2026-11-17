@@ -84,6 +84,17 @@ test('记录全局提醒包含管理员举报反馈，点击进入本人举报�
 const reply = (id, text) => ({ id, recordId: '123', recordDate: '2026-10-15', nodeName: '早餐前', glucoseValue: 3.8,
   recordedAt: '2026-10-15T08:00:00.123', userReply: text, repliedAt: '2026-10-15T09:00:00.456', note: '不应进入用户展示数据' })
 
+test('提醒列表保留建议原血糖与当前血糖，并携带已更新提示', async () => {
+  const { instance } = createComponent(async () => ({ records: [{ ...reply('100','原建议'),
+    recordUpdated:true,currentGlucoseValue:5.2 }], total:1 }))
+  await instance.refreshReplies()
+  assert.equal(instance.data.replies[0].glucoseValue,3.8)
+  assert.equal(instance.data.replies[0].currentGlucoseValue,5.2)
+  assert.equal(instance.data.replies[0].recordUpdated,true)
+  assert.equal(instance.data.replies[0].userReply,'原建议')
+  assert.equal(instance.data.replies[0].note,undefined)
+})
+
 test('提醒和回复不自动弹出，打开/关闭不重复请求、不丢失内容或分页状态', async () => {
   const { instance, state } = createComponent(async () => ({ records: [reply('1', '完整回复')], total: 4 }))
   assert.equal(instance.data.noticeVisible, false)
