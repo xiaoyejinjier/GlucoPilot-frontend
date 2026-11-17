@@ -1882,3 +1882,24 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 对话已删除	Chat deleted
 条消息	messages
 历史对话只能查看，继续聊天请点「回到当前对话」	Past chats are read-only. Tap Back to current chat to continue.
+小语记住的事	What Xiaoyu remembers
+查看或删除小语记住的长期记忆	View or delete what Xiaoyu remembers
+这些是小语在聊天里记住的关于你的事，只用来让回答更贴合你。觉得不对可以直接删。	These are the things Xiaoyu remembered from your chats. They only help tailor answers, and you can delete any of them.
+记忆加载失败	Could not load memories
+小语还没有记住你的事	Xiaoyu has not remembered anything yet
+多聊几句，重要的事小语会自己记下来	Keep chatting, Xiaoyu will note the important bits
+最近更新	Updated
+饮食忌口	Foods to avoid
+控糖目标	Glucose goal
+身体状况	Health context
+生活习惯	Habits
+偏好	Preferences
+这五类记忆各保留最新一条，由小语在对话里自动整理	One entry per category, organized by Xiaoyu during chats
+清空全部记忆	Clear all memories
+删除这条记忆	Delete this memory
+删除后小语不会再据此回答。	Xiaoyu will no longer use it in answers.
+已删除	Deleted
+删除失败，请重试	Delete failed, please retry
+清空后小语会忘记之前记住的所有事，操作不可撤销。	Xiaoyu will forget everything remembered so far. This cannot be undone.
+已清空	Cleared
+清空失败，请重试	Clear failed, please retry

@@ -1,0 +1,54 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="page-intro">
+    <text class="page-intro-text">{{i18n.t("这些是小语在聊天里记住的关于你的事，只用来让回答更贴合你。觉得不对可以直接删。", locale)}}</text>
+  </view>
+
+  <view wx:if="{{error && list.length === 0}}" class="card empty-card">
+    <text class="empty-text">{{i18n.t("记忆加载失败", locale)}}</text>
+    <text class="empty-hint">{{i18n.t("请检查网络后点击刷新", locale)}}</text>
+    <view class="empty-action ui-interactive" bindtap="onRetry" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重试", locale)}}</view>
+  </view>
+
+  <view wx:elif="{{!loading && list.length === 0}}" class="card empty-card">
+    <text class="empty-text">{{i18n.t("小语还没有记住你的事", locale)}}</text>
+    <text class="empty-hint">{{i18n.t("多聊几句，重要的事小语会自己记下来", locale)}}</text>
+  </view>
+
+  <view
+    wx:for="{{list}}"
+    wx:key="key"
+    class="card memory-card"
+  >
+    <view class="memory-head">
+      <text class="memory-label">{{i18n.t(item.label, locale)}}</text>
+      <text class="memory-time">{{i18n.t("最近更新", locale)}} {{item.timeText}}</text>
+    </view>
+    <text class="memory-text">{{item.text}}</text>
+    <view class="memory-actions">
+      <view
+        class="memory-delete ui-interactive"
+        data-key="{{item.key}}"
+        bindtap="onDeleteTap"
+        hover-class="ui-pressed"
+        hover-start-time="0"
+        hover-stay-time="90"
+        hover-stop-propagation="{{true}}"
+      >{{i18n.t("删除", locale)}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{list.length > 0}}" class="memory-footer">
+    <text class="memory-footer-hint">{{i18n.t("这五类记忆各保留最新一条，由小语在对话里自动整理", locale)}}</text>
+    <view
+      class="memory-clear ui-interactive"
+      bindtap="onClearAll"
+      hover-class="ui-pressed"
+      hover-start-time="0"
+      hover-stay-time="90"
+      hover-stop-propagation="{{true}}"
+    >{{i18n.t("清空全部记忆", locale)}}</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="memory-loading">{{i18n.t("正在加载…", locale)}}</view>
+</view>

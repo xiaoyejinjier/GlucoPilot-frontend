@@ -1,0 +1,77 @@
+.memory-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.memory-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.memory-label {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--brand);
+  background: var(--brand-soft);
+  border-radius: 999rpx;
+  padding: 4rpx 20rpx;
+  line-height: 1.6;
+}
+
+.memory-time {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.memory-text {
+  font-size: var(--fs-body);
+  color: var(--ink);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.memory-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.memory-delete {
+  font-size: var(--fs-small);
+  color: var(--danger);
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid var(--danger);
+}
+
+.memory-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 8rpx 0 32rpx;
+}
+
+.memory-footer-hint {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  text-align: center;
+}
+
+.memory-clear {
+  font-size: var(--fs-body);
+  color: var(--danger);
+  padding: 16rpx 48rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--danger);
+}
+
+.memory-loading {
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  padding: 24rpx 0 40rpx;
+}

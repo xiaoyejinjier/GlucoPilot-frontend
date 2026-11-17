@@ -339,6 +339,31 @@ function sendChatMessage(sessionId, payload) {
 }
 
 /**
+ * 长期记忆列表（用户自助查看，合规要求「知道自己被记了什么」）。
+ *
+ * 后端返回 { records: [{ memoryKey, memoryText, confidence, updatedAt }] }。
+ * 注意这里**没有 id**：单条删除的粒度是 memoryKey（见下），不要试图从出参里找内部主键。
+ */
+function fetchAiMemories() {
+  return get('/users/me/ai-memories', null, { auth: true })
+}
+
+/**
+ * 删除单条记忆。
+ *
+ * 键要做 encodeURIComponent：虽然五类键都是 ASCII，但一旦后端加了新键（中文/带空格），
+ * 未编码的路径参数会被截断成 404，那种问题在真机上比在单测里难查得多。
+ */
+function deleteAiMemory(memoryKey) {
+  return del(`/users/me/ai-memories/${encodeURIComponent(memoryKey)}`, null, { auth: true })
+}
+
+/** 清空全部记忆（返回 { deleted } 条数）。 */
+function deleteAllAiMemories() {
+  return del('/users/me/ai-memories', null, { auth: true })
+}
+
+/**
  * 2.25 AI 流式补全（SSE）。
  * @param {string} sessionId
  * @param {object} payload { clientMsgId, replyToMsgId, stream }
@@ -688,6 +713,9 @@ module.exports = {
   deleteChatSession,
   setChatSessionPinned,
   sendChatMessage,
+  fetchAiMemories,
+  deleteAiMemory,
+  deleteAllAiMemories,
   streamChatCompletion,
   createMediaUploadCredential,
   registerMediaFile,
