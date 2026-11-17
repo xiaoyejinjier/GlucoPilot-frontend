@@ -1,0 +1,137 @@
+.history-filters {
+  display: flex;
+  flex-direction: row;
+  gap: 14rpx;
+  padding: 0 24rpx 20rpx;
+  overflow-x: auto;
+}
+
+.filter-chip {
+  flex-shrink: 0;
+  padding: 10rpx 24rpx;
+  border-radius: 28rpx;
+  border: 1rpx solid var(--line);
+  background: var(--surface);
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.filter-chip.is-active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+
+.history-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.history-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+}
+
+.history-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-pin {
+  flex-shrink: 0;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  background: var(--brand-soft);
+  font-size: var(--fs-tiny);
+  color: var(--brand-dark);
+}
+
+.history-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.history-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8rpx;
+  font-size: var(--fs-tiny);
+  color: var(--muted);
+}
+
+.history-status {
+  flex-shrink: 0;
+}
+
+.history-status.is-active {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.history-dot {
+  color: var(--hint);
+}
+
+.history-count {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-time {
+  flex-shrink: 0;
+}
+
+.history-footer {
+  padding: 24rpx 0 8rpx;
+  text-align: center;
+  font-size: var(--fs-tiny);
+  color: var(--muted);
+}
+
+.empty-card {
+  text-align: center;
+  padding: 48rpx 24rpx;
+}
+
+.empty-text {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.empty-hint {
+  display: block;
+  margin-top: 8rpx;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.empty-action {
+  display: inline-block;
+  margin-top: 20rpx;
+  padding: 10rpx 32rpx;
+  border-radius: 28rpx;
+  border: 1rpx solid var(--brand);
+  color: var(--brand-dark);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}

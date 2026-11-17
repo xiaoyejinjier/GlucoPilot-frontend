@@ -1,6 +1,6 @@
 const {
-  fetchCancellationStatus, fetchCancellationCaptcha, sendCancellationCode,
-  submitCancellation, recoverCancellation, logoutRemote
+  fetchCancellationStatus, fetchCancellationPrecheck, fetchCancellationCaptcha, sendCancellationCode,
+  submitCancellation, logoutRemote
 } = require('../../services/api')
 const { clearAccountCache } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
@@ -31,10 +31,11 @@ Page({
     locale: i18n.getLocale(),
     // applying=正常申请流；pending=注销处理中（7 天可恢复窗口）；gone=已注销/执行中兜底；loading/error
     page: 'loading',
+    // intro=说明与勾选；verify=点击申请注销并通过预检后的身份验证步骤
+    step: 'intro',
     errorText: '注销状态加载失败，请返回重试。',
     deadline: '',
     reasons: CANCEL_REASONS,
-    mode: 1,
     reasonCode: 0,
     agreed: false,
     // 验证方式：1=手机/邮箱验证 3=微信身份验证；0=两者都不可用（异常态）
@@ -59,14 +60,24 @@ Page({
     wechatVerified: false,
     sliderVisible: false,
     sliderHint: '按住滑块，拖动到最右侧',
-    submitting: false,
-    recovering: false
+    checking: false,
+    submitting: false
   },
 
-  onLoad() {
+  onLoad(options) {
     // wx.login code 一次性有效：仅在“微信身份验证”成功后短暂持有，提交时随请求消费。
     this._wechatCode = ''
     this._timers = {}
+    // 身份验证是页面栈里的下一层（?step=verify）：原生返回键自然回到说明/原因页。
+    const opts = options || {}
+    if (opts.step === 'verify') {
+      this.setData({
+        step: 'verify',
+        // 上一页已勾选《注销须知》并通过预检，这里不再重复拦截
+        agreed: true,
+        reasonCode: Number(opts.reasonCode) || 0
+      })
+    }
   },
 
   onShow() {
@@ -140,12 +151,6 @@ Page({
   },
 
   /** ---------- 状态 A：申请流 ---------- */
-
-  onSelectMode(e) {
-    const mode = Number(e.currentTarget.dataset.mode)
-    if (mode !== 1 && mode !== 2) return
-    this.setData({ mode })
-  },
 
   onSelectReason(e) {
     const code = Number(e.currentTarget.dataset.code)
@@ -290,14 +295,96 @@ Page({
     })
   },
 
-  onSubmit() {
+  /** 打开《注销须知》独立页，返回后勾选与原因保持不变。 */
+  onOpenNotice() {
+    wx.navigateTo({ url: '/pages/account-cancellation-notice/notice' })
+  },
+
+  /** 说明页点击【申请注销】：勾选校验 → 服务端预检 → 进入身份验证或阻断。 */
+  onApply() {
+    const { agreed, checking, submitting, reasonCode } = this.data
+    if (checking || submitting) return
+    if (!agreed) {
+      wx.showToast({ title: '请先阅读并同意《注销须知》', icon: 'none' })
+      return
+    }
+
+    this.setData({ checking: true })
+    fetchCancellationPrecheck()
+      .then((view) => {
+        this.setData({ checking: false })
+        const info = view || {}
+        if (info.canCancel) {
+          // 身份验证独立成栈内下一页：原生返回键即回到本页（原因选择）
+          const query = reasonCode ? `&reasonCode=${reasonCode}` : ''
+          wx.navigateTo({ url: `/pages/account-cancellation/cancellation?step=verify${query}` })
+          return
+        }
+        this.handlePrecheckBlock(info)
+      })
+      .catch((err) => {
+        this.setData({ checking: false })
+        wx.showToast({ title: (err && err.message) || '账号状态检查失败，请重试', icon: 'none' })
+      })
+  },
+
+  /** 预检阻断分发：注销态切对应视图，其余弹窗告知，均停留在说明页。 */
+  handlePrecheckBlock(view) {
+    const code = view && view.blockCode
+    if (code === 'ALREADY_APPLIED') {
+      const deadline = formatDeadline(view.isolateUntil)
+      if (deadline) {
+        this.setData({ page: 'pending', step: 'intro', deadline })
+        return
+      }
+      // 凭据缺失兜底：回查状态接口，由 refresh 统一路由
+      this.setData({ step: 'intro' })
+      this.refresh()
+      return
+    }
+    if (code === 'CANCELLING' || code === 'ACCOUNT_CANCELLED') {
+      this.setData({ page: 'gone', step: 'intro' })
+      return
+    }
+    if (code === 'ACCOUNT_DISABLED') {
+      wx.showModal({
+        title: '账号已被封禁',
+        content: '当前账号已被封禁，无法自助注销。请先联系客服申请解冻后再试。',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+      return
+    }
+    if (code === 'RECENTLY_RECOVERED') {
+      wx.showModal({
+        title: '暂不可注销',
+        content: '账号恢复后 24 小时内不可再次注销，请稍后再试。',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+      return
+    }
+    if (code === 'ASSET_PENDING') {
+      wx.showModal({
+        title: '资产未结清',
+        content: view.blockMessage || '存在未结清资产，请先提现或结清后再申请。',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+      return
+    }
+    wx.showToast({ title: (view && view.blockMessage) || '当前账号暂不可注销', icon: 'none' })
+  },
+
+  /** 第二步：校验验证凭证 → 二次确认 → 提交注销。 */
+  onConfirmSubmit() {
     const {
-      mode, reasonCode, agreed, verifyMode, codeChannel, verifyCode,
+      reasonCode, agreed, verifyMode, codeChannel, verifyCode,
       wechatVerified, submitting, canUseCode, canUseWechat
     } = this.data
     if (submitting) return
     if (!agreed) {
-      wx.showToast({ title: '请先勾选注销须知', icon: 'none' })
+      wx.showToast({ title: '请先阅读并同意《注销须知》', icon: 'none' })
       return
     }
 
@@ -319,19 +406,17 @@ Page({
       return
     }
 
-    const recoverable = mode === 2
+    // 立即注销已下线：固定七天可恢复模式（mode=2）
     wx.showModal({
       title: '确认注销账号',
-      content: recoverable
-        ? '提交后 7 天内可再次登录取消注销，期满后数据将被永久删除。'
-        : '提交后账号立即注销，数据将被永久删除，无法恢复。',
+      content: '提交后 7 天内可再次登录取消注销，期满后数据将被永久删除。',
       confirmText: '确认注销',
       confirmColor: '#fa5151',
       success: (result) => {
         if (!result.confirm) return
         this.setData({ submitting: true })
         submitCancellation(
-          mode,
+          2,
           reasonCode || undefined,
           verifyType,
           verifyType === 3 ? undefined : verifyCode,
@@ -342,7 +427,7 @@ Page({
             const app = getApp()
             if (app && typeof app.resetLoginState === 'function') app.resetLoginState()
             clearAccountCache()
-            wx.showToast({ title: recoverable ? '已提交注销申请' : '账号已注销', icon: 'none' })
+            wx.showToast({ title: '已提交注销申请', icon: 'none' })
             wx.reLaunch({ url: '/pages/login/login' })
           })
           .catch((err) => {
@@ -360,52 +445,6 @@ Page({
   },
 
   /** ---------- 状态 B：注销处理中 ---------- */
-
-  /** 取消注销：登录会话即身份核验，无需验证码；恢复后按申请前状态还原。 */
-  onRecover() {
-    if (this.data.recovering) return
-    wx.showModal({
-      title: '取消注销',
-      content: '取消后将继续使用本账号；7 天期满后数据将被删除且无法恢复。确认取消注销吗？',
-      confirmText: '取消注销',
-      cancelText: '暂不取消',
-      success: (result) => {
-        if (!result.confirm) return
-        this.setData({ recovering: true })
-        wx.showLoading({ title: '正在取消注销...', mask: true })
-        recoverCancellation()
-          .then((res) => {
-            wx.hideLoading()
-            const status = res && res.accountStatus
-            if (status === 0) {
-              // 申请前即为禁用账号：还原后仍禁用，仅可办理注销或退出。
-              wx.showModal({
-                title: '注销已取消',
-                content: '账号已恢复，但仍处于禁用状态，仅可办理注销或退出登录。',
-                confirmText: '继续注销',
-                cancelText: '退出登录',
-                success: (r) => {
-                  if (r.confirm) {
-                    this.setData({ recovering: false, agreed: false })
-                    this.refresh()
-                  } else {
-                    this.onExit()
-                  }
-                }
-              })
-              return
-            }
-            wx.showToast({ title: '注销已取消，欢迎回来', icon: 'success' })
-            wx.switchTab({ url: '/pages/ai/ai' })
-          })
-          .catch((err) => {
-            wx.hideLoading()
-            this.setData({ recovering: false })
-            wx.showToast({ title: (err && err.message) || '取消失败', icon: 'none' })
-          })
-      }
-    })
-  },
 
   /** 退出登录：撤销远程会话、清账号级缓存并回登录页（契约注销章节缓存清单）。 */
   onExit() {

@@ -2,7 +2,7 @@
 
 ## 入口
 
-- 底部 Tab「设备管理」→ `frontend/pages/devices/devices`：统一为「已绑定 + 待适配」布局（无设备时汇总为 0），确认绑定 / 同步 / 解绑。
+- 唯一入口：我的 → 设备管理封面卡 → `frontend/pages/devices/devices`（普通页 `navigateTo`，不在底部 Tab）：统一为「已绑定 + 待适配」布局（无设备时汇总为 0），确认绑定 / 同步 / 解绑。
 - 记录页「绑定设备」或管理页「添加设备」→ 全屏 `frontend/pages/device-add/device-add`。导航标题为「添加设备」。
 
 ## 设备管理（已接服务端）

@@ -57,18 +57,27 @@
       <view class="predict-divider"></view>
       <view class="predict-col">
         <text class="predict-col-title">{{i18n.t("② 推荐吃法", locale)}}</text>
-        <view class="predict-value-row">
-          <text class="predict-value">{{i18n.t((predictResult.predictSuggest), locale)}}</text>
-          <text class="predict-unit">mmol/L</text>
+        <view wx:if="{{predictResult.recommendationStatus === 'IN_RANGE'}}" class="predict-value-row">
+          <text class="predict-value predict-value-text">{{i18n.t("当前份量已合适，无需调整", locale)}}</text>
         </view>
-        <text class="predict-col-label">{{i18n.t("按推荐份量吃的餐后血糖", locale)}}</text>
-        <text class="predict-carbs">{{i18n.t("推荐碳水 " + (predictResult.suggestCarbs == null ? '—' : predictResult.suggestCarbs) + "g", locale)}}</text>
+        <block wx:elif="{{predictResult.recommendationStatus === 'ABOVE' || predictResult.recommendationStatus === 'BELOW'}}">
+          <view class="predict-value-row">
+            <text class="predict-value">{{i18n.t((predictResult.predictSuggest), locale)}}</text>
+            <text class="predict-unit">mmol/L</text>
+          </view>
+          <text class="predict-col-label">{{i18n.t("按推荐份量吃的餐后血糖", locale)}}</text>
+          <text class="predict-carbs">{{i18n.t("推荐碳水 " + (predictResult.suggestCarbs == null ? '—' : predictResult.suggestCarbs) + "g", locale)}}</text>
+        </block>
+        <view wx:else class="predict-value-row">
+          <text class="predict-value predict-value-text">{{i18n.t((predictResult.statusText), locale)}}</text>
+        </view>
       </view>
     </view>
     <text wx:if="{{predictError}}" class="recognition-warning">{{i18n.t((predictError), locale)}}</text>
     <button wx:if="{{predictError}}" class="btn-ghost btn-block btn-sm ui-interactive" bindtap="onRetryPredict" disabled="{{busy || predictLoading}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重试预测", locale)}}</button>
     <text wx:if="{{!predictLoading && !predictResult && !predictError}}" class="recognition-tip">{{i18n.t("录入上方血糖后，自动生成预测", locale)}}</text>
     <text wx:if="{{predictNotice}}" class="recognition-tip">{{i18n.t((predictNotice), locale)}}</text>
+    <text wx:for="{{statusHints}}" wx:key="*this" class="recognition-tip">{{i18n.t((item), locale)}}</text>
   </view>
 
   <view wx:if="{{hasAnalysis}}" class="card">

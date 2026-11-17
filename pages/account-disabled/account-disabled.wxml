@@ -1,0 +1,25 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="page-no-tab" style="{{displayStyle}}">
+  <view class="card disabled-card">
+    <text class="disabled-title">{{i18n.t("账号已被封禁", locale)}}</text>
+    <text class="disabled-desc">{{i18n.t("当前账号已被封禁，无法自助注销。请先联系客服申请解冻，解冻后可正常使用或再次申请注销。", locale)}}</text>
+
+    <view class="contact-row">
+      <text class="contact-label">{{i18n.t("客服邮箱", locale)}}</text>
+      <text class="contact-value">{{emailText}}</text>
+      <text wx:if="{{email}}" class="copy-btn" data-type="email" bindtap="onCopy">{{i18n.t("复制", locale)}}</text>
+    </view>
+
+    <view class="contact-row">
+      <text class="contact-label">{{i18n.t("客服电话", locale)}}</text>
+      <text class="contact-value">{{phoneText}}</text>
+      <text wx:if="{{phone}}" class="copy-btn" data-type="phone" bindtap="onCopy">{{i18n.t("复制", locale)}}</text>
+    </view>
+
+    <text class="dev-note">{{i18n.t("（开发阶段测试信息，正式上线前将替换为真实客服方式）", locale)}}</text>
+  </view>
+
+  <view class="submit-area">
+    <button class="btn-ghost btn-block" bindtap="onClose">{{i18n.t("关闭", locale)}}</button>
+  </view>
+</view>

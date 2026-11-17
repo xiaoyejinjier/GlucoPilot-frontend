@@ -3,7 +3,7 @@ const { getUserInfo, saveUserInfo } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { uploadMediaFile, BIZ_TYPE, MAX_IMAGE_BYTES } = require('../../utils/media')
 const { getToken } = require('../../utils/request')
-const { DIABETES_TYPE_TEXT, diabetesCode } = require('../../utils/mappers')
+const { DIABETES_TYPE_TEXT, GOAL_PROFILE_TEXT, diabetesCode } = require('../../utils/mappers')
 const { parseMedication, medicationGroups, medicationText, NAMES } = require('../../utils/profile-medications')
 
 // 将 2022.06 / 2022/06 / 2022年6月 / 202206 / 2022-6 统一归一化为 YYYY-MM
@@ -39,6 +39,8 @@ Page({
     form: {},
     diabetesOptions: DIABETES_TYPE_TEXT,
     diabetesIndex: 0,
+    goalProfileOptions: GOAL_PROFILE_TEXT,
+    goalProfileIndex: 0,
     maxDiagnosisMonth:'',diagnosisPickerValue:'',medicationGroups:medicationGroups(),
     selectedMedications:[],otherMedication:'',otherMedicationEnabled:false,
     saving: false, uploadingAvatar:false, avatarPreview:'', loading:true
@@ -46,7 +48,7 @@ Page({
 
   current(token = this._profileToken) { return !this._disposed && !!token && token === getToken() && token === this._profileToken },
   onLoad() {
-    this._disposed = false; this._profileToken = getToken(); this._dirty = new Set(); this._avatarChanged = false; this._diabetesChanged = false
+    this._disposed = false; this._profileToken = getToken(); this._dirty = new Set(); this._avatarChanged = false; this._diabetesChanged = false; this._goalChanged = false
     const token = this._profileToken
     const now=new Date(),month=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
     this.setData({maxDiagnosisMonth:month,diagnosisPickerValue:month})
@@ -79,7 +81,8 @@ Page({
     const form={...info}
     for(const key of this._dirty || []) form[key]=this.data.form[key]
     if(this._avatarChanged)form.avatarUrl=this.data.form.avatarUrl
-    this.setData({form,diabetesIndex:this._diabetesChanged?this.data.diabetesIndex:Math.max(0,diabetesCode(info.diabetesType))})
+    this.setData({form,diabetesIndex:this._diabetesChanged?this.data.diabetesIndex:Math.max(0,diabetesCode(info.diabetesType)),
+      goalProfileIndex:this._goalChanged?this.data.goalProfileIndex:Math.max(0,Number(info.goalProfileCode)||0)})
     this.setData({diagnosisPickerValue:form.confirmDate||this.data.maxDiagnosisMonth})
     if(!this._dirty.has('medication')){
       const medication=parseMedication(form.medication)
@@ -140,6 +143,13 @@ Page({
     this._diabetesChanged = true
     const index = Number(e.detail.value)
     this.setData({ diabetesIndex: index })
+  },
+
+  onGoalProfileChange(e) {
+    if(this.data.saving || !this.current())return
+    this._goalChanged = true
+    const index = Number(e.detail.value)
+    this.setData({ goalProfileIndex: index })
   },
 
   async onChooseAvatar() {
@@ -222,7 +232,9 @@ Page({
         weight,
         // 全量保存：未在表单暴露的目标值原样带回，避免被清空
         targetFasting: form.targetFasting == null ? null : form.targetFasting,
-        targetPostprandial: form.targetPostprandial == null ? null : form.targetPostprandial
+        targetPostprandial: form.targetPostprandial == null ? null : form.targetPostprandial,
+        // 血糖控制目标人群由 picker 决定，始终显式提交（0~3）；后端 null=不修改，旧客户端不带该字段不得重置
+        glucoseGoalProfile: this.data.goalProfileIndex
       })
     ])
       .then(() => this.current(token) ? fetchMe() : null)

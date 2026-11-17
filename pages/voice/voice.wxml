@@ -72,6 +72,7 @@
 
   <view wx:if="{{sessionReadOnly}}" class="wx-locked">
     <text class="wx-locked-text">{{i18n.t((sessionNotice), locale)}}</text>
+    <view wx:if="{{fromHistory}}" class="wx-locked-action ui-interactive" bindtap="onBackToCurrent" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("回到当前对话", locale)}}</view>
   </view>
   <view class="wx-foot">
     <view class="composer-row">

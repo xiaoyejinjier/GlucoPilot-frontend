@@ -1,0 +1,29 @@
+.notice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.notice-title {
+  display: block;
+  text-align: center;
+  font-size: var(--fs-title);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8rpx;
+}
+
+.notice-para {
+  display: block;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  line-height: 1.8;
+}
+
+.notice-sub {
+  display: block;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.8;
+  padding-left: 16rpx;
+}

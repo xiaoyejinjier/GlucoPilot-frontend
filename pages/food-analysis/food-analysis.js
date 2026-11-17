@@ -26,6 +26,17 @@ function portionHint(currentG, suggestG) {
   return ''
 }
 
+/** 后端下发状态提示枚举 key → 中文文案（前端映射渲染，再经 i18n 翻英文）。 */
+const STATUS_HINT_TEXT = {
+  danger_high: '当前血糖明显偏高，建议暂缓进食并尽快就医',
+  low_first: '当前血糖偏低，请先处理低血糖（如进食含糖食物），再录入本餐',
+  above_adjusted: '当前份量预计超过你的目标上限，推荐份量已为你调整',
+  below_add: '当前份量预计低于目标下限，建议适量加餐',
+  caution_high: '当前血糖偏高，建议少量进食并加强监测',
+  infeasible_normal: '已接近最低建议量，仍可能超标，建议调整食物结构或咨询营养师',
+  gdm_infeasible: '当前预测已超出妊娠期严格目标，请按产科/营养科方案进食并加强监测'
+}
+
 Page({
   data: {
     displayStyle: '',
@@ -56,6 +67,7 @@ Page({
     predictLoading: false,
     predictError: '',
     predictNotice: '',
+    statusHints: [],
     suggestCount: 0,
     metrics: { glucose: '—', carbs: '—', extra: '—' }
   },
@@ -225,7 +237,7 @@ Page({
   clearPrediction() {
     this._predictVersion = (this._predictVersion || 0) + 1
     if (this._predictTimer) { clearTimeout(this._predictTimer); this._predictTimer = null }
-    this.setData({ predictResult: null, predictLoading: false, predictError: '', predictNotice: '', suggestCount: 0 })
+    this.setData({ predictResult: null, predictLoading: false, predictError: '', predictNotice: '', statusHints: [], suggestCount: 0 })
   },
 
   schedulePredict() {
@@ -263,7 +275,7 @@ Page({
     const input = this.buildPredictInput()
     if (!input.ready || !input.validItems.length || !(input.glucose > 0 && input.glucose < 40)) {
       // 空态：营养未确认 / 无有效食物 / 未录餐前血糖，均不发起预测。
-      this.setData({ predictResult: null, predictLoading: false, predictError: '', predictNotice: '' })
+      this.setData({ predictResult: null, predictLoading: false, predictError: '', predictNotice: '', statusHints: [] })
       return
     }
     const fingerprint = this.predictFingerprint(input)
@@ -281,7 +293,8 @@ Page({
           weightG: item.weightG, carbsG: item.carbsG }))
       })
       if (!this._alive || version !== this._predictVersion || fingerprint !== this._predictFingerprint) return
-      if (!result || !Number.isFinite(result.predictNow) || !Number.isFinite(result.predictSuggest)) {
+      // P4：仅 predictNow 必须有限；predictSuggest 在 DANGER/INFEASIBLE 为 null（合法），按状态判定。
+      if (!result || !Number.isFinite(result.predictNow)) {
         throw new Error('预测返回数据无效，请重试')
       }
       const suggestItems = Array.isArray(result.suggestItems) ? result.suggestItems : []
@@ -289,12 +302,31 @@ Page({
       for (const suggest of suggestItems) {
         suggestMap[suggest.foodName] = suggest.suggestWeight == null ? null : Number(suggest.suggestWeight)
       }
+      const status = result.recommendationStatus || ''
+      const hintTexts = (Array.isArray(result.statusHints) ? result.statusHints : [])
+        .map((key) => STATUS_HINT_TEXT[key] || key)
+      // 右列主文案：仅 LOW/DANGER/INFEASIBLE 用（无数值，替换数值行）；其余状态右列仍为数值/「无需调整」。
+      let statusText = ''
+      let statusHints = hintTexts
+      if (status === 'LOW' || status === 'DANGER' || status === 'INFEASIBLE') {
+        statusText = hintTexts[0] || ''
+        statusHints = hintTexts.slice(1)
+      }
       // 局部路径写回建议，避免全量 items 覆盖导致输入框失焦
       const updates = {
         suggestCount: suggestItems.length,
-        predictResult: { predictNow: result.predictNow, predictSuggest: result.predictSuggest,
+        statusHints,
+        predictResult: { predictNow: result.predictNow,
+          predictSuggest: result.predictSuggest == null ? null : result.predictSuggest,
           suggestText: result.suggestText || '', predictCarbs: input.carbsG,
           suggestCarbs: result.suggestCarbs == null ? null : result.suggestCarbs,
+          recommendationStatus: status,
+          effectiveProfile: result.effectiveProfile || '',
+          targetLower: result.targetLower == null ? null : result.targetLower,
+          targetUpper: result.targetUpper == null ? null : result.targetUpper,
+          caution: !!result.caution,
+          statusText,
+          algorithmVersion: result.algorithmVersion || '',
           fingerprint }
       }
       this.data.items.forEach((item, index) => {
@@ -309,7 +341,7 @@ Page({
     } catch (error) {
       // P4：失败即清空，保存时不再携带上一次的预测值。
       if (this._alive && version === this._predictVersion && fingerprint === this._predictFingerprint) {
-        this.setData({ predictResult: null, predictError: error.message || '预测失败，可重试；不影响饮食保存' })
+        this.setData({ predictResult: null, statusHints: [], predictError: error.message || '预测失败，可重试；不影响饮食保存' })
         if (error.code === 40100) this.ensureLogin()
       }
     } finally {
@@ -411,7 +443,9 @@ Page({
         foodsText: this.data.foodsText, carbsG: this.data.carbsG,
         supplementText: this.data.supplement || undefined,
         ...(validPrediction ? { predictNow: validPrediction.predictNow, predictSuggest: validPrediction.predictSuggest,
-          suggestText: validPrediction.suggestText || undefined } : {}),
+          suggestText: validPrediction.suggestText || undefined,
+          algorithmVersion: validPrediction.algorithmVersion || undefined,
+          recommendationStatus: validPrediction.recommendationStatus || undefined } : {}),
         items: this.data.items.map((item) => ({ foodId: item.foodId || undefined, foodName: item.foodName,
           weightG: item.weightG, carbsG: item.carbsG, caloriesKcal: item.caloriesKcal }))
       })

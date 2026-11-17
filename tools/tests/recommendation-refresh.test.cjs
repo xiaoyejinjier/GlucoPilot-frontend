@@ -23,6 +23,7 @@ function harness() {
     '../../utils/remote-image': { mapField: async rows => rows },
     '../../utils/publication': {},
     '../../utils/article-tags': {},
+    '../../utils/custom-tag-code': require('../../utils/custom-tag-code'),
     '../../utils/display': {}
   }
   vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/index/index.js'), 'utf8'), {

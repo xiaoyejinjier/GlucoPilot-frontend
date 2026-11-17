@@ -229,6 +229,17 @@
   line-height: 1.4;
 }
 
+/* 历史会话只读时的出口：不逼用户退出页面再进来 */
+.wx-locked-action {
+  flex-shrink: 0;
+  padding: 8rpx 22rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid var(--danger);
+  font-size: var(--fs-small);
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .wx-input[disabled] {
   color: var(--voice-muted);
   background: var(--surface);

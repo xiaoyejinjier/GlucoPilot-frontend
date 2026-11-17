@@ -54,6 +54,15 @@
       </picker>
     </view>
     <view class="form-item">
+      <text class="label">{{i18n.t("血糖控制目标", locale)}}</text>
+      <view class="input goal-picker-wrap">
+        <picker mode="selector" range="{{i18n.list(goalProfileOptions, locale)}}" value="{{goalProfileIndex}}" bindchange="onGoalProfileChange">
+          <view class="picker-value">{{i18n.t((goalProfileOptions[goalProfileIndex]), locale)}}</view>
+        </picker>
+        <text wx:if="{{goalProfileIndex === 3}}" class="goal-profile-hint">{{i18n.t('如不确定请咨询产科医生', locale)}}</text>
+      </view>
+    </view>
+    <view class="form-item">
       <text class="label">{{i18n.t("确诊时间", locale)}}</text>
       <picker class="input" mode="date" fields="month" start="1900-01" end="{{maxDiagnosisMonth}}" value="{{diagnosisPickerValue}}" bindchange="onDiagnosisChange" disabled="{{saving}}">
         <view class="date-picker-value"><text>{{form.confirmDate || i18n.t('选择确诊年月', locale)}}</text><view class="calendar-icon"></view></view>

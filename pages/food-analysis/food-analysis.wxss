@@ -36,6 +36,7 @@
 .predict-col-title { color: #526358; font-size: var(--fs-small); font-weight: 600; }
 .predict-value-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8rpx; margin-top: 16rpx; }
 .predict-value { color: var(--brand-dark); font-size: 64rpx; line-height: 1.2; font-weight: 800; }
+.predict-value-text { font-size: var(--fs-body); font-weight: 600; color: #526358; line-height: 1.5; }
 .predict-unit { color: #526358; font-size: var(--fs-small); }
 .predict-col-label { display: block; margin-top: 8rpx; color: var(--brand-dark); font-size: var(--fs-small); font-weight: 600; }
 .predict-carbs { display: block; margin-top: 12rpx; color: var(--muted); font-size: var(--fs-small); }

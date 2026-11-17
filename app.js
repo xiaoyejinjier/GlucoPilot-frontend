@@ -1,7 +1,7 @@
 const { applyDisplayToCurrentPage, saveDisplaySettings } = require('./utils/display')
 const { getUserInfo, saveUserInfo, clearAccountCache } = require('./utils/storage')
 const { getToken, setToken } = require('./utils/request')
-const { fetchMe, fetchAppConfig, fetchCancellationStatus, recoverCancellation, logoutRemote } = require('./services/api')
+const { fetchMe, fetchAppConfig, logoutRemote } = require('./services/api')
 const { fontNameOf, themeIdOf } = require('./utils/mappers')
 const config = require('./utils/config')
 const messageNotifications = require('./utils/message-notifications')
@@ -9,15 +9,6 @@ const i18n = require('./utils/i18n')
 if (typeof Page === 'function') Page = i18n.wrapPage(Page)
 if (typeof Component === 'function') Component = i18n.wrapComponent(Component)
 i18n.install()
-
-/** 服务端时间戳为 epoch 毫秒（Long 序列化成字符串）。 */
-function formatCancellationDeadline(value) {
-  const ms = Number(value)
-  if (!ms) return ''
-  const d = new Date(ms)
-  const pad = (v) => String(v).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 App({
   globalData: {
@@ -27,6 +18,8 @@ App({
     disclaimerCurrentVersion: '',
     navigationGuideToken: '',
     unreadCount: 0,
+    /** 登录响应带回：本次登录已撤销注销申请，进入主导航前需提示一次。 */
+    recoveredFromCancellation: false,
     /** 只读调试信息：真机当前实际请求的 API 地址。 */
     apiBaseUrl: config.baseUrl,
     /** 拍照页传给确认页的临时图，避免 URL 传路径导致黑屏 */
@@ -179,21 +172,27 @@ App({
       })
   },
 
-  /** 登录完成后的唯一去向：注销/禁用拦截优先，其次免责声明，否则进入记录页。 */
+  /** 登录完成后的唯一去向：恢复提示/禁用拦截优先，其次免责声明，否则进入记录页。 */
   goAfterLogin() {
     const token = getToken()
+    const recovered = !!this.globalData.recoveredFromCancellation
+    this.globalData.recoveredFromCancellation = false
     return this.syncProfile()
       .then((state) => {
         if (getToken() !== token || !this.globalData.isLoggedIn) return null
         const status = state.userInfo && state.userInfo.accountStatus
-        if (status === 4) return this.interceptCancelledLogin()
-        if (status === 0) return this.interceptDisabledLogin()
-        if (state.needsDisclaimer) {
-          this.openRequiredDisclaimer()
-        } else {
-          wx.switchTab({ url: '/pages/ai/ai' })
+        const proceed = () => {
+          if (status === 0) return this.interceptDisabledLogin()
+          if (state.needsDisclaimer) {
+            this.openRequiredDisclaimer()
+          } else {
+            wx.switchTab({ url: '/pages/ai/ai' })
+          }
+          return state
         }
-        return state
+        // 本次登录在服务端已顺带撤销注销：先告知用户，再按正常流程继续
+        if (recovered) return this.showCancellationRecoveredModal().then(proceed)
+        return proceed()
       })
       .catch((error) => {
         if ((error && error.sessionHandled) || (getToken() && getToken() !== token)) return null
@@ -206,88 +205,26 @@ App({
   },
 
   /**
-   * 注销可恢复窗口内登录（accountStatus=4）：服务端只放行注销相关接口。
-   * 登录即本人身份核验——确认继续就撤销注销并按申请前状态还原（24 小时冷却期内不可再次提交）；
-   * 暂不使用则退出登录，7 天期满后由服务端彻底清理。
+   * 冷静期内登录即恢复：服务端已在登录事务内撤销注销，前端只做告知。
+   * 点【确定】仅关闭提示，不影响恢复结果。
    */
-  interceptCancelledLogin() {
-    return fetchCancellationStatus()
-      .then((data) => {
-        const record = (data && data.cancellation) || {}
-        const deadline = formatCancellationDeadline(record.isolateUntil)
-        return new Promise((resolve) => {
-          wx.showModal({
-            title: '账号注销中',
-            content: deadline
-              ? `账号将于 ${deadline} 注销，届时数据将被永久删除。登录即视为取消注销，是否继续使用账号？`
-              : '账号正在注销中，数据将被永久删除。登录即视为取消注销，是否继续使用账号？',
-            confirmText: '取消注销',
-            cancelText: '暂不使用',
-            confirmColor: '#0969da',
-            success: (result) => {
-              if (result.confirm) {
-                this.recoverAfterLogin().then(resolve)
-              } else {
-                this.exitCancelledLogin().then(resolve)
-              }
-            },
-            fail: () => this.exitCancelledLogin().then(resolve)
-          })
-        })
+  showCancellationRecoveredModal() {
+    return new Promise((resolve) => {
+      wx.showModal({
+        title: '账号已恢复',
+        content: '检测到您已成功登录，本次登录已自动终止注销申请，账号已恢复正常。'
+          + '如需继续注销，请于本次恢复 24 小时后重新提交；重新提交后 7 天内请勿登录，'
+          + '到期后账号将永久注销且不可恢复。',
+        confirmText: '我知道了，恢复账号',
+        showCancel: false,
+        confirmColor: '#0969da',
+        complete: () => resolve(null)
       })
-      .catch(() => {
-        // 状态查询失败（含会话被门禁拦截）时回登录页，不进入主界面。
-        this.resetLoginState()
-        this.openLogin()
-        return null
-      })
+    })
   },
 
-  /** 确认继续使用：会话由 wx.login/验证码登录建立，身份已核验，直接撤销注销。 */
-  recoverAfterLogin() {
-    wx.showLoading({ title: '正在撤销注销...', mask: true })
-    return recoverCancellation()
-      .then((res) => {
-        wx.hideLoading()
-        const status = res && res.accountStatus
-        if (status === 0) {
-          // 申请前即为禁用账号：还原后仍禁用，仅可办理注销或退出。
-          return new Promise((resolve) => {
-            wx.showModal({
-              title: '注销已取消',
-              content: '账号已恢复，但仍处于禁用状态，仅可办理注销或退出登录。',
-              confirmText: '去注销',
-              cancelText: '退出登录',
-              success: (r) => {
-                if (r.confirm) {
-                  wx.reLaunch({ url: '/pages/account-cancellation/cancellation' })
-                } else {
-                  this.exitLoginQuietly()
-                }
-                resolve(null)
-              }
-            })
-          })
-        }
-        wx.showToast({ title: '注销已取消，欢迎回来', icon: 'success' })
-        if (this.globalData.disclaimerRequired) {
-          this.openRequiredDisclaimer()
-        } else {
-          wx.switchTab({ url: '/pages/ai/ai' })
-        }
-        return { recovered: true }
-      })
-      .catch((err) => {
-        wx.hideLoading()
-        wx.showToast({ title: (err && err.message) || '撤销注销失败，请重试', icon: 'none' })
-        this.resetLoginState()
-        this.openLogin()
-        return null
-      })
-  },
-
-  /** 暂不使用：撤销远程会话、清账号级缓存并回登录页。 */
-  exitCancelledLogin() {
+  /** 退出当前会话：撤销远程会话、清账号级缓存并回登录页。 */
+  logoutAndExit() {
     return Promise.resolve()
       .then(() => logoutRemote())
       .catch(() => null)
@@ -304,26 +241,13 @@ App({
     wx.reLaunch({ url: '/pages/login/login' })
   },
 
-  /** 禁用账号登录（accountStatus=0）：仅可办理注销或退出。 */
+  /**
+   * 封禁账号（accountStatus=0）：不可自助注销，进入封禁提示页。
+   * 该页展示客服邮箱/电话（逐行复制）与【关闭】；关闭后撤销会话并回登录页。
+   */
   interceptDisabledLogin() {
-    return new Promise((resolve) => {
-      wx.showModal({
-        title: '账号已被禁用',
-        content: '该账号当前处于禁用状态，仅可申请注销账号或退出登录。',
-        confirmText: '申请注销',
-        cancelText: '退出登录',
-        confirmColor: '#fa5151',
-        success: (result) => {
-          if (result.confirm) {
-            wx.reLaunch({ url: '/pages/account-cancellation/cancellation' })
-            resolve({ disabled: true })
-          } else {
-            this.exitCancelledLogin().then(resolve)
-          }
-        },
-        fail: () => this.exitCancelledLogin().then(resolve)
-      })
-    })
+    wx.reLaunch({ url: '/pages/account-disabled/account-disabled' })
+    return Promise.resolve({ disabled: true })
   },
 
   openRequiredDisclaimer() {

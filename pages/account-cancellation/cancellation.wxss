@@ -1,4 +1,38 @@
 /* 注销说明页（QQ 风格）：说明区 + 表单区 + 危险操作按钮 */
+
+/* 说明卡与原因卡：稍放大，左右贴近屏幕边缘、内边距与行距加大 */
+.intro-card {
+  margin: 20rpx 12rpx;
+  padding: 32rpx 28rpx;
+}
+
+.reason-card {
+  margin: 20rpx 12rpx calc(280rpx + env(safe-area-inset-bottom));
+  padding: 32rpx 28rpx;
+}
+
+.intro-card .intro-title {
+  margin: 12rpx 0 16rpx;
+}
+
+.intro-card .intro-list {
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+}
+
+.intro-card .intro-warn {
+  margin-top: 12rpx;
+  padding: 20rpx 24rpx;
+}
+
+.reason-card .reason-row {
+  gap: 16rpx;
+}
+
+.reason-card .reason-item {
+  padding: 18rpx 30rpx;
+}
+
 .muted-line {
   font-size: var(--fs-small);
   color: var(--muted);
@@ -31,7 +65,6 @@
 }
 
 .intro-warn {
-  display: block;
   margin-top: 8rpx;
   padding: 16rpx 20rpx;
   border-radius: 12rpx;
@@ -39,6 +72,17 @@
   color: var(--danger);
   font-size: var(--fs-small);
   line-height: 1.5;
+}
+
+.warn-title {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 6rpx;
+}
+
+.warn-item {
+  display: block;
+  margin-top: 6rpx;
 }
 
 .section-card {
@@ -180,7 +224,14 @@
 .agree-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.agree-line {
+  display: flex;
+  align-items: center;
 }
 
 .agree-box {
@@ -197,8 +248,8 @@
 }
 
 .agree-box.checked {
-  background: var(--danger);
-  border-color: var(--danger);
+  background: var(--brand);
+  border-color: var(--brand);
 }
 
 .agree-text {
@@ -206,8 +257,30 @@
   color: var(--muted);
 }
 
+.agree-link {
+  font-size: var(--fs-small);
+  color: var(--brand-dark);
+}
+
 .submit-area {
   margin: 16rpx 20rpx 40rpx;
+}
+
+/* 身份验证页：与上方验证卡片留出间距，避免拥挤 */
+.verify-submit {
+  margin-top: 80rpx;
+}
+
+/* 申请注销操作区：固定于页面底部（须在 .submit-area 之后覆盖外边距） */
+.submit-fixed {
+  position: fixed;
+  left: 12rpx;
+  right: 12rpx;
+  bottom: 0;
+  margin: 0;
+  padding: 20rpx 16rpx calc(24rpx + env(safe-area-inset-bottom));
+  background: var(--bg);
+  z-index: 10;
 }
 
 .btn-cancel {
@@ -219,10 +292,15 @@
   border-radius: 20rpx;
   font-size: var(--fs-body);
   font-weight: 700;
-  background: var(--danger);
-  color: #fff;
-  border: none;
+  background: #fff;
+  color: var(--ink);
+  border: 1rpx solid var(--line);
   margin: 0;
+}
+
+.btn-cancel[disabled] {
+  background: var(--surface-subtle);
+  color: var(--muted);
 }
 
 .btn-cancel::after {

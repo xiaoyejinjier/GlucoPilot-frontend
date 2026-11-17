@@ -80,6 +80,8 @@
   text-align: right;
   color: #333;
 }
+.goal-picker-wrap { display:flex; flex-direction:column; align-items:flex-end; }
+.goal-profile-hint { margin-top:6rpx; color:var(--muted); font-size:var(--fs-small); line-height:1.5; text-align:right; }
 .bio-form-item { align-items:flex-start; }
 .bio-form-item .label { line-height:1.6; }
 .bio-input { flex:1; min-width:0; width:0; min-height:48rpx; margin:0; padding:0; box-sizing:border-box; text-align:right; font-size:var(--fs-body); line-height:1.6; color:var(--ink); }

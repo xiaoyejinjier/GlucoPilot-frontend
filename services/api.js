@@ -109,10 +109,21 @@ function mapFood(f, categoryName) {
 }
 
 /** ---------- auth ---------- */
+// 登录响应可能带回"本次登录顺带撤销了注销申请"，暂存到全局供 goAfterLogin 弹提示。
+function rememberRecovered(data) {
+  try {
+    const app = typeof getApp === 'function' ? getApp() : null
+    if (app && app.globalData) {
+      app.globalData.recoveredFromCancellation = !!(data && data.recoveredFromCancellation)
+    }
+  } catch (_) { /* 非小程序环境（测试）忽略 */ }
+}
+
 function wechatLogin(code) {
   return post('/auth/wechat/sessions', { code }, { auth: false, timeout: 15000 }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
+    rememberRecovered(data)
     return data
   })
 }
@@ -125,6 +136,7 @@ function phoneLogin(phone, smsCode) {
   return post('/auth/phone/sessions', { phone, smsCode }, { auth: false, timeout: 15000 }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
+    rememberRecovered(data)
     return data
   })
 }
@@ -137,6 +149,7 @@ function emailLogin(email, emailCode) {
   return post('/auth/email/sessions', { email, emailCode }, { auth: false }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
+    rememberRecovered(data)
     return data
   })
 }
@@ -544,6 +557,11 @@ function fetchCancellationStatus() {
   return get('/users/me/cancellation', null, { auth: true })
 }
 
+/** 提交前预检：封禁/注销态/恢复后 24h 锁定/资产/已有申请，HTTP 恒 200。 */
+function fetchCancellationPrecheck() {
+  return get('/users/me/cancellation/precheck', null, { auth: true })
+}
+
 /** 取一次性滑动验证票据（绑 userId，180 秒有效，发码时回传）。 */
 function fetchCancellationCaptcha() {
   return get('/users/me/cancellation/captcha', null, { auth: true, timeout: 10000 })
@@ -554,16 +572,11 @@ function sendCancellationCode(channel, captchaTicket) {
   return post('/users/me/cancellation/code', { channel, captchaTicket }, { auth: true, timeout: 15000 })
 }
 
-/** 提交注销：mode 1=立即 2=七天可恢复；verifyType 1=短信 2=邮箱 3=微信，凭证按类型二选一。 */
+/** 提交注销：仅支持 mode=2（七天可恢复）；verifyType 1=短信 2=邮箱 3=微信，凭证按类型二选一。 */
 function submitCancellation(mode, reasonCode, verifyType, verifyCode, wechatCode) {
   return post('/users/me/cancellation', {
     mode, reasonCode, verifyType, verifyCode, wechatCode
   }, { auth: true })
-}
-
-/** 七天可恢复窗口内恢复账号：登录会话即身份核验，无请求体。 */
-function recoverCancellation() {
-  return post('/users/me/cancellation/recovery', null, { auth: true })
 }
 
 function fetchAppConfig(groups) {
@@ -701,10 +714,10 @@ module.exports = {
   bindPhone,
   bindEmail,
   fetchCancellationStatus,
+  fetchCancellationPrecheck,
   fetchCancellationCaptcha,
   sendCancellationCode,
   submitCancellation,
-  recoverCancellation,
   fetchAppConfig,
   submitFeedback,
   fetchFeedbacks,

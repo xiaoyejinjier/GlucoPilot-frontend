@@ -50,7 +50,7 @@ test('设备移入我的，问诊占用第二个Tab，保留设备页面及其�
   assert.equal(app.tabBar.list.some(item=>item.pagePath==='pages/devices/devices'),false)
   assert.equal(app.pages.includes('pages/devices/devices'),true)
   const mine=fs.readFileSync(path.join(root,'pages/mine/mine.wxml'),'utf8')
-  assert.match(mine,/data-url="\/pages\/devices\/devices" bindtap="onMenuTap"/)
+  assert.match(mine,/bindtap="onDevicesTap"/)
   assert.match(mine,/data-url="\/pages\/consultation-records\/consultation-records"/)
 })
 
