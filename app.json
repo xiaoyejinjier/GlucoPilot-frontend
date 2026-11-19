@@ -22,6 +22,7 @@
     "pages/wallet/wallet",
     "pages/doctor-withdrawals/doctor-withdrawals",
     "pages/chat-history/chat-history",
+    "pages/ai-memory/ai-memory",
     "pages/news-detail/news-detail",
     "pages/community/community",
     "pages/community-search/community-search",

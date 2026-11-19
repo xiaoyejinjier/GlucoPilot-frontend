@@ -597,7 +597,6 @@ g · 热量	g · Calories
 ② 推荐吃法	② Suggested portions
 建议吃	Suggested portion
 饱腹感：	Fullness:\s
-推荐	Recommended
 不建议	Not recommended
 重试预测	Retry estimate
 数据导出	Export data
@@ -1328,7 +1327,6 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 已关注对方	Following
 搜索点赞的文章标题	Search liked article titles
 还没有点赞，看到喜欢的文章点一下赞吧	No likes yet. Like an article to find it here.
-
 我的评论	My comments
 已被系统隐藏	Hidden by the system
 文章已不可查看	This post is no longer available
@@ -1387,7 +1385,6 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 含社区首页话题与自建标签	Includes home feed topics and your custom tags
 全部	All
 点选标签筛选内容	Tap a tag to filter content
-编辑	Edit
 注销账号	Delete account
 确认注销账号	Delete account?
 注销申请已提交	Deletion request submitted
@@ -1695,7 +1692,6 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 重新充值	Recharge again
 支付码有效期异常，请重试	Invalid payment code expiry. Please retry.
 支付码图片加载失败，请重试	Unable to display the payment code. Please retry.
-
 # Consultation workflow 2026-11-16
 接诊中	Consultation in progress
 医生工作台	Doctor workspace
@@ -1882,7 +1878,6 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 对话已删除	Chat deleted
 条消息	messages
 历史对话只能查看，继续聊天请点「回到当前对话」	Past chats are read-only. Tap Back to current chat to continue.
-
 回到顶部	Back to top
 顶部	Top
 支付宝沙箱买家UID	Alipay sandbox buyer UID
@@ -1972,3 +1967,31 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 付款成功	Payment successful
 沙箱充值已到账，点击返回付款页查看结果。	Your sandbox recharge is credited. Go back to the payment page to view the result.
 付款成功，可返回原付款页查看结果。	Payment successful. Return to the payment page to view the result.
+小语记住的事	What Xiaoyu remembers
+查看或删除小语记住的长期记忆	View or delete what Xiaoyu remembers
+这些是小语在聊天里记住的关于你的事，只用来让回答更贴合你。觉得不对可以直接删。	These are the things Xiaoyu remembered from your chats. They only help tailor answers, and you can delete any of them.
+记忆加载失败	Could not load memories
+小语还没有记住你的事	Xiaoyu has not remembered anything yet
+多聊几句，重要的事小语会自己记下来	Keep chatting, Xiaoyu will note the important bits
+最近更新	Updated
+饮食忌口	Foods to avoid
+控糖目标	Glucose goal
+身体状况	Health context
+生活习惯	Habits
+偏好	Preferences
+这五类记忆各保留最新一条，由小语在对话里自动整理	One entry per category, organized by Xiaoyu during chats
+清空全部记忆	Clear all memories
+删除这条记忆	Delete this memory
+删除后小语不会再据此回答。	Xiaoyu will no longer use it in answers.
+已删除	Deleted
+删除失败，请重试	Delete failed, please retry
+清空后小语会忘记之前记住的所有事，操作不可撤销。	Xiaoyu will forget everything remembered so far. This cannot be undone.
+已清空	Cleared
+清空失败，请重试	Clear failed, please retry
+清空本类	Clear this category
+记忆按类别归置，每类可有多条；小语会自己整理，觉得不准可以删	Memories are grouped by category and each category can hold several entries. Xiaoyu curates them; delete anything that looks wrong.
+清空这一类记忆	Clear this category
+这一类还没有记忆	No memories in this category yet
+点上面的「全部」看看小语都记住了什么	Tap All above to see everything Xiaoyu remembers
+只会删掉这一类的全部记忆，其他类不受影响。	Only this category will be cleared. Other categories stay as they are.
+加载失败，请重试	Load failed, please retry

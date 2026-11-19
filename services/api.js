@@ -339,6 +339,52 @@ function sendChatMessage(sessionId, payload) {
 }
 
 /**
+ * 长期记忆列表（用户自助查看，合规要求「知道自己被记了什么」）。
+ *
+ * 后端返回 { records: [{ id, memoryKey, memoryText, confidence, updatedAt }], total, pages }。
+ * V63 之后一类可以有多条（"不吃香菜"与"海鲜过敏"都算忌口），因此：
+ * ①必须分页——被记了上百条时一次拉回来会让低端机卡住；
+ * ②必须带 id——只给键没法表达"删哪一条"。
+ *
+ * @param {object} params { pageNum, pageSize, memoryKey }
+ */
+function fetchAiMemories(params) {
+  const pageNum = (params && params.pageNum) || 1
+  const pageSize = (params && params.pageSize) || 20
+  const memoryKey = params && params.memoryKey
+  const query = { pageNum, pageSize }
+  // 只在真的筛某一类时才带 memoryKey：传空串会让后端多一次"等于空"的判断，
+  // 而且日志里会出现一串无意义的 memoryKey= 参数。
+  if (memoryKey) query.memoryKey = memoryKey
+  return get('/users/me/ai-memories', query, { auth: true })
+}
+
+/**
+ * 删除一个条目（每张卡片上的「删除」）。
+ *
+ * 传 id 而不是键：同一类下有多条时，键无法表达"删哪一条"。
+ * 服务端仍会带 user_id 过滤，猜别人的 id 也删不掉。
+ */
+function deleteAiMemoryById(id) {
+  return del(`/users/me/ai-memories/items/${encodeURIComponent(id)}`, null, { auth: true })
+}
+
+/**
+ * 清空某一类（每类标题右侧的「清空本类」）。
+ *
+ * 键要做 encodeURIComponent：虽然五类键都是 ASCII，但一旦后端加了新键（中文/带空格），
+ * 未编码的路径参数会被截断成 404，那种问题在真机上比在单测里难查得多。
+ */
+function deleteAiMemoriesByKey(memoryKey) {
+  return del(`/users/me/ai-memories/${encodeURIComponent(memoryKey)}`, null, { auth: true })
+}
+
+/** 清空全部记忆（返回 { deleted } 条数）。 */
+function deleteAllAiMemories() {
+  return del('/users/me/ai-memories', null, { auth: true })
+}
+
+/**
  * 2.25 AI 流式补全（SSE）。
  * @param {string} sessionId
  * @param {object} payload { clientMsgId, replyToMsgId, stream }
@@ -688,6 +734,10 @@ module.exports = {
   deleteChatSession,
   setChatSessionPinned,
   sendChatMessage,
+  fetchAiMemories,
+  deleteAiMemoryById,
+  deleteAiMemoriesByKey,
+  deleteAllAiMemories,
   streamChatCompletion,
   createMediaUploadCredential,
   registerMediaFile,

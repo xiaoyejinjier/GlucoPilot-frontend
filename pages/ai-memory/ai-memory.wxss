@@ -1,0 +1,188 @@
+/* ------------------------------------------------------------------
+   分类入口：全部 + 五类，两列栅格。
+   与「我的」页的工具栅格同一套密度（列间距 18rpx、行间距 20rpx），
+   让记忆页进来看起来是同一个 App 的另一个面板，而不是一张独立的表。
+   ------------------------------------------------------------------ */
+.memory-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20rpx 18rpx;
+  margin-bottom: 24rpx;
+}
+
+.memory-tile {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  min-width: 0;
+  padding: 18rpx 20rpx;
+  border-radius: 22rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--line);
+  box-sizing: border-box;
+}
+
+/* 选中态：描边换成品牌色 + 淡底，不用阴影——
+   卡片本身已经是白底细边，再加阴影会在同一屏里出现两种"浮起"的语言。 */
+.memory-tile.is-active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.memory-tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 18rpx;
+  flex-shrink: 0;
+}
+
+.memory-tile-glyph {
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* 五类沿用「我的」页既有色板的同一批色相，避免记忆页另起一套配色 */
+.tint-all { background: var(--brand-soft); color: var(--brand); }
+.tint-diet-taboo { background: #f8f0df; color: #b8a575; }
+.tint-glucose-goal { background: #e7f0fe; color: #477fcb; }
+.tint-health-context { background: #f7ede7; color: #c0a18a; }
+.tint-habit { background: #eef3e4; color: #6b7f47; }
+.tint-preference { background: #f3edf5; color: #b6a5bf; }
+
+.memory-tile-body {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.memory-tile-label {
+  font-size: var(--fs-small);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-tile-count {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* 当前筛选的标题行（全部 / 某一类 + 清空本类） */
+.memory-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 0 8rpx 12rpx;
+}
+
+.memory-section-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.memory-group-clear {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  padding: 6rpx 18rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid var(--line);
+}
+
+/* ------------------------------------------------------------------
+   条目卡片
+   ------------------------------------------------------------------ */
+.memory-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+/* 混合列表（全部）里标出这条属于哪一类；只看某一类时这个标签不渲染 */
+.memory-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.memory-tag {
+  font-size: var(--fs-tiny);
+  color: var(--brand);
+  background: var(--brand-soft);
+  padding: 4rpx 14rpx;
+  border-radius: 16rpx;
+  flex-shrink: 0;
+}
+
+.memory-time {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  flex-shrink: 0;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.memory-text {
+  font-size: var(--fs-body);
+  color: var(--ink);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.memory-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.memory-delete {
+  font-size: var(--fs-small);
+  color: var(--danger);
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid var(--danger);
+}
+
+/* ------------------------------------------------------------------
+   底部与状态
+   ------------------------------------------------------------------ */
+.memory-loading {
+  padding: 20rpx 0;
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--hint);
+}
+
+.memory-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 8rpx 0 32rpx;
+}
+
+.memory-footer-hint {
+  font-size: var(--fs-small);
+  color: var(--hint);
+  text-align: center;
+  line-height: 1.7;
+}
+
+.memory-clear {
+  font-size: var(--fs-small);
+  color: var(--danger);
+  padding: 12rpx 32rpx;
+  border-radius: 26rpx;
+  border: 1rpx solid var(--danger);
+}
