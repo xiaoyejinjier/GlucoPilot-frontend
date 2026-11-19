@@ -8,6 +8,8 @@
     "pages/consultation/consultation",
     "pages/consultation-compose/consultation-compose",
     "pages/consultation-detail/consultation-detail",
+    "pages/consultation-chat/consultation-chat",
+    "pages/consultation-conversations/consultation-conversations",
     "pages/consultation-checkout/consultation-checkout",
     "pages/consultation-records/consultation-records",
     "pages/consultation-doctor/consultation-doctor",
@@ -52,7 +54,8 @@
     "pages/notifications/notifications",
     "pages/display-settings/display-settings",
     "pages/feedback-list/feedback-list",
-    "pages/sandbox-payment/sandbox-payment"
+    "pages/sandbox-payment/sandbox-payment",
+    "pages/sandbox-cashier/sandbox-cashier"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

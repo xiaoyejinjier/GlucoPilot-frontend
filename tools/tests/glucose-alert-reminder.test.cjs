@@ -7,6 +7,33 @@ const { buildGlucoseAlerts } = require('../../utils/glucose-alerts')
 const directory = path.resolve(__dirname, '../../components/glucose-alert-reminder')
 const measured = (value, extra = {}) => ({ id: 'before_breakfast', value, hasRecord: true, ...extra })
 
+test('问诊消息接入记录页全局提醒，打开会话列表不自动已读，可主动整类已读', async () => {
+  const {component,instance,state}=createComponent()
+  component.properties.socialCounts.observer.call(instance,{total:2,consultations:2})
+  assert.equal(instance.data.socialItems[0].key,'consultations')
+  assert.equal(instance.data.socialItems[0].title,'问诊交流')
+  instance.onInformation({currentTarget:{dataset:{key:'consultations'}}})
+  assert.equal(state.navs[0].url,'/pages/consultation-conversations/consultation-conversations')
+  assert.equal(state.reads.length,0)
+  await instance.onReadInformation({currentTarget:{dataset:{key:'consultations'}}})
+  assert.deepEqual(state.reads[0],['CONSULTATION'])
+  assert.equal(state.refreshes,1)
+})
+
+test('同一问诊只显示一项提醒，不同问诊保留标题且可直接进入正确聊天',async()=>{
+ const {component,instance,state}=createComponent()
+ const row={consultationId:'8',title:'餐后血糖咨询',peerName:'接诊医生',lastMessageId:'12',unreadCount:2}
+ component.properties.socialCounts.observer.call(instance,{total:3,consultations:3,consultationConversations:[row,row,{...row,consultationId:'9',title:'饮食咨询',lastMessageId:'13',unreadCount:1}]})
+ assert.equal(instance.data.socialItems.length,2)
+ assert.equal(instance.data.socialItems[0].contextTitle,'餐后血糖咨询')
+ assert.equal(instance.data.socialItems[1].contextTitle,'饮食咨询')
+ instance.onInformation({currentTarget:{dataset:{key:'consultation:8'}}})
+ assert.equal(state.navs[0].url,'/pages/consultation-chat/consultation-chat?id=8')
+ assert.equal(state.reads.length,0)
+ await instance.onReadInformation({currentTarget:{dataset:{key:'consultation:9'}}})
+ assert.deepEqual(state.reads[0],['CONSULTATION_ONE','9','13'])
+})
+
 test('提醒边界与后端一致：3.9不提示、10提示，低值严格小于3.9', () => {
   assert.equal(buildGlucoseAlerts([measured(3.9), measured(9.9)]).length, 0)
   assert.equal(buildGlucoseAlerts([measured(3.8)])[0].type, 'low')
@@ -39,6 +66,7 @@ function createComponent(fetchReplies = async () => ({ records: [], total: 0 }),
     Component(value) { component = value }, wx:{navigateTo:value=>{state.navs.push(value);if(state.navFails){if(value.fail)value.fail()}else if(value.success)value.success()},showToast:value=>state.toasts.push(value)},require(name) {
       if (name === '../../utils/glucose-alerts') return { buildGlucoseAlerts }
       if (name === '../../utils/request') return { getToken: () => state.token }
+      if (name === '../../services/consultation') return {readMessages:async(...args)=>state.reads.push(['CONSULTATION_ONE',...args])}
       if (name === '../../utils/storage') return { getTodayKey: () => '2026-10-15' }
       if (name === '../../utils/message-notifications') return { refresh: async () => { state.refreshes++ } }
       assert.equal(name, '../../services/api')

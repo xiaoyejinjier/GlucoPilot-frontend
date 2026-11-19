@@ -1,0 +1,13 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="consult-page" style="{{displayStyle}}">
+  <view class="consult-heading"><text class="consult-title">{{i18n.t('问诊交流',locale)}}</text></view>
+  <view class="consult-notice">{{i18n.t('打开具体问诊交流后，消息才会标记为已读。',locale)}}</view>
+  <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('点击重试',locale)}}</view>
+  <view wx:if="{{!records.length}}" class="consult-state">{{i18n.t(loading ? '正在加载…' : '暂无问诊交流，接诊后可从详情进入。',locale)}}</view>
+  <view wx:for="{{records}}" wx:key="consultationId" class="consult-card conversation-card" data-id="{{item.consultationId}}" bindtap="onOpen" hover-class="ui-pressed">
+    <view class="conversation-heading"><text class="conversation-name">{{item.peerName}}</text><text class="conversation-time">{{item.timeLabel}}</text></view>
+    <text class="conversation-title">{{item.title}}</text>
+    <view class="conversation-preview"><text class="conversation-content">{{item.lastContent}}</text><text wx:if="{{item.unreadCount > 0}}" class="conversation-unread">{{item.unreadCount > 99 ? '99+' : item.unreadCount}}</text><text class="conversation-arrow">›</text></view>
+  </view>
+  <view wx:if="{{records.length && loading}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
+</view>

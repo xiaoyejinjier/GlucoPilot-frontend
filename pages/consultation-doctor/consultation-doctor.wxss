@@ -1,3 +1,18 @@
 @import "/styles/consultation.wxss";
 .doctor-wallet-card{margin-top:24rpx;background:#f7faff;border-color:#cfddf1}
 .doctor-wallet-card .consult-button{margin-top:24rpx}
+.doctor-workspace { padding-bottom:calc(64rpx + env(safe-area-inset-bottom)); }
+.doctor-wallet-card { padding:32rpx; border-color:#d8e4f4; background:linear-gradient(145deg,#f8fbff,#f1f6ff); }
+.doctor-work-actions { gap:18rpx; margin-top:32rpx; margin-bottom:52rpx; }
+.doctor-work-actions .consult-button { flex:1; width:0; min-width:0; min-height:94rpx; border-radius:20rpx; }
+.doctor-work-actions .primary { box-shadow:0 6rpx 16rpx rgba(42,97,186,.12); }
+.doctor-cases-heading { justify-content:flex-start; gap:14rpx; margin-bottom:26rpx; }
+.doctor-section-mark { flex:none; width:6rpx; height:28rpx; border-radius:6rpx; background:#4a79bf; }
+.doctor-case-card { padding:32rpx; margin-bottom:28rpx; border-color:#e0e8f3; box-shadow:0 5rpx 18rpx rgba(36,67,108,.035); }
+.doctor-case-heading { display:flex; align-items:flex-start; gap:18rpx; }
+.doctor-case-heading .consult-list-title { flex:1; min-width:0; margin:0; font-size:30rpx; font-weight:600; line-height:1.65; overflow-wrap:anywhere; }
+.doctor-case-arrow { flex:none; margin-top:2rpx; color:#9baec8; font-size:36rpx; line-height:1.4; }
+.doctor-case-card .consult-list-meta { align-items:center; flex-wrap:wrap; gap:12rpx 18rpx; margin-top:24rpx; padding-top:22rpx; border-top-color:#edf2f8; }
+.doctor-case-status { padding:5rpx 14rpx; border-radius:10rpx; background:#f0f4fa; color:#7b8fa9; line-height:1.5; }
+.doctor-case-status.is-active { background:#eaf2ff; color:#3f6eae; }
+.doctor-case-time { color:#97a6bb; font-size:22rpx; font-variant-numeric:tabular-nums; }

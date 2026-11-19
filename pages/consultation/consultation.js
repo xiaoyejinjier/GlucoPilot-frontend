@@ -6,10 +6,15 @@ const HIDE_MINE_KEY = 'consultationHideMine'
 
 Page({
   data: { displayStyle: '', topics: TOPICS, topic: '', records: [], loading: false, error: '',
-    capabilities: api.PREVIEW_CAPABILITIES, pageNum: 0, hasMore: false, hideMine: false },
+    capabilities: api.PREVIEW_CAPABILITIES, pageNum: 0, hasMore: false, hideMine: false,
+    doctorApproved: false, unclaimedOnly: false },
   onShow() {
     if (!getApp().checkLogin()) return
+    const previous = this._communityToken
     social.begin(this)
+    const app = getApp()
+    if (app.globalData) this.setData({informationCounts:app.globalData.informationCounts || {}})
+    if (previous !== this._communityToken) this.setData({ doctorApproved: false, unclaimedOnly: false, records: [] })
     try { this.setData({ hideMine: wx.getStorageSync(HIDE_MINE_KEY) === true }) } catch (_) {}
     applyDisplayToCurrentPage()
     const tab = typeof this.getTabBar === 'function' && this.getTabBar()
@@ -18,6 +23,7 @@ Page({
   },
   onHide() { social.end(this); this._run = (this._run || 0) + 1 },
   onUnload() { this.onHide() },
+  onConversations() { if (social.active(this)) wx.navigateTo({url:'/pages/consultation-conversations/consultation-conversations'}) },
   async load(reset = true) {
     if (!social.active(this) || (!reset && (this.data.loading || !this.data.hasMore))) return
     const version = this._communityVersion, run = this._run = (this._run || 0) + 1
@@ -25,9 +31,18 @@ Page({
     if (reset) this.setData({ records: [], pageNum: 0, hasMore: false })
     this.setData({ loading: true, error: '' })
     try {
-      const [capabilities, page] = await Promise.all([
-        api.capabilities(), api.list({ pageNum, pageSize: 10, topic: this.data.topic, hideMine: this.data.hideMine })
+      const [capabilities, doctor] = await Promise.all([
+        api.capabilities(), api.doctor().catch(error => {
+          if (error.statusCode === 404 || error.statusCode === 501) return null
+          throw error
+        })
       ])
+      if (!social.active(this, version) || run !== this._run) return
+      const doctorApproved = !!doctor && doctor.status === 'APPROVED'
+      const unclaimedOnly = doctorApproved && this.data.unclaimedOnly
+      this.setData({ doctorApproved, unclaimedOnly, capabilities })
+      const page = await api.list({ pageNum, pageSize: 10, topic: this.data.topic,
+        hideMine: this.data.hideMine, unclaimedOnly })
       if (!social.active(this, version) || run !== this._run) return
       const rows = (page.records || []).map(decorate)
       this.setData({ capabilities, records: reset ? rows : this.data.records.concat(rows),
@@ -48,6 +63,13 @@ Page({
     const hideMine = !this.data.hideMine
     this.setData({ hideMine })
     try { wx.setStorageSync(HIDE_MINE_KEY, hideMine) } catch (_) {}
+    return this.load(true)
+  },
+  onUnclaimedFilter(event) {
+    if (!social.active(this) || !this.data.doctorApproved) return
+    const unclaimedOnly = event.currentTarget.dataset.filter === 'unclaimed'
+    if (unclaimedOnly === this.data.unclaimedOnly) return
+    this.setData({ unclaimedOnly })
     return this.load(true)
   },
   onDoctor() { wx.navigateTo({ url: '/pages/consultation-doctor/consultation-doctor' }) },

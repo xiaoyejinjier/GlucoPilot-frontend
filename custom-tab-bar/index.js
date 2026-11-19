@@ -2,6 +2,8 @@ Component({
   data: {
     selected: 0,
     unreadCount: 0,
+    consultationUnread: 0,
+    consultationNotice: null,
     guideActive: false,
     selectedColor: '#0969da'
   },
@@ -12,9 +14,18 @@ Component({
   methods: {
     refreshGuide() {
       const app = getApp()
-      this.setData({ unreadCount:Number(app.globalData && app.globalData.unreadCount || 0) })
+      const counts = app.globalData && app.globalData.informationCounts || {}
+      this.setData({ unreadCount:Number(app.globalData && app.globalData.unreadCount || 0), consultationUnread:Number(counts.consultations)||0,
+        consultationNotice:Array.isArray(counts.consultationConversations) ? counts.consultationConversations[0] || null : null })
       this._guideToken = typeof app.getNavigationGuideToken === 'function' ? app.getNavigationGuideToken() : ''
       this.setData({ guideActive: !!this._guideToken })
+    },
+
+    onConsultationNotice() {
+      const app = getApp(), notice = this.data.consultationNotice
+      if (typeof app.checkLogin === 'function' && !app.checkLogin()) return
+      if (notice && /^[1-9]\d{0,18}$/.test(String(notice.consultationId)))
+        wx.navigateTo({url:`/pages/consultation-chat/consultation-chat?id=${notice.consultationId}`})
     },
 
     onGuideComplete(event) {

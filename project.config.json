@@ -3,6 +3,14 @@
   "packOptions": {
     "ignore": [
       {
+        "value": ".tmp",
+        "type": "folder"
+      },
+      {
+        "value": "assets/video/demo.mp4",
+        "type": "file"
+      },
+      {
         "value": "docs",
         "type": "folder"
       },

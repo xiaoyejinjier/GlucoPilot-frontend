@@ -5,6 +5,8 @@ module.exports = {
   withdrawalSummary: () => get('/wallet/withdrawals/summary', null, { auth: true }),
   withdrawals: params => get('/wallet/withdrawals', params, { auth: true }),
   withdraw: body => post('/wallet/withdrawals', body, { auth: true }),
+  withdrawalRecipient: (no, body) => post(`/wallet/withdrawals/${encodeURIComponent(no)}/recipient`, body, { auth: true }),
+  refreshWithdrawals: () => post('/wallet/withdrawals/refresh', {}, { auth: true, timeout: 60000 }),
   summary: () => get('/wallet', null, { auth: true }),
   activate: () => post('/wallet/activation', {}, { auth: true }),
   orders: (type, params) => get(type === 'RECHARGE' ? '/wallet/recharge-orders' : '/consultation-orders', params, { auth: true }),

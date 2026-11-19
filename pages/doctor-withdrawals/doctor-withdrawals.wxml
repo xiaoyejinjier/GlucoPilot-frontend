@@ -1,10 +1,51 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="wallet-page" style="{{displayStyle}}">
-  <view class="wallet-balance"><view class="wallet-between"><text>{{i18n.t('医生提现',locale)}}</text><text class="wallet-chip">{{i18n.t('沙箱模拟',locale)}}</text></view><text class="wallet-balance-caption">{{i18n.t('可提现问诊收入（元）',locale)}}</text><text class="wallet-balance-value">{{available}}</text><text class="wallet-balance-note">{{i18n.t('冻结金额',locale)}}：¥{{frozen}}</text></view>
-  <view class="wallet-card"><text class="wallet-title">{{i18n.t('申请提现',locale)}}</text><text class="wallet-muted wallet-block">{{i18n.t('仅问诊收入可提现，充值金额不计入。',locale)}}</text><view wx:if="{{eligible}}"><view class="wallet-custom"><text>¥</text><input type="digit" value="{{amount}}" maxlength="10" bindinput="onAmount" disabled="{{posting}}" placeholder="{{i18n.t('输入金额',locale)}}"/><text class="withdraw-all" bindtap="onAll">{{i18n.t('全部提现',locale)}}</text></view><button class="wallet-primary" loading="{{posting}}" disabled="{{loading || posting || !availableCents}}" bindtap="onApply">{{i18n.t('提交提现申请',locale)}}</button></view><text wx:elif="{{!loading && !error}}" class="wallet-muted wallet-block">{{i18n.t('仅审核通过的医生可申请提现。',locale)}}</text></view>
-  <view class="wallet-note"><text class="wallet-title">{{i18n.t('审核与发放',locale)}}</text><text>{{i18n.t('审核通过后5个工作日模拟发放，节假日和调休以后台工作日历为准。',locale)}}</text><text>{{i18n.t('当前为沙箱测试，不会向支付宝或银行卡真实转账。',locale)}}</text></view>
-  <view wx:if="{{error}}" class="wallet-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('重试',locale)}}</view>
-  <view class="withdraw-heading">{{i18n.t('提现记录',locale)}}</view>
-  <view wx:for="{{records}}" wx:key="orderNo" class="wallet-card withdrawal-row"><view class="wallet-between"><text class="wallet-title">¥{{item.amountLabel}}</text><text class="withdraw-status {{item.status}}">{{i18n.t(item.statusLabel,locale)}}</text></view><text class="wallet-muted wallet-block">{{item.timeLabel}}</text><text class="withdraw-order">{{item.orderNo}}</text><text wx:if="{{item.expectedPayoutDate}}" class="wallet-muted wallet-block">{{i18n.t('预计发放日期',locale)}}：{{item.expectedPayoutDate}}</text><text wx:if="{{item.reviewNote}}" class="withdraw-note">{{i18n.t('审核意见',locale)}}：{{item.reviewNote}}</text><text wx:if="{{item.payoutReference}}" class="wallet-muted wallet-block">{{i18n.t('沙箱模拟流水',locale)}}：{{item.payoutReference}}</text></view>
-  <view wx:if="{{!records.length && !loading && !error}}" class="wallet-muted withdraw-empty">{{i18n.t('暂无提现记录',locale)}}</view><button wx:if="{{hasMore}}" class="wallet-primary" bindtap="onMore" loading="{{loading}}">{{i18n.t('加载更多',locale)}}</button>
+  <view class="wallet-balance">
+    <view class="wallet-between">
+      <text>{{i18n.t('医生提现', locale)}}</text>
+      <view class="withdraw-heading-actions">
+        <text class="wallet-chip">{{i18n.t('支付宝沙箱', locale)}}</text>
+        <button class="withdraw-refresh ui-interactive" loading="{{loading}}" disabled="{{loading || posting}}" bindtap="onRefresh" hover-class="ui-pressed">{{i18n.t('刷新状态', locale)}}</button>
+      </view>
+    </view>
+    <text class="wallet-balance-caption">{{i18n.t('可提现问诊收入（元）', locale)}}</text>
+    <text class="wallet-balance-value">{{available}}</text>
+    <text class="wallet-balance-note">{{i18n.t('冻结金额', locale)}}：¥{{frozen}}</text>
+  </view>
+  <view class="wallet-card">
+    <text class="wallet-title">{{i18n.t('申请提现', locale)}}</text>
+    <text class="wallet-muted wallet-block">{{i18n.t('仅问诊收入可提现，充值金额不计入。', locale)}}</text>
+    <view wx:if="{{eligible}}">
+      <text class="withdraw-payee-label">{{i18n.t('支付宝沙箱买家UID', locale)}}</text>
+      <view class="wallet-custom"><input type="number" value="{{payeeUserId}}" maxlength="32" bindinput="onPayee" disabled="{{posting}}" placeholder="2088…" /></view>
+      <text class="wallet-muted wallet-block">{{i18n.t('从沙箱控制台的买家测试账号中复制UID，不是手机号或密码。', locale)}}</text>
+      <view class="wallet-custom">
+        <text>¥</text><input type="digit" value="{{amount}}" maxlength="10" bindinput="onAmount" disabled="{{posting}}" placeholder="{{i18n.t('输入金额', locale)}}" />
+        <text class="withdraw-all" bindtap="onAll">{{i18n.t('全部提现', locale)}}</text>
+      </view>
+      <button class="wallet-primary" loading="{{posting}}" disabled="{{loading || posting || !availableCents || !transferEnabled}}" bindtap="onApply">{{i18n.t('提交提现申请', locale)}}</button>
+      <text wx:if="{{!transferEnabled}}" class="wallet-muted wallet-block">{{i18n.t('支付宝沙箱转账尚未配置', locale)}}</text>
+    </view>
+    <text wx:elif="{{!loading && !error}}" class="wallet-muted wallet-block">{{i18n.t('仅审核通过的医生可申请提现。', locale)}}</text>
+  </view>
+  <view class="wallet-note">
+    <text class="wallet-title">{{i18n.t('审核与发放', locale)}}</text>
+    <text>{{i18n.t('审核通过后第5个工作日发起支付宝沙箱转账，节假日和调休以后台工作日历为准。', locale)}}</text>
+    <text>{{i18n.t('仅测试资金，查单确认成功后才显示到账；网络异常时保留冻结金额继续核对。', locale)}}</text>
+  </view>
+  <view wx:if="{{error}}" class="wallet-error" bindtap="onRetry">{{i18n.t(error, locale)}} · {{i18n.t('重试', locale)}}</view>
+  <view class="withdraw-heading">{{i18n.t('提现记录', locale)}}</view>
+  <view wx:for="{{records}}" wx:key="orderNo" class="wallet-card withdrawal-row">
+    <view class="wallet-between"><text class="wallet-title">¥{{item.amountLabel}}</text><text class="withdraw-status {{item.status}}">{{i18n.t(item.statusLabel, locale)}}</text></view>
+    <text class="wallet-muted wallet-block">{{item.timeLabel}}</text>
+    <text class="withdraw-order">{{item.orderNo}}</text>
+    <text wx:if="{{item.payeeUserId}}" class="wallet-muted wallet-block">{{i18n.t('沙箱收款UID', locale)}}：{{item.payeeUserId}}</text>
+    <text wx:if="{{item.expectedPayoutDate}}" class="wallet-muted wallet-block">{{i18n.t('预计发放日期', locale)}}：{{item.expectedPayoutDate}}</text>
+    <text wx:if="{{item.reviewNote}}" class="withdraw-note">{{i18n.t('审核意见', locale)}}：{{item.reviewNote}}</text>
+    <text wx:if="{{item.transferErrorCode}}" class="withdraw-note">{{i18n.t('转账核对信息', locale)}}：{{item.transferErrorCode}}</text>
+    <text wx:if="{{item.payoutReference}}" class="wallet-muted wallet-block">{{i18n.t(item.provider === 'ALIPAY_SANDBOX_TRANSFER' ? '支付宝沙箱流水' : '沙箱模拟流水', locale)}}：{{item.payoutReference}}</text>
+    <button wx:if="{{!item.transferStartedAt && (item.status === 'PENDING' || item.status === 'APPROVED')}}" class="withdraw-bind ui-interactive" data-order="{{item.orderNo}}" bindtap="onBindPayee" disabled="{{posting || loading}}" hover-class="ui-pressed">{{i18n.t(item.payeeUserId ? '修改沙箱收款账号' : '补充沙箱收款账号', locale)}}</button>
+  </view>
+  <view wx:if="{{!records.length && !loading && !error}}" class="wallet-muted withdraw-empty">{{i18n.t('暂无提现记录', locale)}}</view>
+  <button wx:if="{{hasMore}}" class="wallet-primary" bindtap="onMore" loading="{{loading}}">{{i18n.t('加载更多', locale)}}</button>
 </view>

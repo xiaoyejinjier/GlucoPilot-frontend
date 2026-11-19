@@ -1,13 +1,26 @@
 const api = require('../services/api')
 const { getToken } = require('./request')
-let timer = null, token = '', epoch = 0, busy = false, latest = '', latestNotice = '', latestReport = '', enabled = false
+let timer = null, token = '', epoch = 0, busy = false, latest = '', latestNotice = '', latestReport = '', latestConsultation = '', enabled = false
+let promptedConsultations = new Set()
+function consultationConversations(value) {
+  const rows = Array.isArray(value) ? value : [], byId = new Map()
+  for (const row of rows) {
+    const id = String(row && row.consultationId || '')
+    if (!/^[1-9]\d{0,18}$/.test(id) || !count(row.unreadCount)) continue
+    const previous = byId.get(id)
+    if (!previous || compareId(row.lastMessageId, previous.lastMessageId) > 0) byId.set(id, { ...row, consultationId:id, unreadCount:count(row.unreadCount) })
+  }
+  return [...byId.values()].sort((a,b) => compareId(b.lastMessageId, a.lastMessageId))
+}
+function compareId(first, second) { const a=String(first||''),b=String(second||'');return a.length-b.length||(a<b?-1:a>b?1:0) }
 function count(value) { const number = Number(value); return Number.isFinite(number) ? Math.max(0,Math.floor(number)) : 0 }
 function label(value) { const n = count(value); return n > 99 ? '99+' : n ? String(n) : '' }
 function currentApp(owner) { return owner || (typeof getApp === 'function' ? getApp() : null) }
 function publish(value, owner) {
   const source = value && typeof value === 'object' ? value : { messages:value }
-  const counts = Object.fromEntries(['messages','likes','collections','comments','follows','reports'].map(key => [key,count(source[key])]))
+  const counts = Object.fromEntries(['messages','likes','collections','comments','follows','reports','consultations'].map(key => [key,count(source[key])]))
   counts.total = Object.values(counts).reduce((sum,n) => sum+n,0)
+  counts.consultationConversations = consultationConversations(source.consultationConversations)
   const n = counts.total, app = currentApp(owner)
   if (app && app.globalData) {
     app.globalData.unreadCount = n
@@ -15,9 +28,11 @@ function publish(value, owner) {
   }
   const pages = getCurrentPages(), page = pages[pages.length - 1]
   if (!page) return
+  const reading = page.route === 'pages/consultation-chat/consultation-chat' ? String(page._id || '') : ''
+  const consultationNotice = counts.consultationConversations.find(row => row.consultationId !== reading) || null
   page.setData({ unreadCount:n, unreadLabel:label(n), informationCounts:counts })
   const tab = typeof page.getTabBar === 'function' && page.getTabBar()
-  if (tab) tab.setData({ unreadCount:n })
+  if (tab) tab.setData({ unreadCount:n, consultationUnread:counts.consultations, consultationNotice })
 }
 async function refresh(force = false) {
   if (!getToken()) { reset(); return }
@@ -52,6 +67,22 @@ async function refresh(force = false) {
       latestReport=reportId
       if(count(state.reports)>0&&(!page||page.route!=='pages/community-reports/community-reports'))wx.showToast({title:'举报有了处理反馈，可在我的举报查看',icon:'none',duration:2500})
     }
+    const threads = consultationConversations(state.consultationConversations)
+    if (Array.isArray(state.consultationConversations)) {
+      const unreadIds = new Set(threads.map(row => row.consultationId))
+      promptedConsultations = new Set([...promptedConsultations].filter(id => unreadIds.has(id)))
+      const fresh = threads.find(row => !promptedConsultations.has(row.consultationId) && !(page && page.route === 'pages/consultation-chat/consultation-chat' && String(page._id) === row.consultationId))
+      const tab = page && typeof page.getTabBar === 'function' && page.getTabBar()
+      if (fresh && !tab) wx.showToast({title:'收到新的问诊消息，可在问诊消息中查看',icon:'none',duration:3500})
+      // 同一未读会话只提示一次；连续消息更新原会话的数量。
+      for (const row of threads) promptedConsultations.add(row.consultationId)
+    } else {
+      const consultationId = String(state.latestConsultationMessageId || '')
+      if (consultationId && compareId(consultationId, latestConsultation) > 0) {
+        latestConsultation = consultationId
+        if (count(state.consultations) > 0 && (!page || page.route !== 'pages/consultation-chat/consultation-chat')) wx.showToast({ title:'收到新的问诊消息，可在问诊消息中查看',icon:'none',duration:3500 })
+      }
+    }
   } catch (_) { /* Quiet polling never blocks navigation or reveals message content. */ }
   finally { if (epoch === version) busy = false }
 }
@@ -63,7 +94,7 @@ function start() {
     if (app && app.globalData) publish(app.globalData.informationCounts || app.globalData.unreadCount, app)
     return
   }
-  if (token !== current) { latest = latestNotice = latestReport = ''; publish(0) }
+  if (token !== current) { latest = latestNotice = latestReport = latestConsultation = ''; promptedConsultations = new Set(); publish(0) }
   stop(); token = current; enabled = true; refresh()
   timer = setInterval(refresh,5000)
 }
@@ -72,5 +103,5 @@ function stop() {
   timer = null; epoch++; busy = false; enabled = false
   // Keep the high-water mark across a background/foreground cycle of this account.
 }
-function reset(owner) { stop(); token = ''; latest = latestNotice = latestReport = ''; publish(0, owner) }
-module.exports = { start, stop, reset, refresh, count, label }
+function reset(owner) { stop(); token = ''; latest = latestNotice = latestReport = latestConsultation = ''; promptedConsultations = new Set(); publish(0, owner) }
+module.exports = { start, stop, reset, refresh, count, label, consultationConversations }

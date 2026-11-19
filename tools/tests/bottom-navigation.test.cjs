@@ -5,6 +5,16 @@ const path = require('node:path')
 const vm = require('node:vm')
 const root = path.resolve(__dirname, '../..')
 
+test('问诊消息横幅打开对应聊天，不自动已读；返回主页面可恢复未读入口',()=>{
+ let definition;const pages=[]
+ const app={globalData:{unreadCount:2,informationCounts:{consultations:2,consultationConversations:[{consultationId:'8',unreadCount:2}]}},checkLogin:()=>true}
+ vm.runInNewContext(fs.readFileSync(path.join(root,'custom-tab-bar/index.js'),'utf8'),{Component:value=>definition=value,getApp:()=>app,wx:{navigateTo:value=>pages.push(value)}})
+ const bar={...definition.methods,data:{...definition.data},setData(value){Object.assign(this.data,value)}}
+ definition.lifetimes.attached.call(bar);assert.equal(bar.data.consultationUnread,2)
+ bar.onConsultationNotice();assert.equal(pages[0].url,'/pages/consultation-chat/consultation-chat?id=8')
+ app.globalData.informationCounts={};bar.refreshGuide();assert.equal(bar.data.consultationNotice,null)
+})
+
 function createNavigation() {
   let definition
   const requests = [], pages = [], events = [], measurements = []

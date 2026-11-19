@@ -1,5 +1,5 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
-<view class="consult-page" style="{{displayStyle}}">
+<view class="consult-page doctor-workspace" style="{{displayStyle}}">
   <view class="consult-hero"><text class="consult-hero-title">{{i18n.t('医生工作台',locale)}}</text><text class="consult-hero-note">{{i18n.t('完成身份审核后，可接诊并出具问诊单。',locale)}}</text></view>
   <view wx:if="{{loading}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
   <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('重试',locale)}}</view>
@@ -27,9 +27,14 @@
       <text wx:elif="{{walletActivated}}" class="consult-body">{{i18n.t('已准备就绪，可以前往求助广场接诊。',locale)}}</text>
       <view class="consult-row" bindtap="onWithdrawals"><text class="consult-link">{{i18n.t('问诊收入与提现记录',locale)}} ›</text></view>
     </view>
-    <view class="consult-hero-actions"><button class="consult-button primary" bindtap="onFind">{{i18n.t('前往接诊',locale)}}</button><button class="consult-button" bindtap="onWallet">{{i18n.t('我的钱包',locale)}}</button></view>
-    <view class="consult-heading"><text class="consult-title">{{i18n.t('我接诊的求助',locale)}}</text></view>
-    <view wx:for="{{records}}" wx:key="id" class="consult-card" data-id="{{item.id}}" bindtap="onOpen"><text class="consult-list-title">{{item.title}}</text><view class="consult-list-meta"><text>{{i18n.t(item.statusLabel,locale)}}</text><text>{{item.timeLabel}}</text></view></view>
-    <view wx:if="{{!records.length && !loading}}" class="consult-state">{{i18n.t('暂无接诊记录',locale)}}</view>
+    <view class="consult-hero-actions doctor-work-actions"><button class="consult-button primary" bindtap="onFind" hover-class="ui-pressed">{{i18n.t('前往接诊',locale)}}</button><button class="consult-button" bindtap="onWallet" hover-class="ui-pressed">{{i18n.t('我的钱包',locale)}}</button></view>
+    <view class="doctor-cases-section">
+      <view class="consult-heading doctor-cases-heading"><view class="doctor-section-mark"></view><text class="consult-title">{{i18n.t('我接诊的求助',locale)}}</text></view>
+      <view wx:for="{{records}}" wx:key="id" class="consult-card doctor-case-card" data-id="{{item.id}}" bindtap="onOpen" hover-class="ui-pressed">
+        <view class="doctor-case-heading"><text class="consult-list-title">{{item.title}}</text><text class="doctor-case-arrow" aria-hidden="true">›</text></view>
+        <view class="consult-list-meta"><text class="doctor-case-status {{item.status === 'IN_PROGRESS' ? 'is-active' : ''}}">{{i18n.t(item.statusLabel,locale)}}</text><text class="doctor-case-time">{{item.timeLabel}}</text></view>
+      </view>
+      <view wx:if="{{!records.length && !loading}}" class="consult-state">{{i18n.t('暂无接诊记录',locale)}}</view>
+    </view>
   </block>
 </view>

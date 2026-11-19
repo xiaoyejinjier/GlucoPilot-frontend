@@ -1,0 +1,49 @@
+@import "../../styles/wallet.wxss";
+.cashier-page {
+  padding-top: 64rpx;
+}
+.cashier-state {
+  padding: 48rpx 32rpx;
+  text-align: center;
+}
+.cashier-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18rpx;
+  min-height: 180rpx;
+  color: #6f85a5;
+  font-size: 27rpx;
+}
+.cashier-error {
+  margin: 28rpx 0 36rpx;
+  line-height: 1.8;
+}
+.cashier-success {
+  width: 110rpx;
+  height: 110rpx;
+  margin: 0 auto 30rpx;
+  border-radius: 50%;
+  background: #e9f2ff;
+  color: #355e97;
+  font-size: 68rpx;
+  line-height: 110rpx;
+}
+.cashier-state button {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 88rpx;
+  margin: 20rpx 0 0;
+  padding: 20rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+.cashier-return {
+  border: 1rpx solid #d6e2f4;
+  border-radius: 20rpx;
+  background: #f2f6fd;
+  color: #365c94;
+}
+.cashier-return::after {
+  border: none;
+}

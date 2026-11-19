@@ -11,7 +11,7 @@ function createFlow(options = {}) {
     storage: new Map(Object.entries(options.storage || {})),
     route: options.route || 'pages/login/login',
     profile: { disclaimerAgreed: false, disclaimerVersion: '', ...options.profile },
-    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: []
+    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: [], sms:[]
   }
   const token = () => state.storage.get('accessToken') || ''
   const request = { getToken: token, setToken(value) { if (value) state.storage.set('accessToken', value); else state.storage.delete('accessToken') } }
@@ -33,8 +33,8 @@ function createFlow(options = {}) {
       state.profile = { ...state.profile, disclaimerAgreed: true, disclaimerVersion: version }
     },
     async wechatLogin(code) { state.logins.push(['wechat', code]); request.setToken('new-token'); return { accessToken: token() } },
-    async phoneLogin(phone, code) { state.logins.push(['phone', phone, code]); request.setToken('new-token'); return { accessToken: token() } },
-    async sendSmsCode() {}
+    async phoneLogin(phone, code) { state.logins.push(['phone', phone, code]); if(options.phoneLoginError)throw options.phoneLoginError; request.setToken('new-token'); return { accessToken: token() } },
+    async sendSmsCode(...args) { state.sms.push(args) }
   }
   const wx = {
     getWindowInfo: () => options.windowInfo || { statusBarHeight: 0 },
@@ -88,6 +88,42 @@ function createFlow(options = {}) {
 }
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+test('成功手机号登录后记住号码，重新打开默认填入且仅主动点击才发送验证码',async()=>{
+ const flow=createFlow(),first=flow.page('login')
+ flow.app.goAfterLogin=()=>{}
+ first.onPhoneLogin();assert.equal(first.data.phone,'');assert.equal(first.data.lastLoginPhone,'')
+ first.onPhoneInput({detail:{value:'13800000001'}});first.onSmsInput({detail:{value:'123456'}})
+ first.onConfirmPhoneLogin();await flush()
+ assert.equal(flow.state.storage.get('lastLoginPhone'),'13800000001');assert.equal(first.data.smsCode,'')
+ const next=flow.page('login');next.onLoad();next.onPhoneLogin()
+ assert.equal(next.data.phone,'13800000001');assert.equal(next.data.usingLastPhone,true)
+ assert.equal(flow.state.sms.length,0);assert.equal(next.data.smsCode,'')
+ next.onSendSms();await flush();assert.deepEqual(flow.state.sms[0],['13800000001','login'])
+})
+
+test('默认号码可清空改填或一键恢复，切换号码会清除验证码且不覆盖成功登录历史',()=>{
+ const flow=createFlow({storage:{lastLoginPhone:'13800000001'}}),page=flow.page('login')
+ page.onPhoneLogin();page.onSmsInput({detail:{value:'123456'}});page.onSwitchPhone()
+ assert.equal(page.data.phone,'');assert.equal(page.data.smsCode,'');assert.equal(page.data.phoneFocus,true)
+ page.onPhoneInput({detail:{value:'13900000002'}});page.onSmsInput({detail:{value:'654321'}})
+ page.onPhoneInput({detail:{value:'13900000003'}});assert.equal(page.data.smsCode,'')
+ page.onSwitchPhone();assert.equal(page.data.phone,'13800000001');assert.equal(page.data.usingLastPhone,true)
+ assert.equal(flow.state.storage.get('lastLoginPhone'),'13800000001');assert.equal(flow.state.sms.length,0)
+})
+
+test('错误验证码登录失败不覆盖历史号码，已有资料可兼容回填但不使用脱敏或损坏号码',async()=>{
+ const failed=createFlow({storage:{lastLoginPhone:'13800000001'},phoneLoginError:new Error('验证码错误')})
+ const page=failed.page('login');page.onPhoneLogin();page.onPhoneInput({detail:{value:'13900000002'}})
+ page.onSmsInput({detail:{value:'000000'}});page.onConfirmPhoneLogin();await flush()
+ assert.equal(failed.state.storage.get('lastLoginPhone'),'13800000001');assert.equal(failed.app.globalData.isLoggedIn,false)
+ const prior=createFlow({storage:{userInfo:{phone:'13700000003'}}}).page('login');prior.onPhoneLogin()
+ assert.equal(prior.data.phone,'13700000003');assert.equal(prior.data.usingLastPhone,true)
+ for(const saved of ['138****0001',{phone:'13800000001'},'not-a-phone']){
+  const invalid=createFlow({storage:{lastLoginPhone:saved,userInfo:{phone:'138****0001'}}}).page('login')
+  invalid.onPhoneLogin();assert.equal(invalid.data.phone,'');assert.equal(invalid.data.usingLastPhone,false)
+ }
+})
 
 test('全局会话失效只提示并跳转一次，清理账号缓存并保留服务器地址', () => {
   const { app, state } = createFlow({ route: 'pages/messages/messages', storage: {

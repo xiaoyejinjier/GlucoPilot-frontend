@@ -51,3 +51,24 @@ test('举报反馈计入全局数量，查看后归零，不把已读回退的�
   state.queue.push(Promise.resolve({reports:0,total:0}));await n.refresh();assert.equal(page.data.unreadLabel,'');assert.equal(tab.unreadCount,0)
   page.route='pages/community-reports/community-reports';state.queue.push(Promise.resolve({reports:1,total:1,latestReportId:'11'}));await n.refresh();assert.equal(state.toasts.length,1);n.stop()
 })
+
+test('问诊横幅可直达具体会话，同一会话连续消息只更新数量，其他会话仍提醒',async()=>{
+ const {notifications:n,state,page,tab}=harness(true)
+ const value=(id,count=1)=>({consultationId:String(id),lastMessageId:String(count+10),unreadCount:count,peerName:'接诊医生'})
+ state.queue.push(Promise.resolve({total:1,consultations:1,consultationConversations:[value(8)]}))
+ n.start();await flush();assert.equal(tab.consultationNotice.consultationId,'8');assert.equal(state.toasts.length,0)
+ state.queue.push(Promise.resolve({total:2,consultations:2,consultationConversations:[value(8,2),value(8,2)]}))
+ await n.refresh();assert.equal(tab.consultationNotice.unreadCount,2)
+ assert.equal(page.data.informationCounts.consultationConversations.length,1);assert.equal(state.toasts.length,0)
+ page.route='pages/consultation-chat/consultation-chat';page._id='8'
+ state.queue.push(Promise.resolve({total:3,consultations:3,consultationConversations:[value(8,2),value(9)]}))
+ page.getTabBar=()=>null;await n.refresh();assert.equal(state.toasts.length,1)
+ assert.match(state.toasts[0].title,/问诊/)
+ state.queue.push(Promise.resolve({total:4,consultations:4,consultationConversations:[value(8,2),value(9,2)]}))
+ await n.refresh();assert.equal(state.toasts.length,1)
+ state.queue.push(Promise.resolve({total:0,consultations:0,consultationConversations:[]}));await n.refresh(true)
+ page.getTabBar=()=>tab
+ state.queue.push(Promise.resolve({total:1,consultations:1,consultationConversations:[value(8,3)]}));page.route='pages/ai/ai'
+ await n.refresh();assert.equal(tab.consultationNotice.consultationId,'8')
+ n.stop()
+})

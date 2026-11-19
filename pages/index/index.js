@@ -8,14 +8,22 @@ const { applyDisplayToCurrentPage } = require('../../utils/display')
 
 Page({
   data: { displayStyle: '', tags: [], otherTags:[],otherSelected:false,tagsError:'',activeTag: '', feedMode: 'recommend', posts: [],
-    loading: false, error: '', pageNum: 0, hasMore: false, searchMounted: false, searchOpen: false },
+    loading: false, error: '', pageNum: 0, hasMore: false, searchMounted: false, searchOpen: false, showBackToTop: false },
   onShow() {
     if (!getApp().checkLogin()) return
     const tabBar = typeof this.getTabBar === 'function' && this.getTabBar()
     if (tabBar) { tabBar.setData({ selected: 2 }); if (tabBar.refreshGuide) tabBar.refreshGuide() }
     const token = this._communityToken; social.begin(this); applyDisplayToCurrentPage()
-    if (token && token !== this._communityToken) this.setData({ posts: [], activeTag: '', feedMode: 'recommend',tags:[],otherTags:[],otherSelected:false })
-    this._busy = new Set(); this.load(true)
+    const sessionChanged = token !== this._communityToken
+    if (sessionChanged) {
+      this._feedLoaded = false
+      this._recommendationSeed = null
+      if (token) this.setData({ posts: [], activeTag: '', feedMode: 'recommend', tags: [], otherTags: [], otherSelected: false, pageNum: 0, hasMore: false, loading: false, error: '' })
+    }
+    this._busy = new Set()
+    // 阅读返回或切回社区时保留本轮推荐；重新登录、下拉刷新再换一批。
+    if (this.data.feedMode !== 'recommend' || !this._feedLoaded) this.load(true)
+    else if (this.data.loading) this.setData({ loading: false })
     this.loadTags()
   },
   async loadTags() {
@@ -77,6 +85,7 @@ Page({
     const version = this._communityVersion, run = this._loadRun = (this._loadRun || 0) + 1
     const pageNum = reset ? 1 : this.data.pageNum + 1
     const recommend = this.data.feedMode === 'recommend'
+    if (reset) this._feedLoaded = false
     if (recommend && (reset || !this._recommendationSeed)) this._recommendationSeed = social.requestId()
     const refreshSeed = this._recommendationSeed
     const excludeIds = recommend && !reset ? this.data.posts.map(post => String(post.id)).slice(0,200).join(',') : ''
@@ -100,6 +109,7 @@ Page({
       }))
       if (!social.active(this, version) || run !== this._loadRun) return
       const map = new Map((reset || hot ? [] : this.data.posts).map(post => [post.id, post])); records.forEach(post => map.set(post.id, post))
+      this._feedLoaded = true
       this.setData({ posts: Array.from(map.values()), pageNum: hot ? 1 : pageNum, hasMore: hot ? false : pageNum < Number(page.pages), loading: false })
       // 单独记录列表下发，不当作真实阅读；迟到响应及其他账号不登记。
       if (recommend && records.length && typeof api.recordRecommendationExposures === 'function') {
@@ -145,6 +155,13 @@ Page({
   },
   onSearchOverlayTouchMove() {},
   onRetry() { this.load(true) },
+  onPageScroll(e) {
+    const showBackToTop = Number(e.scrollTop) > 400
+    if (showBackToTop !== this.data.showBackToTop) this.setData({ showBackToTop })
+  },
+  onBackToTop() {
+    wx.pageScrollTo({ scrollTop: 0, duration: 250 })
+  },
   onMore() { this.load(false) },
   onReachBottom() { this.load(false) },
   async onPullDownRefresh() { try { await Promise.all([this.loadTags(),this.load(true)]) } finally { wx.stopPullDownRefresh() } },

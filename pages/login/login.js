@@ -5,6 +5,8 @@ const config = require('../../utils/config')
 const app = getApp()
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const LAST_LOGIN_PHONE_KEY = 'lastLoginPhone'
+const PHONE_RE = /^1\d{10}$/
 
 Page({
   data: {
@@ -12,6 +14,9 @@ Page({
     loginLayoutStyle: '',
     phonePanel: false,
     phone: '',
+    lastLoginPhone: '',
+    usingLastPhone: false,
+    phoneFocus: false,
     smsCode: '',
     smsCooldown: 0,
     emailPanel: false,
@@ -94,7 +99,18 @@ Page({
   },
 
   onPhoneLogin() {
-    this.setData({ phonePanel: true, emailPanel: false })
+    if (this.data.phonePanel) return
+    let lastLoginPhone = ''
+    try {
+      const saved = wx.getStorageSync(LAST_LOGIN_PHONE_KEY)
+      // 兼容此前登录过的账号；脱敏号码不能用于发送验证码。
+      const previous = typeof saved === 'string' && PHONE_RE.test(saved) ? null : wx.getStorageSync('userInfo')
+      const candidate = previous ? previous.phone : saved
+      if (typeof candidate === 'string' && PHONE_RE.test(candidate)) lastLoginPhone = candidate
+    } catch (_) { /* 本地缓存不可用时仍可手动输入。 */ }
+    this.setData({ phonePanel: true, emailPanel: false, lastLoginPhone,
+      phone: lastLoginPhone || this.data.phone, usingLastPhone: !!lastLoginPhone,
+      smsCode: '', phoneFocus: false })
   },
 
   onClosePhonePanel() {
@@ -102,7 +118,16 @@ Page({
   },
 
   onPhoneInput(e) {
-    this.setData({ phone: e.detail.value.trim() })
+    const phone = e.detail.value.trim()
+    this.setData({ phone, usingLastPhone: !!this.data.lastLoginPhone && phone === this.data.lastLoginPhone,
+      ...(phone !== this.data.phone ? { smsCode: '' } : {}) })
+  },
+
+  onSwitchPhone() {
+    if (!this.data.lastLoginPhone) return
+    const useLast = !this.data.usingLastPhone
+    this.setData({ phone: useLast ? this.data.lastLoginPhone : '', usingLastPhone: useLast,
+      smsCode: '', phoneFocus: !useLast })
   },
 
   onSmsInput(e) {
@@ -156,7 +181,9 @@ Page({
     phoneLogin(phone, smsCode)
       .then((data) => {
         wx.hideLoading()
-        this.setData({ phonePanel: false })
+        // 仅成功登录后记住本设备上次号码，不缓存验证码或自动发送短信。
+        try { wx.setStorageSync(LAST_LOGIN_PHONE_KEY, phone) } catch (_) {}
+        this.setData({ phonePanel: false, lastLoginPhone: phone, smsCode: '' })
         this.finishLogin(data)
       })
       .catch((err) => {

@@ -11,7 +11,7 @@
     <view class="consult-field"><text class="consult-field-title">{{i18n.t('补充图片（选填）',locale)}}</text><text class="consult-field-note">{{i18n.t('最多6张，每张不超过5MB，仅本人及接诊医生可见。',locale)}}</text><view class="consult-photo-grid"><view wx:for="{{images}}" wx:key="mediaId" class="consult-photo-cell"><image src="{{item.url}}" mode="aspectFill" data-url="{{item.url}}" bindtap="onPreviewImage"/><button class="consult-photo-remove" data-id="{{item.mediaId}}" bindtap="onRemoveImage" disabled="{{saving || uploading}}">×</button></view><button wx:if="{{images.length < 6}}" class="consult-photo-add" bindtap="onAddImage" disabled="{{saving || uploading}}" loading="{{uploading}}"><text>＋</text><text>{{i18n.t('添加图片',locale)}}</text></button></view></view>
     <view class="consult-anonymous"><view><text class="consult-field-title">{{i18n.t('匿名展示求助',locale)}}</text><text class="consult-muted">{{i18n.t('广场不展示你的昵称和联系方式',locale)}}</text></view><switch checked="{{form.anonymous}}" color="#2a61ba" bindchange="onAnonymous" /></view>
   </view>
-  <view wx:if="{{error}}" class="consult-error">{{i18n.t(error,locale)}}</view>
+  <view wx:if="{{error}}" id="consultation-submit-error" class="consult-error">{{i18n.t(error,locale)}}</view>
   <text class="consult-fine-print">{{i18n.t('完整健康资料仅用于本人及获准接诊医生查看。',locale)}}</text>
   <view class="consult-footer"><view class="consult-footer-actions"><button class="consult-button" bindtap="onPreview" disabled="{{saving}}" hover-class="ui-pressed">{{i18n.t('预览求助',locale)}}</button><button class="consult-button primary" bindtap="onSubmit" loading="{{saving}}" disabled="{{saving}}" hover-class="ui-pressed">{{i18n.t('发布求助',locale)}}</button></view><text class="consult-footer-note">{{i18n.t('医生出具问诊单后，再按需支付查看',locale)}}</text></view>
 </view>

@@ -34,12 +34,8 @@
 .report-count{display:block;text-align:right;margin-top:10rpx;color:#97a6b9;font-size:21rpx}
 .report-submit-note{margin:6rpx 0 24rpx;color:#7f90a7;font-size:23rpx;line-height:1.8}
 .report-editor>.consult-button{width:100%}
-.consultation-chat-row{display:flex;flex-direction:column;align-items:flex-start;gap:8rpx;margin:22rpx 0}
-.consultation-chat-row.mine{align-items:flex-end}
-.consultation-chat-bubble{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:16rpx;padding:18rpx 22rpx;background:#f1f5fb;color:#3f5878;font-size:27rpx}
-.mine .consultation-chat-bubble{background:#e6efff;color:#2b5289}
-.consultation-chat-compose{padding-top:22rpx;border-top:1rpx solid #e5edf7}
-.consultation-chat-compose textarea{height:auto;min-height:140rpx;margin-bottom:18rpx}
-.consultation-chat-compose button{width:100%}
-.chat-history{font-size:23rpx;line-height:1.6;padding:12rpx;border:0;background:#f3f7fd;color:#5f7fa9}
-.chat-history::after{border:0}
+.consultation-chat-entry{display:flex;align-items:center;gap:20rpx}
+.consultation-chat-entry-copy{flex:1;min-width:0}
+.consultation-chat-entry-copy text{display:block}
+.consultation-chat-entry-copy .consult-muted{margin-top:10rpx;line-height:1.6}
+.consultation-chat-entry>.consult-link{flex:none}

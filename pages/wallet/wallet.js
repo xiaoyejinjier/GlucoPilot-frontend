@@ -82,8 +82,9 @@ Page({
     if (!social.active(this) || this.data.creating || !this.data.rechargeEnabled) return
     const amount = amountCents(this.data.useCustom ? this.data.custom : this.data.selected)
     if (amount == null) return
-    if (!this._attempt || this._attempt.amountCents !== amount)
-      this._attempt = { amountCents: amount, clientRequestId: social.requestId() }
+    const paymentMode = 'PAGE'
+    if (!this._attempt || this._attempt.amountCents !== amount || this._attempt.paymentMode !== paymentMode)
+      this._attempt = { amountCents: amount, clientRequestId: social.requestId(), paymentMode }
     const version = this._communityVersion
     this.setData({ creating: true })
     try {

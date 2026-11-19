@@ -1882,3 +1882,93 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 对话已删除	Chat deleted
 条消息	messages
 历史对话只能查看，继续聊天请点「回到当前对话」	Past chats are read-only. Tap Back to current chat to continue.
+
+回到顶部	Back to top
+顶部	Top
+支付宝沙箱买家UID	Alipay sandbox buyer UID
+从沙箱控制台的买家测试账号中复制UID，不是手机号或密码。	Copy the UID from the sandbox buyer test account, not a phone number or password.
+支付宝沙箱转账尚未配置	Alipay sandbox transfers are not configured
+审核通过后第5个工作日发起支付宝沙箱转账，节假日和调休以后台工作日历为准。	An Alipay sandbox transfer starts on the fifth business day after approval, using the configured work calendar.
+仅测试资金，查单确认成功后才显示到账；网络异常时保留冻结金额继续核对。	Test funds only. Receipt is shown after verification. Funds remain frozen while an uncertain result is checked.
+沙箱收款UID	Sandbox recipient UID
+转账核对信息	Transfer verification
+支付宝沙箱流水	Alipay sandbox reference
+修改沙箱收款账号	Change sandbox recipient
+补充沙箱收款账号	Add sandbox recipient
+已到账沙箱钱包	Received in sandbox wallet
+转账失败，已退回	Transfer failed; funds returned
+待补充收款账号	Recipient required
+转账处理中	Transfer processing
+转账待核实	Transfer awaiting verification
+请填写支付宝沙箱买家UID	Enter the Alipay sandbox buyer UID
+请先在上方填写支付宝沙箱买家UID	Enter the sandbox buyer UID above first
+确认沙箱收款账号	Confirm sandbox recipient
+请输入可提现范围内的金额，至少0.10元，最多两位小数	Enter an available amount of at least CNY 0.10 with up to two decimal places
+提交后冻结对应问诊收入，审核通过后第5个工作日转入填写的支付宝沙箱账号，仅测试资金。	The income will be frozen and transferred to the entered sandbox account on the fifth business day after approval. Test funds only.
+当前为支付宝沙箱测试，医生提现通过沙箱转账核对，不涉及真实资金。	Alipay sandbox testing only. Doctor withdrawals use verified sandbox transfers, with no real funds.
+请填写不同于付款商家的支付宝沙箱买家UID	Enter a sandbox buyer UID different from the paying merchant
+该提现已开始出款或已结束，不能修改收款账号	The recipient cannot change after payout starts or the withdrawal ends
+请先由本人补充支付宝沙箱收款UID	The owner must add the sandbox recipient UID first
+沙箱商家配置已变化，请核对后再出款	The sandbox merchant configuration changed; verify it before payout
+未接诊	Unclaimed
+暂无未接诊的求助	No unclaimed requests
+可以切换全部求助，或稍后刷新查看。	View all requests or refresh again later.
+未接诊筛选仅用于求助广场	The unclaimed filter is only available in the request square
+仅患者本人和接诊医生可见	Visible only to the patient and assigned doctor
+患	Pt
+有新消息，点击查看	New messages. Tap to view
+消息最多2000字	Messages can contain up to 2,000 characters
+问诊尚未接诊或无权交流	This request has not been claimed or you cannot access this chat
+已读状态更新失败，稍后重试	Unable to update read status. Please try again
+打开具体问诊交流后，消息才会标记为已读。	Messages are marked read after you open the relevant chat.
+暂无问诊交流，接诊后可从详情进入。	No consultation chats yet. Open the details after a doctor accepts the request.
+与对方沟通情况，交流记录仅双方可见。	Discuss your situation privately with the other participant.
+进入交流	Open chat
+收到新的问诊消息，可在提醒与回复查看	New consultation message. See Notifications and replies
+交流消息不存在或无权查看	The message does not exist or you cannot access it
+问诊已结束，不能继续发送	This consultation has ended. You can no longer send messages
+问诊新消息	New consultation message
+问诊消息	Consultation messages
+与接诊医生或患者的交流都在这里	Your chats with assigned doctors or patients are here
+收到新的问诊消息，可在问诊消息中查看	New consultation message. Open Consultation messages to view it
+已填入上次登录的手机号	Your last sign-in phone number is filled in
+可以使用上次登录的手机号	You can use your last sign-in phone number
+换个手机号	Use another number
+使用上次手机号	Use previous number
+使用沙箱买家测试账号付款	Pay with an Alipay sandbox buyer account
+网页账号付款	Pay on the web
+电脑浏览器登录付款	Sign in on a computer
+扫码付款	Scan to pay
+沙箱钱包扫码	Scan with sandbox wallet
+付款已过期	Payment has expired
+正在准备付款…	Preparing payment…
+在电脑浏览器完成付款	Complete payment in a computer browser
+复制付款链接并在电脑浏览器打开，选择支付宝账号付款，输入沙箱买家账号和支付密码。	Copy the payment link and open it in a computer browser. Choose Alipay account payment and enter your sandbox buyer account and payment password.
+复制网页付款链接	Copy web payment link
+重新加载付款链接	Reload payment link
+账号与支付密码请在支付宝沙箱收银台输入。买家测试账号和支付密码可在支付宝开放平台沙箱账号页面查看。	Enter your account and payment password on the Alipay sandbox cashier page. Find your test buyer account and payment password in the Alipay sandbox console.
+付款链接已过期，请查询付款结果或重新充值	The payment link expired. Check the result or create a new recharge order.
+网页付款链接加载失败，请重试	Could not load the web payment link. Please retry.
+付款链接已复制	Payment link copied
+请粘贴到电脑浏览器打开，在支付宝沙箱收银台选择账号付款，使用沙箱买家测试账号和支付密码。付款后返回此页查询结果。	Paste the link into a computer browser. On the Alipay sandbox cashier page, choose account payment and use your sandbox buyer account and payment password. Return here to check the result.
+复制失败，请重试	Could not copy. Please retry.
+付款方式不正确	Invalid payment method
+同一充值请求不能修改金额或付款方式	The amount and payment method must stay the same when retrying a recharge request.
+支付宝沙箱付款	Alipay sandbox payment
+点击下方按钮进入支付宝沙箱收银台，使用买家测试账号完成付款。	Open the Alipay sandbox cashier below and pay with your test buyer account.
+前往支付宝沙箱付款	Continue to Alipay sandbox
+此订单使用旧付款方式，请重新充值生成网页付款订单。	This order uses an older payment method. Create a new recharge order to pay on the web.
+付款后返回此页查询结果。	Return to this page after payment to check the result.
+付款有效期异常，请重试	Invalid payment expiry. Please retry.
+付款页面打开失败，请重试	Could not open the payment page. Please retry.
+沙箱充值已到账，请返回查看订单	The sandbox recharge is credited. Go back to view the order.
+订单已关闭，请返回查看订单	The order is closed. Go back to view the order.
+付款已过期，请返回重新充值	Payment has expired. Go back to create a new recharge order.
+微信未能打开收银台，可能受到业务域名限制。	WeChat could not open the cashier. Business domain restrictions may apply.
+正在打开支付宝沙箱…	Opening Alipay sandbox…
+支付宝沙箱收银台	Alipay sandbox cashier
+重试打开	Try opening again
+返回付款页	Back to payment
+付款成功	Payment successful
+沙箱充值已到账，点击返回付款页查看结果。	Your sandbox recharge is credited. Go back to the payment page to view the result.
+付款成功，可返回原付款页查看结果。	Payment successful. Return to the payment page to view the result.

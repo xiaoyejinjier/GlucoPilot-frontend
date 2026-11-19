@@ -22,9 +22,9 @@
     <text class="wallet-muted wallet-block">{{i18n.t('单次充值1～1000元',locale)}}</text>
     <view class="wallet-amounts"><view wx:for="{{amounts}}" wx:key="*this" class="wallet-amount {{!useCustom && selected === item ? 'selected' : ''}}" data-amount="{{item}}" bindtap="onAmount" hover-class="ui-pressed"><text>¥ {{item}}</text><text>{{i18n.t('充值',locale)}}</text></view></view>
     <view class="wallet-custom {{useCustom ? 'selected' : ''}}"><text>{{i18n.t('其他金额',locale)}}</text><input type="digit" maxlength="7" value="{{custom}}" placeholder="{{i18n.t('输入金额',locale)}}" bindinput="onCustom" /><text>{{i18n.t('元',locale)}}</text></view>
-    <view class="wallet-channel"><view class="wallet-channel-icon">A</view><view><text>{{i18n.t('支付宝沙箱',locale)}}</text><text class="wallet-muted wallet-block">{{i18n.t('使用沙箱买家账号扫码付款',locale)}}</text></view><text class="wallet-muted">{{i18n.t(rechargeEnabled ? '已配置' : '未配置',locale)}}</text></view>
+    <view class="wallet-channel"><view class="wallet-channel-icon">A</view><view><text>{{i18n.t('支付宝沙箱',locale)}}</text><text class="wallet-muted wallet-block">{{i18n.t('使用沙箱买家测试账号付款',locale)}}</text></view><text class="wallet-muted">{{i18n.t(rechargeEnabled ? '已配置' : '未配置',locale)}}</text></view>
     <button class="wallet-primary" disabled="{{!ready || loading || creating}}" loading="{{loading || creating}}" bindtap="onRecharge">{{i18n.t(rechargeEnabled ? '沙箱充值' : '支付宝沙箱尚未配置',locale)}}</button>
   </view>
   <view wx:if="{{error}}" class="wallet-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('重试',locale)}}</view>
-  <view class="wallet-note"><text class="wallet-title">{{i18n.t('钱包说明',locale)}}</text><text>{{i18n.t('当前为沙箱测试，医生提现仅模拟发放，不涉及真实转账。',locale)}}</text><text>{{i18n.t('可用沙箱余额查看问诊单，医生问诊收入同样计入沙箱余额。',locale)}}</text></view>
+  <view class="wallet-note"><text class="wallet-title">{{i18n.t('钱包说明',locale)}}</text><text>{{i18n.t('当前为支付宝沙箱测试，医生提现通过沙箱转账核对，不涉及真实资金。',locale)}}</text><text>{{i18n.t('可用沙箱余额查看问诊单，医生问诊收入同样计入沙箱余额。',locale)}}</text></view>
 </view>

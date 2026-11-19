@@ -23,55 +23,6 @@ function getGlucoseStatus(value) {
 /** 资讯频道 */
 const NEWS_CHANNELS = ['企业动态', '行业快讯', '设备新知', '控糖科普']
 
-/** 模拟资讯数据 */
-const NEWS_LIST = [
-  {
-    id: 1,
-    title: '餐后血糖为什么会飙升？三步稳住波动',
-    summary: '餐后血糖波动常见于精制主食过量与进餐过快。',
-    channel: '控糖科普',
-    type: 'article',
-    typeLabel: '图文',
-    time: '今天 09:20',
-    coverText: '科普',
-    cover: '/assets/news/n1.jpg'
-  },
-  {
-    id: 2,
-    title: '指血与 CGM 怎么配合使用更省心',
-    summary: '指血校准准、CGM 看趋势。点进可播放演示视频。',
-    channel: '设备新知',
-    type: 'video',
-    typeLabel: '视频',
-    time: '昨天',
-    coverText: '▶',
-    cover: '/assets/news/n2.jpg',
-    videoUrl: '/assets/video/demo.mp4'
-  },
-  {
-    id: 3,
-    title: '慧科未来发布 AI 控糖助手 2.0',
-    summary: '全新九时段记录与饮食两段式预测功能上线。',
-    channel: '企业动态',
-    type: 'article',
-    typeLabel: '图文',
-    time: '3天前',
-    coverText: '动态',
-    cover: '/assets/news/n3.jpg'
-  },
-  {
-    id: 4,
-    title: '2026 糖尿病管理行业白皮书解读',
-    summary: '数字化健康管理成为行业新趋势。',
-    channel: '行业快讯',
-    type: 'article',
-    typeLabel: '图文',
-    time: '1周前',
-    coverText: '快讯',
-    cover: '/assets/news/n4.jpg'
-  }
-]
-
 /** Banner 轮播 */
 const BANNERS = [
   { title: '慧科未来', desc: '移动互联网 + 健康管理' },
@@ -108,7 +59,6 @@ module.exports = {
   GLUCOSE_NODES,
   getGlucoseStatus,
   NEWS_CHANNELS,
-  NEWS_LIST,
   BANNERS,
   FOOD_CATEGORIES,
   FEEDBACK_TYPES,

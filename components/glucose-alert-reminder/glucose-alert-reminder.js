@@ -2,6 +2,22 @@ const { fetchUserReminders, readUserReminder, readInformationCategory, readAllUs
 const notifications = require('../../utils/message-notifications')
 const { getTodayKey } = require('../../utils/storage')
 const { getToken } = require('../../utils/request')
+const consultations = require('../../services/consultation')
+
+function informationItems(counts) {
+  const source = counts || {}, threads = Array.isArray(source.consultationConversations) ? source.consultationConversations : []
+  const rows = [], seen = new Set()
+  for (const row of threads) {
+    const id = String(row.consultationId || '')
+    if (!/^[1-9]\d{0,18}$/.test(id) || seen.has(id) || !(Number(row.unreadCount) > 0)) continue
+    seen.add(id)
+    rows.push({ key:`consultation:${id}`,title:'问诊交流',consultationId:id,peerName:row.peerName,
+      contextTitle:row.title,throughId:String(row.lastMessageId),count:Number(row.unreadCount) })
+  }
+  const categories = [{key:'consultations',title:'问诊交流'},{key:'messages',title:'私信'},{key:'likes',title:'点赞'},{key:'collections',title:'收藏'},{key:'comments',title:'评论'},{key:'follows',title:'新关注我的'},{key:'reports',title:'举报反馈'}]
+  return rows.concat(categories.filter(item => item.key !== 'consultations' || !rows.length)
+    .map(item => ({...item,count:Math.max(0,Number(source[item.key])||0)})).filter(item => item.count > 0))
+}
 
 function formatTime(value) {
   return typeof value === 'string' ? value.replace('T', ' ').replace(/\.\d+$/, '') : ''
@@ -10,7 +26,7 @@ function formatTime(value) {
 Component({
   options: { styleIsolation: 'isolated' },
   properties: {
-    socialCounts: { type:Object,value:{},observer(counts) { this.setData({ socialTotal:Number(counts && counts.total)||0, socialItems:[{key:'messages',title:'私信'},{key:'likes',title:'点赞'},{key:'collections',title:'收藏'},{key:'comments',title:'评论'},{key:'follows',title:'新关注我的'},{key:'reports',title:'举报反馈'}].map(item=>({...item,count:Math.max(0,Number(counts && counts[item.key])||0)})).filter(item=>item.count>0) }) } },
+    socialCounts: { type:Object,value:{},observer(counts) { this.setData({ socialTotal:Number(counts && counts.total)||0, socialItems:informationItems(counts) }) } },
     nodes: { type: Array, value: [], observer() { if (this._receiptLoaded && this._alive && this._visible) this.refreshReplies() } }
   },
   data: { alerts: [], replies: [], noticeVisible: false, replyTotal: 0, repliesLoading: false, repliesError: '', hasMoreReplies: false, socialTotal:0,socialItems:[], reading:'', informationReading:'', allReading:false },
@@ -30,7 +46,12 @@ Component({
     }
   },
   methods: {
-    onInformation(e) { if(this.data.allReading)return; this.closeNotice(); const key=e.currentTarget.dataset.key;wx.navigateTo({url:key==='reports'?'/pages/community-reports/community-reports':`/pages/information/information?tab=${key}`}) },
+    onInformation(e) {
+      if(this.data.allReading)return
+      const key=e.currentTarget.dataset.key, item=this.data.socialItems.find(row=>row.key===key)
+      this.closeNotice()
+      wx.navigateTo({url:item && item.consultationId ? `/pages/consultation-chat/consultation-chat?id=${item.consultationId}` : key==='consultations'?'/pages/consultation-conversations/consultation-conversations':key==='reports'?'/pages/community-reports/community-reports':`/pages/information/information?tab=${key}`})
+    },
     openNotice() {
       if (!this._alive || !this._visible || this.data.noticeVisible) return
       this.setData({ noticeVisible: true })
@@ -117,12 +138,14 @@ Component({
     async onReadInformation(e) {
       if (!this._alive || !this._visible || this.data.informationReading || this.data.allReading) return
       const key = e.currentTarget.dataset.key
-      const kind = {messages:'MESSAGE',likes:'LIKE',collections:'COLLECT',comments:'COMMENT',follows:'FOLLOW',reports:'REPORT'}[key]
+      const kind = {messages:'MESSAGE',likes:'LIKE',collections:'COLLECT',comments:'COMMENT',follows:'FOLLOW',reports:'REPORT',consultations:'CONSULTATION'}[key]
+      const item = this.data.socialItems.find(row => row.key === key && row.consultationId)
       const token = getToken()
-      if (!kind || !token) return
+      if ((!kind && !item) || !token) return
       this.setData({ informationReading: key })
       try {
-        await readInformationCategory(kind)
+        if (item) await consultations.readMessages(item.consultationId,item.throughId)
+        else await readInformationCategory(kind)
         if (getToken() === token) {
           await notifications.refresh(true)
           if (this._alive && this._visible) wx.showToast({ title: '已标为已读', icon: 'none' })

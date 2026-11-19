@@ -1,6 +1,7 @@
 Component({
   properties: {
     unreadCount: { type:Number, value:0 },
+    consultationUnreadCount: { type:Number, value:0 },
     selected: { type: Number, value: 0 },
     brandColor: { type: String, value: '#0969da' },
     guideActive: {

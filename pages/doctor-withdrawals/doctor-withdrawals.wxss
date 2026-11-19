@@ -1,2 +1,7 @@
 @import '../wallet/wallet.wxss';
+.withdraw-heading-actions{display:flex;align-items:center;gap:12rpx;flex-wrap:wrap;justify-content:flex-end}
+.withdraw-refresh{margin:0;padding:8rpx 16rpx;min-height:56rpx;line-height:1.5;border-radius:18rpx;background:#e8f1ff;color:#244e84;font-size:24rpx}
+.withdraw-refresh::after,.withdraw-bind::after{border:0}
+.withdraw-payee-label{display:block;margin-top:24rpx;font-size:26rpx;color:#294f82}
+.withdraw-bind{margin:20rpx 0 0;padding:12rpx 20rpx;border-radius:16rpx;background:#edf3fc;color:#2a61ba;font-size:25rpx;line-height:1.5}
 .withdraw-all{color:#2a61ba;font-size:24rpx;white-space:nowrap}.withdraw-heading{margin:28rpx 0 20rpx;font-size:30rpx;color:#294f82;font-weight:600}.withdraw-order{display:block;color:#92a1b5;font-size:21rpx;overflow-wrap:anywhere;margin-top:8rpx}.withdraw-note{display:block;margin-top:18rpx;color:#566e8d;font-size:25rpx;white-space:pre-wrap}.withdraw-status{font-size:23rpx;padding:6rpx 14rpx;background:#edf3fc;border-radius:12rpx;color:#56769f}.withdraw-status.REJECTED{color:#a96450;background:#fff3ee}.withdraw-status.COMPLETED{color:#386da5;background:#eaf3ff}.withdraw-empty{text-align:center;padding:36rpx}

@@ -4,13 +4,9 @@ function expiryTime(value) {
   return Date.parse(text)
 }
 
-function qrSource(base64) {
-  if (typeof base64 !== 'string' || base64.length > 200000
-      || !base64.startsWith('iVBORw0KGgo') || base64.length % 4 !== 0
-      || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
-    throw new Error('支付码格式异常')
-  }
-  // 接口已返回PNG，直接显示内存数据，避免本地文件写入和清理影响二维码展示。
-  return `data:image/png;base64,${base64}`
+function isSandboxPageUrl(value) {
+  return typeof value === 'string' && value.length <= 12000
+    && /^https:\/\/openapi-sandbox\.dl\.alipaydev\.com\/gateway\.do\?/.test(value)
+    && /[?&]method=alipay\.trade\.page\.pay(?:&|$)/.test(value)
 }
-module.exports = { qrSource, expiryTime }
+module.exports = { isSandboxPageUrl, expiryTime }

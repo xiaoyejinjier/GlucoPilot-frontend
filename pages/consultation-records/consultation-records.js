@@ -45,6 +45,7 @@ Page({
     if (id) wx.navigateTo({ url: `/pages/consultation-detail/consultation-detail?id=${id}` })
   },
   onCompose() { wx.navigateTo({ url: '/pages/consultation-compose/consultation-compose' }) },
+  onConversations() { if (social.active(this)) wx.navigateTo({ url: '/pages/consultation-conversations/consultation-conversations' }) },
   onRetry() { return this.load(true) },
   onReachBottom() { return this.load(false) },
   async onPullDownRefresh() { try { await this.load(true) } finally { wx.stopPullDownRefresh() } }

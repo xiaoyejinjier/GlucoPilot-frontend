@@ -1,0 +1,17 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<web-view wx:if="{{cashierUrl}}" src="{{cashierUrl}}" binderror="onWebError" bindload="onWebLoad" />
+<view wx:else class="wallet-page cashier-page" style="{{displayStyle}}">
+  <view class="wallet-card cashier-state">
+    <view wx:if="{{loading}}" class="cashier-loading">
+      <view class="wallet-loading"></view>
+      <text>{{i18n.t('正在打开支付宝沙箱…',locale)}}</text>
+    </view>
+    <view wx:else>
+      <view wx:if="{{paid}}" class="cashier-success">✓</view>
+      <text class="wallet-title">{{i18n.t(paid ? '沙箱充值已到账' : '支付宝沙箱收银台',locale)}}</text>
+      <text class="wallet-muted wallet-block cashier-error">{{i18n.t(paid ? '付款成功，可返回原付款页查看结果。' : error,locale)}}</text>
+      <button wx:if="{{retryable}}" class="wallet-primary" bindtap="onRetry">{{i18n.t('重试打开',locale)}}</button>
+      <button class="{{paid ? 'wallet-primary' : 'cashier-return'}}" bindtap="onReturn">{{i18n.t('返回付款页',locale)}}</button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,8 @@
+@import "../../styles/consultation.wxss";
+.conversation-heading,.conversation-preview { display:flex; align-items:center; gap:16rpx; }
+.conversation-name { flex:1; min-width:0; color:#29486f; font-size:28rpx; font-weight:600; }
+.conversation-time { flex:none; font-size:20rpx; color:#97a6b9; }
+.conversation-title { display:block; margin:12rpx 0; font-size:24rpx; color:#6a83a5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conversation-content { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#8a98ab; font-size:25rpx; }
+.conversation-unread { flex:none; min-width:34rpx; padding:2rpx 9rpx; border-radius:20rpx; background:#df695e; color:#fff; font-size:20rpx; text-align:center; }
+.conversation-arrow { color:#9fb0c7; font-size:32rpx; }

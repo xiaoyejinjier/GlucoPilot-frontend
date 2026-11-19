@@ -53,9 +53,21 @@ Page({
     if (this.data.topics.some(item => item.code === topic)) { this._requestId = ''; this.setData({ 'form.topic': topic }) }
   },
   onAnonymous(event) { if (!this.data.saving) { this._requestId = ''; this.setData({ 'form.anonymous': !!event.detail.value }) } },
+  showSubmissionError(error) {
+    const version = this._communityVersion
+    const run = this._errorScrollRun = (this._errorScrollRun || 0) + 1
+    wx.hideKeyboard()
+    // 等底部提示渲染完成再定位，避免滚动时提示尚未出现。
+    this.setData({ error }, () => {
+      wx.nextTick(() => {
+        if (!social.active(this, version) || run !== this._errorScrollRun || this.data.error !== error) return
+        wx.pageScrollTo({ selector: '#consultation-submit-error', duration: 250 })
+      })
+    })
+  },
   validate() {
-    if (this.data.form.title.trim().length < 4) { this.setData({ error: '请用至少4个字概括你的问题' }); return false }
-    if (this.data.form.symptoms.trim().length < 10) { this.setData({ error: '请补充至少10个字的问题描述' }); return false }
+    if (this.data.form.title.trim().length < 4) { this.showSubmissionError('请用至少4个字概括你的问题'); return false }
+    if (this.data.form.symptoms.trim().length < 10) { this.showSubmissionError('请补充至少10个字的问题描述'); return false }
     return true
   },
   onPreview() {
@@ -85,7 +97,7 @@ Page({
         this.setData({ form: emptyForm(), images:[] }); wx.redirectTo({ url: '/pages/consultation-records/consultation-records' })
       }
     } catch (error) {
-      if (social.active(this, version)) { this.setData({ error: error.message || '发布暂不可用，填写内容已保留' }); social.failure(this, error, version) }
+      if (social.active(this, version)) { this.showSubmissionError(error.message || '发布暂不可用，填写内容已保留'); social.failure(this, error, version) }
     } finally { if (social.active(this, version)) this.setData({ saving: false }) }
   }
 })

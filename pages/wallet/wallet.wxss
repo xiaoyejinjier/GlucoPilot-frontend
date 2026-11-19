@@ -1,2 +1,10 @@
 @import "../../styles/wallet.wxss";
+.wallet-card .wallet-primary {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 88rpx;
+  padding: 20rpx 24rpx;
+  line-height: 1.5;
+}
 .wallet-activation{text-align:center;padding:40rpx 32rpx}.wallet-activation-icon{display:block;width:100rpx;height:100rpx;line-height:100rpx;border-radius:28rpx;background:#eaf2ff;color:#5585c5;font-size:58rpx;margin:0 auto 28rpx}.wallet-activation .wallet-muted{line-height:1.8;margin:18rpx 0 30rpx}

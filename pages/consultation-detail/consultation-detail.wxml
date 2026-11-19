@@ -42,13 +42,9 @@
         <block wx:elif="{{walletReady && walletActivated}}"><view class="claim-ready"><view class="claim-ready-dot"></view><text>{{i18n.t('钱包已开通',locale)}}</text></view><button class="consult-button primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onClaim" hover-class="ui-pressed">{{i18n.t('我要接诊',locale)}}</button></block>
       </view>
     </view>
-    <view wx:if="{{chatEnabled}}" class="consult-card consultation-chat">
-      <view class="consult-heading"><text class="consult-title">{{i18n.t('问诊交流',locale)}}</text><text class="consult-muted">{{i18n.t('仅本人和接诊医生可见',locale)}}</text></view>
-      <button wx:if="{{chatHasEarlier}}" class="chat-history" bindtap="onChatMore" loading="{{chatLoading}}">{{i18n.t('查看更早的交流',locale)}}</button>
-      <view wx:if="{{!messages.length}}" class="consult-state">{{i18n.t('可以在这里补充情况或回复对方。',locale)}}</view>
-      <view wx:for="{{messages}}" wx:key="id" class="consultation-chat-row {{item.mine ? 'mine' : ''}}"><text class="consult-muted">{{i18n.t(item.mine ? '我' : item.senderRole === 'DOCTOR' ? '接诊医生' : '患者',locale)}} · {{item.timeLabel}}</text><text class="consultation-chat-bubble">{{item.content}}</text></view>
-      <view wx:if="{{chatError}}" class="consult-error" bindtap="onChatRetry">{{i18n.t(chatError,locale)}} · {{i18n.t('重试',locale)}}</view>
-      <view wx:if="{{chatCanSend}}" class="consultation-chat-compose"><textarea class="consult-textarea" auto-height maxlength="2000" value="{{chatText}}" bindinput="onChatInput" disabled="{{chatSending}}" cursor-spacing="30" placeholder="{{i18n.t('输入回复或补充情况',locale)}}"/><button class="consult-button primary" loading="{{chatSending}}" disabled="{{chatSending || !chatText}}" bindtap="onSendChat">{{i18n.t('发送回复',locale)}}</button></view>
+    <view wx:if="{{chatEnabled}}" class="consult-card consultation-chat-entry" bindtap="onChat" hover-class="ui-pressed" aria-role="button">
+      <view class="consultation-chat-entry-copy"><text class="consult-title">{{i18n.t('问诊交流',locale)}}</text><text class="consult-muted">{{i18n.t('与对方沟通情况，交流记录仅双方可见。',locale)}}</text></view>
+      <text class="consult-link">{{i18n.t('进入交流',locale)}} ›</text>
     </view>
     <view wx:if="{{item.canReply}}" id="consultation-report-editor" class="consult-card report-editor">
       <view class="consult-heading"><text class="consult-title">{{i18n.t('填写问诊单',locale)}}</text><text class="consult-muted">{{i18n.t('以下内容均需填写',locale)}}</text></view>
