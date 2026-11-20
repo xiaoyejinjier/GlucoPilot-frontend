@@ -2011,3 +2011,19 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 本次问诊已结束，可查看历史详情	This consultation has ended. You can view its details.
 求助已发布，等待医生接诊	Your request is published and awaiting a doctor.
 查看问诊单	View report
+其他胰岛素	Other insulin
+填写正在使用的其他胰岛素名称	Enter the name of the other insulin you currently use
+请填写其他胰岛素名称，或取消选择	Enter the other insulin name or deselect the option
+选填，可记录运动方式、频率和时长	Optional: record your activity, frequency and duration
+如：散步，每周3次，每次30分钟	For example: walking, 3 times a week, 30 minutes each time
+
+设备支持	Device support
+设备信息	Device information
+正在加载反馈类型…	Loading feedback types…
+反馈类型加载失败，点击重试	Unable to load feedback types. Tap to retry.
+设备暂不支持也可以反馈，无需先绑定。	You can report unsupported devices without binding them first.
+未绑定或其他设备	Unbound or other device
+已绑定设备加载失败，可直接填写品牌型号。	Unable to load bound devices. Enter the brand and model instead.
+填写设备品牌、型号（未选择设备时必填）	Brand and model (required if no device is selected)
+请先加载反馈类型	Please load the feedback types first
+请选择设备或填写设备品牌型号	Select a device or enter its brand and model

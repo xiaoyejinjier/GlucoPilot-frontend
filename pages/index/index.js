@@ -11,6 +11,7 @@ Page({
     loading: false, error: '', pageNum: 0, hasMore: false, searchMounted: false, searchOpen: false, showBackToTop: false },
   onShow() {
     if (!getApp().checkLogin()) return
+    this._feedDisposed = false
     const tabBar = typeof this.getTabBar === 'function' && this.getTabBar()
     if (tabBar) { tabBar.setData({ selected: 2 }); if (tabBar.refreshGuide) tabBar.refreshGuide() }
     const token = this._communityToken; social.begin(this); applyDisplayToCurrentPage()
@@ -65,7 +66,7 @@ Page({
     }catch(error){if(social.active(this,version)&&run===this._tagRun)this.setData({tagsError:'标签加载失败，点击重试'})}
   },
   onHide() { social.end(this); this._loadRun = (this._loadRun || 0) + 1 },
-  onUnload() { this.onHide() },
+  onUnload() { this._feedDisposed = true; this.onHide() },
   openMyTags() {
     if (!social.active(this)) return
     const version = this._communityVersion
@@ -167,8 +168,33 @@ Page({
   async onPullDownRefresh() { try { await Promise.all([this.loadTags(),this.load(true)]) } finally { wx.stopPullDownRefresh() } },
   onWrite() { wx.navigateTo({ url: '/pages/community-compose/community-compose' }) },
   onMyArticles() { wx.navigateTo({ url: '/pages/community-articles/community-articles' }) },
-  onOpen(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}` }) },
-  onComments(e) { const id = String(e.currentTarget.dataset.id || ''); if (/^[1-9]\d{0,18}$/.test(id)) wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}&comments=1` }) },
+  onOpen(e) { this.openArticle(e.currentTarget.dataset.id, false) },
+  onComments(e) { this.openArticle(e.currentTarget.dataset.id, true) },
+  openArticle(value, comments) {
+    const id = String(value || '')
+    if (!/^[1-9]\d{0,18}$/.test(id) || !social.active(this)) return
+    const token = this._communityToken
+    wx.navigateTo({
+      url: `/pages/news-detail/news-detail?id=${id}${comments ? '&comments=1' : ''}`,
+      events: {
+        articleViewed: result => this.applyArticleView(id, result, token)
+      }
+    })
+  },
+  applyArticleView(id, result, token) {
+    if (this._feedDisposed || !social.sameAccount(this, token) || !result || String(result.id) !== id) return
+    if (!['number', 'string'].includes(typeof result.viewCount) || String(result.viewCount).trim() === '') return
+    const count = Number(result.viewCount)
+    if (!Number.isSafeInteger(count) || count < 0) return
+    let changed = false
+    const posts = this.data.posts.map(post => {
+      if (String(post.id) !== id || count <= (Number(post.viewCount) || 0)) return post
+      changed = true
+      return { ...post, viewCount: count }
+    })
+    // 不重新拉取推荐：只回填对应文章，保留本轮顺序、分页和滚动位置。
+    if (changed) this.setData({ posts })
+  },
   onProfile(e) { const key = e.currentTarget.dataset.key; if (/^[ub][1-9]\d{0,18}$/.test(String(key || ''))) wx.navigateTo({ url: `/pages/community-profile/community-profile?key=${key}` }) },
   onCommunityEntry(e) {
     const mode = e.currentTarget.dataset.mode

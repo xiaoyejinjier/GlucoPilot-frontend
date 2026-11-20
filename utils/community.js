@@ -19,6 +19,10 @@ function begin(page) {
   page._communityVersion = (page._communityVersion || 0) + 1
   page._communityVisible = true
 }
+// 页面隐藏后仍可接收子页的真实计数，但不能把旧账号的结果写进新账号。
+function sameAccount(page, token = page._communityToken) {
+  return !!token && page._communityToken === token && getToken() === token
+}
 function active(page, version = page._communityVersion, error) {
   const token = getToken()
   const ownExpired = error && error.code === 40100 && !token
@@ -52,4 +56,4 @@ function mergeMessages(existing, incoming) {
   incoming.forEach(message => map.set(String(message.id), { ...message, timeLabel: timeLabel(message.createdAt) }))
   return Array.from(map.values()).sort(compareId)
 }
-module.exports = { requestId, timeLabel, relativeTime, begin, active, end, failure, success, compareId, mergeMessages, report }
+module.exports = { requestId, timeLabel, relativeTime, begin, sameAccount, active, end, failure, success, compareId, mergeMessages, report }

@@ -88,7 +88,7 @@ const DIABETES_TYPE_TEXT = ['未填写', '1 型糖尿病', '2 型糖尿病', '�
 // 血糖控制目标人群（0一般/1较严格/2较宽松/3妊娠期）；独立于糖尿病类型，前端 option 原文同步加入 i18n
 const GOAL_PROFILE_TEXT = ['一般（默认）', '较严格（年轻、无并发症）', '较宽松（65 岁以上或容易低血糖）', '妊娠期（含妊娠糖尿病）']
 const GENDER_TEXT = ['未填写', '男', '女']
-const FEEDBACK_TYPE_TEXT = ['', '产品建议', 'Bug问题', '功能诉求', '其他']
+const FEEDBACK_TYPE_TEXT = ['', '产品建议', 'Bug问题', '功能诉求', '其他', '设备支持']
 const FEEDBACK_STATUS_TEXT = ['已收到', '处理中', '已处理', '已关闭']
 const FEEDBACK_STATUS_HINT = [
   '已收到，处理进度会在这里更新',
@@ -291,7 +291,9 @@ function mapFeedback(f) {
   return {
     id: f.id,
     typeCode: f.feedbackType,
-    type: FEEDBACK_TYPE_TEXT[f.feedbackType] || '其他',
+    type: f.feedbackTypeName || FEEDBACK_TYPE_TEXT[f.feedbackType] || '其他',
+    deviceId: f.deviceId == null ? '' : String(f.deviceId),
+    deviceDescription: f.deviceDescription || '',
     content: f.contentText || '',
     statusCode: f.replyStatus,
     status: FEEDBACK_STATUS_TEXT[f.replyStatus] || '已收到',

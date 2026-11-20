@@ -52,7 +52,20 @@ Page({
         if (typeof wx.nextTick === 'function') wx.nextTick(scroll)
         else scroll()
       })
-      if(typeof api.recordArticleView==='function')api.recordArticleView(this._newsId).then(result=>{if(social.active(this,version)&&run===this._detailRun)this.setData({'news.viewCount':result.viewCount})}).catch(()=>{})
+      if (typeof api.recordArticleView === 'function') {
+        const articleId = this._newsId
+        const token = this._communityToken
+        const channel = typeof this.getOpenerEventChannel === 'function' ? this.getOpenerEventChannel() : null
+        api.recordArticleView(articleId).then(result => {
+          if (!social.sameAccount(this, token) || run !== this._detailRun || !result) return
+          if (!['number', 'string'].includes(typeof result.viewCount) || String(result.viewCount).trim() === '') return
+          const viewCount = Number(result.viewCount)
+          if (!Number.isSafeInteger(viewCount) || viewCount < 0) return
+          if (social.active(this, version)) this.setData({ 'news.viewCount': viewCount })
+          // 使用服务端去重后的真实总数；快速返回时也允许通知仍属于同账号的上一页。
+          if (channel && typeof channel.emit === 'function') channel.emit('articleViewed', { id: articleId, viewCount })
+        }).catch(() => {})
+      }
       if (news.title) wx.setNavigationBarTitle({ title: news.title })
       // The comment anchor is ready without waiting for a potentially slow cover download.
       try {

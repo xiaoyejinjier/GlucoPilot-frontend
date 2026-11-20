@@ -38,7 +38,7 @@ const FOOD_CATEGORIES = [
 ]
 
 /** 反馈类型 */
-const FEEDBACK_TYPES = ['产品建议', 'Bug问题', '功能诉求', '其他']
+const FEEDBACK_TYPES = ['产品建议', 'Bug问题', '功能诉求', '其他', '设备支持']
 
 /** 免责声明内容 */
 const DISCLAIMER_CONTENT = [

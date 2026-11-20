@@ -76,14 +76,17 @@
         <text class="medication-group-title">{{i18n.t(group.label, locale)}}</text>
         <view class="medication-options">
           <view wx:for="{{group.options}}" wx:key="name" class="medication-option {{item.selected ? 'selected' : ''}} ui-interactive" data-name="{{item.name}}" bindtap="onMedicationTap" aria-role="button" aria-label="{{i18n.t(item.name, locale)}}" hover-class="ui-pressed"><text wx:if="{{item.selected}}">✓ </text>{{i18n.t(item.name, locale)}}</view>
+          <view wx:if="{{group.key === 'insulin'}}" class="medication-option {{otherInsulinEnabled ? 'selected' : ''}} ui-interactive" bindtap="onOtherInsulin" aria-role="button" hover-class="ui-pressed"><text wx:if="{{otherInsulinEnabled}}">✓ </text>{{i18n.t('其他胰岛素', locale)}}</view>
         </view>
+        <textarea wx:if="{{group.key === 'insulin' && otherInsulinEnabled}}" class="other-medication" value="{{otherInsulin}}" bindinput="onOtherInsulinInput" maxlength="256" placeholder="{{i18n.t('填写正在使用的其他胰岛素名称', locale)}}" auto-height disabled="{{saving}}" />
       </view>
       <view class="medication-options"><view class="medication-option {{otherMedicationEnabled ? 'selected' : ''}} ui-interactive" bindtap="onOtherMedication" aria-role="button" hover-class="ui-pressed"><text wx:if="{{otherMedicationEnabled}}">✓ </text>{{i18n.t('其他用药', locale)}}</view></view>
       <textarea wx:if="{{otherMedicationEnabled}}" class="other-medication" value="{{otherMedication}}" bindinput="onOtherMedicationInput" maxlength="256" placeholder="{{i18n.t('填写其他药物名称或保留原用药记录', locale)}}" auto-height disabled="{{saving}}" />
     </view>
-    <view class="form-item last">
+    <view class="exercise-field">
       <text class="label">{{i18n.t("运动习惯", locale)}}</text>
-      <input class="input" value="{{form.exercise}}" bindinput="onField" data-key="exercise" />
+      <text class="medication-hint">{{i18n.t('选填，可记录运动方式、频率和时长', locale)}}</text>
+      <textarea class="exercise-input" value="{{form.exercise}}" bindinput="onField" data-key="exercise" maxlength="256" placeholder="{{i18n.t('如：散步，每周3次，每次30分钟', locale)}}" placeholder-class="exercise-placeholder" auto-height disabled="{{saving}}" />
     </view>
   </view>
 

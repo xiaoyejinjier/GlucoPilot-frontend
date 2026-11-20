@@ -172,3 +172,60 @@ test('加载更多时离页，返回取消加载状态并丢弃迟到结果，�
   assert.equal(state.requests[2].refreshSeed, seed)
   assert.deepEqual(Array.from(page.data.posts, post => post.id), ['1', '2'])
 })
+
+test('详情真实浏览量回传只更新对应文章，返回保留推荐顺序、分页和曝光', async () => {
+  const { page, state } = harness()
+  state.response = { records: [{ id: '1', viewCount: 3 }], pages: 3 }
+  page.onShow(); await flush()
+  const seed = page._recommendationSeed
+  state.response = { records: [{ id: '2', viewCount: 9 }], pages: 3 }
+  await page.load(false)
+  const untouched = page.data.posts[1]
+  page.onOpen({ currentTarget: { dataset: { id: '1' } } })
+  const callback = state.navigations.at(-1).events.articleViewed
+  page.onHide()
+  callback({ id: '1', viewCount: 4 })
+  page.onShow(); await flush()
+  assert.deepEqual(Array.from(page.data.posts, row => [row.id, row.viewCount]), [['1', 4], ['2', 9]])
+  assert.equal(page.data.posts[1], untouched)
+  assert.equal(page.data.pageNum, 2)
+  assert.equal(page._recommendationSeed, seed)
+  assert.equal(state.requests.length, 2)
+  assert.deepEqual(state.exposures, [['1'], ['2']])
+})
+
+test('评论入口同样同步浏览量，重复及迟到较小计数不增加、不回退', async () => {
+  const { page, state } = harness()
+  state.response = { records: [{ id: '1', viewCount: 7 }], pages: 1 }
+  page.onShow(); await flush()
+  page.onComments({ currentTarget: { dataset: { id: '1' } } })
+  assert.equal(state.navigations.at(-1).url, '/pages/news-detail/news-detail?id=1&comments=1')
+  const callback = state.navigations.at(-1).events.articleViewed
+  const original = page.data.posts
+  for (const count of [7, 6, -1, 1.2, null, '', ' ', true, Infinity, 'invalid']) callback({ id: '1', viewCount: count })
+  callback({ id: '2', viewCount: 100 })
+  assert.equal(page.data.posts, original)
+  callback({ id: '1', viewCount: '8' })
+  assert.equal(page.data.posts[0].viewCount, 8)
+  callback({ id: '1', viewCount: 8 })
+  assert.equal(page.data.posts[0].viewCount, 8)
+})
+
+test('浏览量回传隔离账号和已卸载页面，不复活被隐藏的文章', async () => {
+  const { page, state } = harness()
+  state.response = { records: [{ id: '1', viewCount: 2 }], pages: 1 }
+  page.onShow(); await flush()
+  page.onOpen({ currentTarget: { dataset: { id: '1' } } })
+  const callback = state.navigations.at(-1).events.articleViewed
+  state.token = 'session-two'
+  callback({ id: '1', viewCount: 20 })
+  assert.equal(page.data.posts[0].viewCount, 2)
+  state.token = 'session-one'
+  page.setData({ posts: [] })
+  callback({ id: '1', viewCount: 21 })
+  assert.equal(page.data.posts.length, 0)
+  page.setData({ posts: [{ id: '1', viewCount: 2 }] })
+  page.onUnload()
+  callback({ id: '1', viewCount: 22 })
+  assert.equal(page.data.posts[0].viewCount, 2)
+})

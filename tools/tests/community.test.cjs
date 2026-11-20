@@ -55,6 +55,51 @@ function harness(name, options = {}) {
   return { page, state, api: implementations, social: socialModule.exports }
 }
 
+test('文章详情收到计数成功响应后回填并向上一页发送真实浏览量', async () => {
+  const result = deferred(), events = []
+  const { page, state } = harness('news-detail', {
+    api: { fetchNewsDetail: async () => ({ id: '10', title: '文章', viewCount: 5 }), recordArticleView: () => result.promise }
+  })
+  page.getOpenerEventChannel = () => ({ emit: (name, detail) => events.push({ name, detail }) })
+  await flush()
+  assert.equal(page.data.news.viewCount, 5)
+  assert.equal(events.length, 0)
+  result.resolve({ viewCount: 6 }); await flush()
+  assert.equal(page.data.news.viewCount, 6)
+  assert.equal(events[0].name, 'articleViewed')
+  assert.equal(events[0].detail.id, '10')
+  assert.equal(events[0].detail.viewCount, 6)
+  assert.equal(state.calls.filter(row => row.name === 'recordArticleView').length, 1)
+  page.onUnload()
+})
+
+test('计数失败不伪增浏览量，旧账号计数不能回传', async () => {
+  const failed = deferred(), failedEvents = []
+  const first = harness('news-detail', { api: { recordArticleView: () => failed.promise } })
+  first.page.getOpenerEventChannel = () => ({ emit: (...args) => failedEvents.push(args) })
+  await flush(); failed.reject(Error('网络错误')); await flush()
+  assert.equal(failedEvents.length, 0)
+  first.page.onUnload()
+  const late = deferred(), events = []
+  const second = harness('news-detail', { api: { recordArticleView: () => late.promise } })
+  second.page.getOpenerEventChannel = () => ({ emit: (...args) => events.push(args) })
+  await flush(); second.state.token = 'account-two'
+  late.resolve({ viewCount: 30 }); await flush()
+  assert.equal(events.length, 0)
+  second.page.onUnload()
+})
+
+test('快速返回时收到真实计数仍可通知同账号上一页，不更新已隐藏详情', async () => {
+  const result = deferred(), events = []
+  const { page } = harness('news-detail', { api: { fetchNewsDetail: async () => ({ id: '10', title: '文章', viewCount: 1 }), recordArticleView: () => result.promise } })
+  page.getOpenerEventChannel = () => ({ emit: (name, detail) => events.push({ name, detail }) })
+  await flush(); page.onHide()
+  result.resolve({ viewCount: 2 }); await flush()
+  assert.equal(page.data.news.viewCount, 1)
+  assert.equal(events[0].detail.viewCount, 2)
+  page.onUnload()
+})
+
 test('找糖友单字模糊搜索保留分页，返回页面后可重新加载单字条件', async () => {
   const h = harness('community', { route: { mode: 'profiles' }, api: {
     fetchCommunityList: async (_mode, query) => ({ records: [

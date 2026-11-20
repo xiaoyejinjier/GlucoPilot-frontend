@@ -14,6 +14,64 @@ function harness(overrides={}) {
  const p={...def,data:JSON.parse(JSON.stringify(def.data)),setData:patch=>Object.assign(p.data,patch)};p.onLoad();p.onShow()
  return{p,state,wx}
 }
+
+test('运动习惯可回填、编辑保存和清空，迟到资料不覆盖已输入内容',async()=>{
+ const {p,state}=harness({fetchMe:async()=>({...person,exercise:'每周散步三次'})});await flush()
+ assert.equal(p.data.form.exercise,'每周散步三次')
+ p.onField({currentTarget:{dataset:{key:'exercise'}},detail:{value:'周末骑行，每次40分钟'}})
+ await p.onSave();assert.equal(state.calls.find(call=>call.key==='saveHealthProfile').args[0].exerciseHabit,'周末骑行，每次40分钟')
+ p.onField({currentTarget:{dataset:{key:'exercise'}},detail:{value:''}})
+ await p.onSave();assert.equal(state.calls.filter(call=>call.key==='saveHealthProfile').at(-1).args[0].exerciseHabit,null)
+ p.onUnload()
+ const late=deferred(),second=harness({fetchMe:()=>late.promise})
+ second.p.onField({currentTarget:{dataset:{key:'exercise'}},detail:{value:'自行填写的运动记录'}})
+ late.resolve({...person,exercise:'服务器旧记录'});await flush()
+ assert.equal(second.p.data.form.exercise,'自行填写的运动记录');second.p.onUnload()
+})
+
+test('其他胰岛素与已选药物、其他用药一并保存，再次回填仍可编辑',async()=>{
+ const {p,state}=harness();await flush()
+ p.onMedicationTap({currentTarget:{dataset:{name:'二甲双胍'}}})
+ p.onOtherMedication();p.onOtherMedicationInput({detail:{value:'原有自填记录'}})
+ p.onOtherInsulin()
+ await p.onSave();assert.equal(state.calls.some(call=>call.key==='saveHealthProfile'),false)
+ assert.match(state.toasts.at(-1).title,/请填写其他胰岛素/)
+ p.onOtherInsulinInput({detail:{value:'自填名称甲；自填名称乙'}})
+ await p.onSave()
+ const medication=state.calls.find(call=>call.key==='saveHealthProfile').args[0].medication
+ assert.ok(medication.includes('二甲双胍'));assert.ok(medication.includes('原有自填记录'))
+ assert.ok(medication.includes('其他胰岛素：自填名称甲'));assert.ok(medication.includes('其他胰岛素：自填名称乙'))
+ p.onUnload()
+ const next=harness({fetchMe:async()=>({...person,medication})});await flush()
+ assert.equal(next.p.data.otherInsulinEnabled,true)
+ assert.equal(next.p.data.otherInsulin,'自填名称甲；自填名称乙')
+ assert.equal(next.p.data.otherMedication,'原有自填记录')
+ assert.ok(next.p.data.selectedMedications.includes('二甲双胍'))
+ next.p.onOtherInsulin();await next.p.onSave()
+ const updated=next.state.calls.find(call=>call.key==='saveHealthProfile').args[0].medication
+ assert.equal(updated.includes('其他胰岛素：'),false)
+ assert.ok(updated.includes('二甲双胍'));assert.ok(updated.includes('原有自填记录'));next.p.onUnload()
+})
+
+test('其他胰岛素迟到资料不覆盖手动输入，换账号清除旧用药选项',async()=>{
+ const late=deferred(),{p,state}=harness({fetchMe:()=>late.promise})
+ p.onOtherInsulin();p.onOtherInsulinInput({detail:{value:'当前输入'}})
+ late.resolve({...person,medication:'其他胰岛素：旧记录'});await flush()
+ assert.equal(p.data.otherInsulin,'当前输入')
+ state.token='two';p.onShow()
+ assert.equal(p.data.otherInsulin,'');assert.equal(p.data.otherInsulinEnabled,false)
+ assert.equal(p.data.selectedMedications.length,0);p.onUnload()
+})
+
+test('其他胰岛素仍受合计256字限制，历史自由文本不推断为胰岛素',async()=>{
+ const {p,state}=harness({fetchMe:async()=>({...person,medication:'历史未知药名 每日2次'})});await flush()
+ assert.equal(p.data.otherInsulinEnabled,false)
+ const original=p.data.form.medication
+ p.onOtherInsulin();p.onOtherInsulinInput({detail:{value:'甲'.repeat(256)}})
+ assert.equal(p.data.otherInsulin,'')
+ assert.equal(p.data.form.medication,original)
+ assert.match(state.toasts.at(-1).title,/256/);p.onUnload()
+})
 test('头像走AVATAR上传登记，阻止提前保存，资料只提交登记返回的地址',async()=>{
  const upload=deferred(),{p,state}=harness({upload:()=>upload.promise});await flush()
  const task=p.onChooseAvatar();await flush();assert.equal(p.data.uploadingAvatar,true);assert.equal(p.data.avatarPreview,'wxfile://new-avatar.jpg')

@@ -631,8 +631,15 @@ function fetchAppConfig(groups) {
   return get('/app-config', data, { auth: false, timeout: 10000 })
 }
 
-function submitFeedback(feedbackType, contentText) {
-  return post('/feedbacks', { feedbackType, contentText }, { auth: true })
+function fetchFeedbackTypes() {
+  return get('/feedbacks/types', null, { auth: true })
+}
+
+function submitFeedback(feedbackType, contentText, device) {
+  const payload = { feedbackType, contentText }
+  if (device && device.deviceId) payload.deviceId = String(device.deviceId)
+  if (device && device.deviceDescription) payload.deviceDescription = device.deviceDescription
+  return post('/feedbacks', payload, { auth: true })
 }
 
 function fetchFeedbacks(pageNum, pageSize) {
@@ -770,6 +777,7 @@ module.exports = {
   submitCancellation,
   fetchAppConfig,
   submitFeedback,
+  fetchFeedbackTypes,
   fetchFeedbacks,
   upsertGlucoseRecord,
   fetchGlucoseRecords,

@@ -9,12 +9,24 @@
     <view class="type-row">
       <view
         wx:for="{{types}}"
-        wx:key="*this"
+        wx:key="id"
         class="type-item {{activeTypeIndex === index ? 'on' : ''}} ui-interactive"
         data-index="{{index}}"
         bindtap="onTypeTap"
-       hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t((item), locale)}}</view>
+       hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t(item.name, locale)}}</view>
     </view>
+    <text wx:if="{{typesLoading}}" class="device-hint">{{i18n.t('正在加载反馈类型…', locale)}}</text>
+    <view wx:if="{{typesError}}" class="options-error" bindtap="loadOptions">{{i18n.t('反馈类型加载失败，点击重试', locale)}}</view>
+  </view>
+
+  <view wx:if="{{deviceRelated}}" class="card">
+    <view class="section-title">{{i18n.t('设备信息', locale)}}</view>
+    <text class="device-hint">{{i18n.t('设备暂不支持也可以反馈，无需先绑定。', locale)}}</text>
+    <picker range="{{deviceLabels}}" value="{{deviceIndex}}" bindchange="onDeviceChange" disabled="{{submitting}}">
+      <view class="device-picker">{{i18n.t(deviceLabels[deviceIndex] || '未绑定或其他设备', locale)}}<text>⌄</text></view>
+    </picker>
+    <text wx:if="{{devicesError}}" class="device-hint">{{i18n.t('已绑定设备加载失败，可直接填写品牌型号。', locale)}}</text>
+    <input class="device-description" value="{{deviceDescription}}" bindinput="onDeviceInput" maxlength="120" disabled="{{submitting}}" placeholder="{{i18n.t('填写设备品牌、型号（未选择设备时必填）', locale)}}" />
   </view>
 
   <view class="card">
@@ -22,6 +34,7 @@
     <view class="textarea-box">
       <textarea
         class="feedback-textarea"
+        disabled="{{submitting}}"
         placeholder="{{i18n.t('请尽量描述清楚遇到的问题或您的建议', locale)}}"
         value="{{content}}"
         bindinput="onInput"
@@ -39,7 +52,7 @@
        hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text class="action-button-text">{{i18n.t("清空内容", locale)}}</text></button>
       <button
         class="submit-button ui-interactive"
-        disabled="{{submitting}}"
+        disabled="{{submitting || typesLoading || typesError || !types.length}}"
         bindtap="onSubmit"
        hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text class="action-button-text">{{i18n.t((submitting ? '提交中…' : '提交反馈'), locale)}}</text></button>
     </view>
@@ -86,6 +99,7 @@
         </view>
         <text class="feedback-time">{{i18n.t((item.time), locale)}}</text>
         <text class="feedback-content">{{item.content}}</text>
+        <text wx:if="{{item.deviceDescription}}" class="feedback-device">{{i18n.t('设备信息', locale)}}：{{item.deviceDescription}}</text>
 
         <view wx:if="{{item.officialReply}}" class="official-reply">
           <view class="official-head">

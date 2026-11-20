@@ -43,6 +43,7 @@ Page({
     goalProfileIndex: 0,
     maxDiagnosisMonth:'',diagnosisPickerValue:'',medicationGroups:medicationGroups(),
     selectedMedications:[],otherMedication:'',otherMedicationEnabled:false,
+    otherInsulin:'',otherInsulinEnabled:false,
     saving: false, uploadingAvatar:false, avatarPreview:'', loading:true
   },
 
@@ -65,7 +66,7 @@ Page({
     this._visible = true
     if (this._profileToken && this._profileToken !== getToken()) {
       this._uploadRun = (this._uploadRun || 0) + 1; this._skipCache = true
-      this.setData({form:{},avatarPreview:'',uploadingAvatar:false,saving:false}); this.onLoad()
+      this.setData({form:{},avatarPreview:'',uploadingAvatar:false,saving:false,selectedMedications:[],otherMedication:'',otherMedicationEnabled:false,otherInsulin:'',otherInsulinEnabled:false,medicationGroups:medicationGroups()}); this.onLoad()
     }
     applyDisplayToCurrentPage()
     if(this._phoneBindingVisited&&this.current()){
@@ -79,6 +80,7 @@ Page({
   fill(info) {
     this._me = info
     const form={...info}
+    form.exercise = form.exercise == null ? '' : form.exercise
     for(const key of this._dirty || []) form[key]=this.data.form[key]
     if(this._avatarChanged)form.avatarUrl=this.data.form.avatarUrl
     this.setData({form,diabetesIndex:this._diabetesChanged?this.data.diabetesIndex:Math.max(0,diabetesCode(info.diabetesType)),
@@ -87,6 +89,7 @@ Page({
     if(!this._dirty.has('medication')){
       const medication=parseMedication(form.medication)
       this.setData({selectedMedications:medication.selected,otherMedication:medication.other,otherMedicationEnabled:!!medication.other,
+        otherInsulin:medication.otherInsulin,otherInsulinEnabled:!!medication.otherInsulin,
         medicationGroups:medicationGroups(medication.selected)})
     }
   },
@@ -118,11 +121,22 @@ Page({
     this.updateMedication(this.data.selectedMedications,this.data.otherMedication,!this.data.otherMedicationEnabled)
   },
   onOtherMedicationInput(e){if(this.current()&&!this.data.saving)this.updateMedication(this.data.selectedMedications,e.detail.value,true)},
-  updateMedication(selected,other,enabled){
-    const value=medicationText(selected,enabled?other:'')
+  onOtherInsulin() {
+    if (!this.current() || this.data.saving) return
+    this.updateMedication(this.data.selectedMedications, this.data.otherMedication, this.data.otherMedicationEnabled,
+      this.data.otherInsulin, !this.data.otherInsulinEnabled)
+  },
+  onOtherInsulinInput(e) {
+    if (!this.current() || this.data.saving) return
+    this.updateMedication(this.data.selectedMedications, this.data.otherMedication, this.data.otherMedicationEnabled,
+      e.detail.value, true)
+  },
+  updateMedication(selected,other,enabled,insulin=this.data.otherInsulin,insulinEnabled=this.data.otherInsulinEnabled){
+    const value=medicationText(selected,enabled?other:'',insulinEnabled?insulin:'')
     if(value.length>256){wx.showToast({title:'用药信息不能超过256字',icon:'none'});return}
     this._dirty.add('medication')
     this.setData({selectedMedications:selected,otherMedication:other,otherMedicationEnabled:enabled,
+      otherInsulin:insulin,otherInsulinEnabled:insulinEnabled,
       medicationGroups:medicationGroups(selected),form:{...this.data.form,medication:value}})
   },
 
@@ -186,6 +200,10 @@ Page({
     const form = this.data.form
     if (!(form.nickname || '').trim()) {
       wx.showToast({ title: '请填写昵称', icon: 'none' })
+      return
+    }
+    if (this.data.otherInsulinEnabled && !this.data.otherInsulin.trim()) {
+      wx.showToast({ title: '请填写其他胰岛素名称，或取消选择', icon: 'none' })
       return
     }
 

@@ -1,16 +1,16 @@
 .type-row {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  gap: 12rpx;
   width: 100%;
 }
 
 .type-item {
-  flex: 1 1 0;
-  width: 0;
+  flex: 0 1 auto;
   min-width: 0;
   min-height: 72rpx;
-  margin-right: 12rpx;
+  margin-right: 0;
   border-radius: 12rpx;
   background: var(--line);
   font-size: var(--fs-small);
@@ -20,7 +20,7 @@
   justify-content: center;
   color: var(--muted);
   box-sizing: border-box;
-  padding: 0 8rpx;
+  padding: 0 20rpx;
   white-space: nowrap;
   line-height: 1.2;
 }
@@ -33,6 +33,13 @@
   background: var(--brand);
   color: #fff;
 }
+
+.device-hint { display: block; color: var(--muted); font-size: var(--fs-small); line-height: 1.6; margin-bottom: 16rpx; }
+.device-picker, .device-description { border: 2rpx solid var(--line); border-radius: 12rpx; padding: 20rpx; margin-top: 16rpx; font-size: var(--fs-small); }
+.device-picker { display: flex; justify-content: space-between; align-items: center; }
+.device-description { display: block; width: 100%; min-height: 88rpx; box-sizing: border-box; }
+.feedback-device { display: block; color: var(--muted); margin-top: 12rpx; font-size: var(--fs-small); line-height: 1.6; overflow-wrap: anywhere; }
+.options-error { color: var(--brand); font-size: var(--fs-small); padding: 12rpx 0; }
 
 .textarea-box {
   background: #f4fbf7;
