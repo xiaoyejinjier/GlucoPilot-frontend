@@ -16,9 +16,16 @@
     <text class="wallet-title">{{i18n.t('申请提现', locale)}}</text>
     <text class="wallet-muted wallet-block">{{i18n.t('仅问诊收入可提现，充值金额不计入。', locale)}}</text>
     <view wx:if="{{eligible}}">
-      <text class="withdraw-payee-label">{{i18n.t('支付宝沙箱买家UID', locale)}}</text>
-      <view class="wallet-custom"><input type="number" value="{{payeeUserId}}" maxlength="32" bindinput="onPayee" disabled="{{posting}}" placeholder="2088…" /></view>
-      <text class="wallet-muted wallet-block">{{i18n.t('从沙箱控制台的买家测试账号中复制UID，不是手机号或密码。', locale)}}</text>
+      <view class="withdraw-recipient" wx:if="{{!payeeEditing && payeeUserId}}">
+        <view class="wallet-between"><text class="withdraw-recipient-title">{{i18n.t('收款账号', locale)}}</text><text class="withdraw-recipient-change" bindtap="onChangePayee" aria-role="button">{{i18n.t('更换', locale)}}</text></view>
+        <text class="withdraw-recipient-id">{{payeeMasked}}</text>
+        <text class="wallet-muted wallet-block">{{i18n.t(payeeSource === 'HISTORY' ? '已自动带入上次使用的收款账号' : '已识别本人的充值付款账号', locale)}}</text>
+      </view>
+      <view wx:else>
+        <view class="wallet-between"><text class="withdraw-payee-label">{{i18n.t('支付宝沙箱收款账号', locale)}}</text><text class="withdraw-recipient-change" bindtap="onResolvePayee" aria-role="button">{{i18n.t(payeeLoading ? '正在识别…' : '自动识别', locale)}}</text></view>
+        <view class="wallet-custom"><input type="number" value="{{payeeUserId}}" maxlength="32" bindinput="onPayee" disabled="{{posting}}" placeholder="2088…" /></view>
+        <text class="wallet-muted wallet-block">{{i18n.t(payeeHint || '可自动使用上次收款账号或已成功充值的付款账号，也可手动填写沙箱买家UID。', locale)}}</text>
+      </view>
       <view class="wallet-custom">
         <text>¥</text><input type="digit" value="{{amount}}" maxlength="10" bindinput="onAmount" disabled="{{posting}}" placeholder="{{i18n.t('输入金额', locale)}}" />
         <text class="withdraw-all" bindtap="onAll">{{i18n.t('全部提现', locale)}}</text>

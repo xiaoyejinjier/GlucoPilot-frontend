@@ -1,4 +1,7 @@
 @import '../wallet/wallet.wxss';
+.withdraw-recipient{margin-top:24rpx;padding:24rpx;border-radius:22rpx;background:#eef5ff;border:1rpx solid #d8e6fa}
+.withdraw-recipient-title{font-size:26rpx;font-weight:600;color:#294f82}.withdraw-recipient-id{display:block;margin-top:18rpx;font-size:34rpx;font-weight:600;color:#254a7b;letter-spacing:2rpx}
+.withdraw-recipient-change{font-size:24rpx;color:#2a61ba;padding:10rpx 0 10rpx 18rpx;flex-shrink:0}
 .withdraw-heading-actions{display:flex;align-items:center;gap:12rpx;flex-wrap:wrap;justify-content:flex-end}
 .withdraw-refresh{margin:0;padding:8rpx 16rpx;min-height:56rpx;line-height:1.5;border-radius:18rpx;background:#e8f1ff;color:#244e84;font-size:24rpx}
 .withdraw-refresh::after,.withdraw-bind::after{border:0}

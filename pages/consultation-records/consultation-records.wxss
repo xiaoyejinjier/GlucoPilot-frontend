@@ -1,1 +1,11 @@
 @import "../../styles/consultation.wxss";
+.record-card{position:relative;overflow:hidden;border:2rpx solid #e1e8f3;padding:28rpx;margin-bottom:24rpx}
+.record-status{font-size:24rpx;font-weight:600;color:#687d98;background:#edf1f7;padding:9rpx 18rpx;border-radius:12rpx}
+.record-topic{font-size:23rpx;color:#7c8eaa}.record-active{border-color:#c8dcfb;background:#f9fcff}.record-active .record-status{color:#2b65b3;background:#e5efff}
+.record-report{border-color:#81a9e2;background:linear-gradient(135deg,#eef5ff 0%,#fff 78%);box-shadow:0 10rpx 28rpx rgba(45,87,149,.09)}
+.record-report::before{content:'';position:absolute;left:0;top:0;bottom:0;width:8rpx;background:#345d9e}
+.record-report .record-status{background:#345d9e;color:#fff}.record-report .consult-list-title{color:#213f70}
+.record-progress{display:flex;align-items:center;gap:12rpx;margin:18rpx 0 24rpx;padding:18rpx 20rpx;border-radius:16rpx;background:#f3f6fb;color:#74849b;font-size:24rpx;line-height:1.6}
+.record-active .record-progress{background:#ecf3fe;color:#496eaa}.record-report .record-progress{background:#e2edff;color:#2c518a;font-weight:500}.record-paper{font-size:38rpx;flex-shrink:0}
+.record-footer{display:flex;align-items:center;justify-content:space-between;gap:14rpx;padding-top:18rpx;border-top:1rpx solid #e6edf7;flex-wrap:wrap}
+.record-time{font-size:22rpx;color:#8a99b0}.record-actions{display:flex;align-items:center;gap:20rpx;margin-left:auto;flex-shrink:0}.record-chat{font-size:24rpx;color:#567caf;padding:8rpx 0}.record-open{font-size:24rpx;color:#496eaa;font-weight:500}.record-report .record-open{padding:12rpx 18rpx;background:#345d9e;color:#fff;border-radius:14rpx}

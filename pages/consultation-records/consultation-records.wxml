@@ -5,6 +5,11 @@
   <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('点击重试',locale)}}</view>
   <view wx:if="{{loading && !records.length}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
   <view wx:elif="{{!records.length && !error}}" class="consult-card consult-empty"><view class="consult-paper" aria-hidden="true"></view><text class="consult-empty-title">{{i18n.t(tab === 'orders' ? '还没有问诊订单' : '还没有求助记录',locale)}}</text><text class="consult-empty-note">{{i18n.t(tab === 'orders' ? '问诊单的查看订单会保存在这里。' : '你的求助和医生回复会保存在这里。',locale)}}</text><button class="consult-button" bindtap="onCompose" hover-class="ui-pressed">{{i18n.t('整理我的问题',locale)}} ↗</button></view>
-  <view wx:for="{{records}}" wx:key="id" class="consult-card" data-id="{{item.id}}" bindtap="onOpen" hover-class="ui-pressed"><view class="consult-heading"><text class="consult-pill">{{i18n.t(item.statusLabel,locale)}}</text><text wx:if="{{tab === 'orders'}}" class="consult-muted">¥{{item.price}}</text><text wx:else class="consult-muted">{{i18n.t(item.topicLabel,locale)}}</text></view><text class="consult-list-title">{{item.title}}</text><text class="consult-muted">{{item.timeLabel || item.createdAt}}</text></view>
+  <view wx:for="{{records}}" wx:key="id" class="consult-card record-card record-{{item.statusTone || 'order'}}" data-id="{{item.id}}" bindtap="onOpen" hover-class="ui-pressed">
+    <view class="consult-heading"><text class="record-status">{{i18n.t(item.reportReady ? '问诊单已出具' : item.statusLabel,locale)}}</text><text wx:if="{{tab === 'orders'}}" class="consult-muted">¥{{item.price}}</text><text wx:else class="record-topic">{{i18n.t(item.topicLabel,locale)}}</text></view>
+    <text class="consult-list-title">{{item.title}}</text>
+    <view wx:if="{{tab === 'requests'}}" class="record-progress"><text wx:if="{{item.reportReady}}" class="record-paper" aria-hidden="true">▤</text><text>{{i18n.t(item.progressNote,locale)}}</text></view>
+    <view class="record-footer"><text class="record-time">{{item.timeLabel || item.createdAt}}</text><view class="record-actions"><text wx:if="{{tab === 'requests' && item.hasDoctor}}" class="record-chat" data-id="{{item.id}}" catchtap="onChat" aria-role="button">{{i18n.t('问诊交流',locale)}}</text><text class="record-open">{{i18n.t(item.reportReady ? '查看问诊单' : '查看详情',locale)}} ›</text></view></view>
+  </view>
   <view wx:if="{{loading && records.length}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
 </view>

@@ -21,7 +21,12 @@ Page({
       const rows = (page.records || []).map(item => orders ? {
         ...item, id: String(item.orderNo), title: item.title || '问诊单查看服务',
         statusLabel: STATUS[item.status] || '处理中', price: money(item.amountCents)
-      } : decorate(item))
+      } : { ...decorate(item),
+        reportReady: item.status === 'REPORT_READY',
+        hasDoctor: ['IN_PROGRESS', 'REPLIED', 'REPORT_READY'].includes(item.status),
+        statusTone: item.status === 'REPORT_READY' ? 'report' : ['IN_PROGRESS', 'REPLIED'].includes(item.status) ? 'active' : item.status === 'CLOSED' ? 'closed' : 'waiting',
+        progressNote: item.status === 'REPORT_READY' ? '医生已出具问诊单，进入详情查看' : ['IN_PROGRESS', 'REPLIED'].includes(item.status) ? '医生正在跟进，可进入交流补充情况' : item.status === 'CLOSED' ? '本次问诊已结束，可查看历史详情' : '求助已发布，等待医生接诊'
+      })
       this.setData({ records: reset ? rows : this.data.records.concat(rows), pageNum,
         hasMore: pageNum < Number(page.pages), loading: false })
     } catch (error) {
@@ -45,6 +50,11 @@ Page({
     if (id) wx.navigateTo({ url: `/pages/consultation-detail/consultation-detail?id=${id}` })
   },
   onCompose() { wx.navigateTo({ url: '/pages/consultation-compose/consultation-compose' }) },
+  onChat(event) {
+    const row = this.data.records.find(item => item.id === String(event.currentTarget.dataset.id))
+    const id = row && row.hasDoctor && identifier(row.id)
+    if (social.active(this) && id) wx.navigateTo({ url: `/pages/consultation-chat/consultation-chat?id=${id}` })
+  },
   onConversations() { if (social.active(this)) wx.navigateTo({ url: '/pages/consultation-conversations/consultation-conversations' }) },
   onRetry() { return this.load(true) },
   onReachBottom() { return this.load(false) },

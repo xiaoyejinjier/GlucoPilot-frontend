@@ -8,6 +8,17 @@ const helpers = require('../../utils/consultation')
 const previewCaps = { mode:'PREVIEW', submissionEnabled:false, paymentEnabled:false, feeCents:100 }
 const flush = async () => { for (let i=0;i<20;i++) await Promise.resolve() }
 
+test('我的问诊区分待接诊、已接诊和已有问诊单，交流直达对应会话',async()=>{
+ const h=harness('consultation-records',{list:async()=>({records:[{id:'1',status:'WAITING',title:'问题一'},{id:'2',status:'IN_PROGRESS',title:'问题二'},{id:'3',status:'REPORT_READY',title:'问题三'}],pages:1})})
+ h.page.onLoad({});h.page.onShow();await flush()
+ assert.equal(h.page.data.records[0].statusTone,'waiting');assert.equal(h.page.data.records[0].hasDoctor,false)
+ assert.equal(h.page.data.records[1].statusTone,'active');assert.equal(h.page.data.records[1].hasDoctor,true)
+ assert.equal(h.page.data.records[2].reportReady,true);assert.equal(h.page.data.records[2].statusTone,'report')
+ h.page.onChat({currentTarget:{dataset:{id:'1'}}});assert.equal(h.state.navs.length,0)
+ h.page.onChat({currentTarget:{dataset:{id:'2'}}});assert.equal(h.state.navs[0].url,'/pages/consultation-chat/consultation-chat?id=2')
+ h.page.onOpen({currentTarget:{dataset:{id:'3'}}});assert.equal(h.state.navs[1].url,'/pages/consultation-detail/consultation-detail?id=3')
+})
+
 function harness(name, overrides = {}) {
   let definition
   const state = { token:'user-one', publishes:[], orders:[], modals:[], navs:[], selected:[], patches:[], keyboardHides:0, scrolls:[],timers:new Map(),uploads:[], storage:new Map(),reads:[],notificationRefreshes:0,keyboardHandlers:new Set() }

@@ -18,7 +18,7 @@ function harness(name, overrides = {}) {
   })
   const api = { summary: async () => ({ balanceCents: null }),
     orders: async () => ({ records: [], pages: 0 }), detail: async () => ({}),
-    recharge: async body => state.writes.push(body), refreshWithdrawals: async () => {}, ...overrides }
+    recharge: async body => state.writes.push(body), refreshWithdrawals: async () => {}, defaultWithdrawalRecipient: async () => ({payeeUserId:null,source:'NONE'}), ...overrides }
   let definition
   const deps = { '../../services/wallet': api, '../../utils/community': social.exports,
     '../../utils/wallet': helpers, '../../utils/withdrawal': require('../../utils/withdrawal'), '../../utils/consultation': require('../../utils/consultation'), '../../utils/display': { applyDisplayToCurrentPage() {} } }
@@ -76,6 +76,30 @@ test('医生提现按分提交，失败保留请求编号，金额校验且普�
  page.onHide();state.token='two';page.onShow();await flush();assert.equal(page.data.amount,'')
  const ordinary=harness('doctor-withdrawals',{withdrawalSummary:async()=>({eligible:false,availableCents:0,frozenCents:0}),withdrawals:async()=>({records:[],pages:0})})
  ordinary.page.onShow();await flush();ordinary.page.onApply();assert.equal(ordinary.state.modals.length,0)
+})
+
+test('提现自动带入本人历史或已核实充值账号，不用手填即可确认申请',async()=>{
+ for(const source of ['HISTORY','RECHARGE']){
+  const writes=[],h=harness('doctor-withdrawals',{
+   withdrawalSummary:async()=>({eligible:true,transferEnabled:true,availableCents:100,frozenCents:0}),withdrawals:async()=>({records:[],pages:0}),
+   defaultWithdrawalRecipient:async()=>({payeeUserId:'2088000000000002',source}),withdraw:async body=>writes.push(body)
+  });h.page.onShow();await flush()
+  assert.equal(h.page.data.payeeUserId,'2088000000000002');assert.equal(h.page.data.payeeEditing,false);assert.equal(h.page.data.payeeMasked,'2088 **** 0002')
+  h.page.onAmount({detail:{value:'1'}});h.page.onApply();h.state.modals[0].success({confirm:true});await flush()
+  assert.equal(writes[0].payeeUserId,'2088000000000002');assert.equal(writes[0].amountCents,100)
+ }
+})
+
+test('自动识别失败不影响金额和记录，手动输入及换账号后不被迟到账号覆盖',async()=>{
+ let resolve;const h=harness('doctor-withdrawals',{
+  withdrawalSummary:async()=>({eligible:true,transferEnabled:true,availableCents:200,frozenCents:0}),withdrawals:async()=>({records:[],pages:0}),
+  defaultWithdrawalRecipient:()=>new Promise(done=>{resolve=done})
+ });h.page.onShow();await flush();assert.equal(h.page.data.available,'2.00');assert.equal(h.page.data.payeeLoading,true)
+ h.page.onChangePayee();h.page.onPayee({detail:{value:'2088000000000003'}});resolve({payeeUserId:'2088000000000002',source:'RECHARGE'});await flush()
+ assert.equal(h.page.data.payeeUserId,'2088000000000003')
+ const pending=h.page.onResolvePayee();h.page.onHide();h.state.token='two';resolve({payeeUserId:'2088000000000002',source:'HISTORY'});await pending
+ assert.equal(h.page.data.payeeUserId,'2088000000000003','旧账号识别结果不能写入其他会话')
+ h.page.onShow();await flush();assert.equal(h.page.data.payeeUserId,'')
 })
 
 test('订单类型和状态请求分页，迟到响应不能覆盖新筛选或新账号', async () => {

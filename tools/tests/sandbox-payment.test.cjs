@@ -185,22 +185,21 @@ test('收银台忽略旧账号迟到响应，已付、关闭、过期订单不�
   assert.match(expired.page.data.error, /过期/)
 })
 
-test('收银台确认到账后卸载网页，只弹一次返回提示并回到原付款页', async () => {
+test('收银台两秒查单，确认到账后卸载网页并自动返回一次', async () => {
   const h = harness({}, 'sandbox-cashier')
   h.page.onShow(); await flush()
   const timer = [...h.state.timers.values()][0]
-  assert.equal(timer.ms, 5000)
+  assert.equal(timer.ms, 2000)
   h.api.refreshPayment = async () => ({ status: 'PAID', amountCents: 100 })
   timer.fn(); await flush()
   assert.equal(h.page.data.paid, true)
   assert.equal(h.page.data.cashierUrl, '')
   assert.equal(h.state.timers.size, 0)
-  assert.equal(h.state.modals.length, 1)
-  assert.equal(h.state.modals[0].confirmText, '返回')
-  assert.equal(h.state.navs.length, 0)
+  assert.equal(h.state.modals.length, 0)
+  assert.equal(h.state.toasts[0].title, '付款成功')
+  assert.equal(h.state.navs.length, 1)
   h.page.showCompleted(); await h.page.refreshStatus()
-  assert.equal(h.state.modals.length, 1)
-  h.state.modals[0].success({ confirm: true })
+  assert.equal(h.state.modals.length, 0)
   assert.equal(h.state.navs[0].delta, 1)
   h.page.onReturn()
   assert.equal(h.state.navs.length, 1)
@@ -236,7 +235,7 @@ test('收银台查单互斥、离页停止，旧账号迟到的成功结果不�
   assert.equal(h.state.navs.length, 0)
 })
 
-test('关闭订单停止查单，已付订单的返回提示在页面离开后不能再导航', async () => {
+test('关闭订单停止查单，已付订单直接返回且离页不重复导航', async () => {
   const closed = harness({ refreshPayment: async () => ({ status: 'CLOSED' }) }, 'sandbox-cashier')
   closed.page.onShow(); await flush()
   assert.equal(closed.page.data.cashierUrl, '')
@@ -244,10 +243,10 @@ test('关闭订单停止查单，已付订单的返回提示在页面离开后�
   assert.equal(closed.page.data.paid, false)
   const paid = harness({ payment: async () => ({ status: 'PAID' }) }, 'sandbox-cashier')
   paid.page.onShow(); await flush()
-  assert.equal(paid.state.modals.length, 1)
+  assert.equal(paid.state.navs.length, 1)
   paid.page.onHide(); paid.state.token = 'two'
-  paid.state.modals[0].success({ confirm: true })
-  assert.equal(paid.state.navs.length, 0)
+  paid.page.showCompleted(); paid.page.onReturn()
+  assert.equal(paid.state.navs.length, 1)
 })
 
 test('收银台轮询到期暂停，页面栈缺失时可返回同一订单付款页', async () => {

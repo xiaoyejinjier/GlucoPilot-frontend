@@ -63,7 +63,7 @@ Page({
           return
         }
         this.refreshStatus()
-      }, 5000)
+      }, 2000)
       this.refreshStatus()
     } catch (error) {
       if (!social.active(this, version) || run !== this._run) return
@@ -108,15 +108,8 @@ Page({
     const version = this._communityVersion, run = this._run
     this.setData({ cashierUrl: '', loading: false, retryable: false, paid: true, error: '' }, () => {
       if (!social.active(this, version) || run !== this._run) return
-      wx.showModal({
-        title: '付款成功',
-        content: '沙箱充值已到账，点击返回付款页查看结果。',
-        confirmText: '返回',
-        showCancel: false,
-        success: result => {
-          if (result.confirm && social.active(this, version) && run === this._run) this.onReturn()
-        }
-      })
+      wx.showToast({ title: '付款成功', icon: 'success' })
+      this.onReturn()
     })
   },
   onWebLoad() {
