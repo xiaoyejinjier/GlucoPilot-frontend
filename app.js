@@ -5,6 +5,7 @@ const { fetchMe, fetchAppConfig, logoutRemote } = require('./services/api')
 const { fontNameOf, themeIdOf } = require('./utils/mappers')
 const config = require('./utils/config')
 const messageNotifications = require('./utils/message-notifications')
+const { tryAutoCloudPull } = require('./utils/device-cloud-sync')
 const i18n = require('./utils/i18n')
 if (typeof Page === 'function') Page = i18n.wrapPage(Page)
 if (typeof Component === 'function') Component = i18n.wrapComponent(Component)
@@ -63,7 +64,13 @@ App({
       return
     }
     // 登录方式选择页不受后台恢复时的声明检查抢占。
-    if (current !== 'pages/login/login') this.enforceDisclaimer()
+    if (current !== 'pages/login/login') {
+      this.enforceDisclaimer().then((state) => {
+        if (state && !state.needsDisclaimer) {
+          tryAutoCloudPull({ reason: 'app-onShow' })
+        }
+      })
+    }
     if (!this.globalData.disclaimerRequired) messageNotifications.start()
   },
 
@@ -279,6 +286,7 @@ App({
     this.globalData.userInfo = userInfo
     this.globalData.disclaimerRequired = false
     this.globalData.disclaimerCurrentVersion = version
+    tryAutoCloudPull({ reason: 'disclaimer-agreed' })
   },
 
   getNavigationGuideToken() {

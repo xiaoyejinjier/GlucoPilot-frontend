@@ -469,18 +469,23 @@ function mapDeviceItem(d) {
     deviceSn: d.deviceSn || '',
     deviceName: d.deviceName || '我的血糖仪',
     provider: String(d.provider || 'MOCK').toUpperCase(),
+    deviceCategory: d.deviceCategory ? String(d.deviceCategory).toUpperCase() : '',
+    deviceModel: d.deviceModel || '',
     deviceStatus: d.deviceStatus == null ? 1 : Number(d.deviceStatus),
     lastSyncAt: d.lastSyncAt || '',
-    bound: d.bound !== false
+    bound: d.bound !== false,
+    cloudLinked: d.cloudLinked === true
   }
 }
 
-/** 自助绑定：deviceSn + provider，名称可选。 */
+/** 自助绑定：deviceSn + provider，名称可选；类型/型号可选（管理端可后补）。 */
 function bindDevice(payload) {
   return post('/devices/bind', {
     deviceSn: payload.deviceSn,
     provider: payload.provider,
-    deviceName: payload.deviceName || undefined
+    deviceName: payload.deviceName || undefined,
+    deviceCategory: payload.deviceCategory || undefined,
+    deviceModel: payload.deviceModel || undefined
   }, { auth: true }).then(mapDeviceItem)
 }
 
@@ -519,6 +524,44 @@ function syncDeviceGlucose(opts) {
   }
   if (opts.deviceSn) body.deviceSn = opts.deviceSn
   return post('/device/glucose-sync', body, { auth: true })
+}
+
+/**
+ * 华为健康云授权 URL（供 web-view 打开）。
+ * @param {string|number} [deviceId]
+ */
+function fetchHuaweiAuthorizeUrl(deviceId) {
+  const query = deviceId == null || deviceId === '' ? null : { deviceId: String(deviceId) }
+  return get('/devices/cloud/huawei/authorize-url', query, { auth: true }).then((data) => ({
+    authorizeUrl: (data && data.authorizeUrl) || '',
+    state: (data && data.state) || ''
+  }))
+}
+
+/** 查询设备云授权状态。 */
+function fetchDeviceCloudAuth(deviceId) {
+  return get(`/devices/${deviceId}/cloud-auth`, null, { auth: true }).then((data) => ({
+    linked: !!(data && data.linked),
+    expiresAt: (data && data.expiresAt) || '',
+    scopes: (data && data.scopes) || ''
+  }))
+}
+
+/** 撤销设备云授权。 */
+function revokeDeviceCloudAuth(deviceId) {
+  return del(`/devices/${deviceId}/cloud-auth`, null, { auth: true })
+}
+
+/**
+ * 服务端云拉取（首期华为）。
+ * @param {{ deviceId?: string|number }} [opts]
+ */
+function pullDeviceCloud(opts) {
+  const body = {}
+  if (opts && opts.deviceId != null && opts.deviceId !== '') {
+    body.deviceId = Number(opts.deviceId)
+  }
+  return post('/devices/cloud-pull', body, { auth: true })
 }
 
 /**
@@ -753,6 +796,10 @@ module.exports = {
   unbindDevice,
   fetchDeviceSyncLogs,
   syncDeviceGlucose,
+  fetchHuaweiAuthorizeUrl,
+  fetchDeviceCloudAuth,
+  revokeDeviceCloudAuth,
+  pullDeviceCloud,
   createSimDeviceAndSync,
   syncMockGlucose,
   defaultMockReadings,

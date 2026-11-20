@@ -43,6 +43,20 @@
       </view>
     </view>
     <view class="manage-actions">
+      <button
+        wx:if="{{item.showCloudAuth}}"
+        class="action-btn ghost"
+        data-id="{{item.id}}"
+        catchtap="onAuthorizeCloud"
+        hover-class="method-pressed"
+      >{{i18n.t("授权华为健康", locale)}}</button>
+      <button
+        wx:if="{{item.showCloudRevoke}}"
+        class="action-btn ghost"
+        data-id="{{item.id}}"
+        catchtap="onRevokeCloud"
+        hover-class="method-pressed"
+      >{{i18n.t("撤销云授权", locale)}}</button>
       <button class="action-btn" data-id="{{item.id}}" catchtap="onSync" disabled="{{loading}}" hover-class="method-pressed">{{i18n.t((item.syncActionText), locale)}}</button>
       <button class="action-btn ghost" data-id="{{item.id}}" catchtap="onDetail" hover-class="method-pressed">{{i18n.t("详情", locale)}}</button>
       <button class="action-btn danger" data-id="{{item.id}}" catchtap="onUnbind" disabled="{{unbinding}}" hover-class="method-pressed">{{i18n.t("解绑", locale)}}</button>
@@ -92,7 +106,7 @@
 
   <view class="device-preparation-note">
     <text class="preparation-title">{{i18n.t("状态说明", locale)}}</text>
-    <text>{{i18n.t("绑定后可查看设备详情、同步演示读数与近 10 次同步流水。待适配设备仅临时登记；「生成模拟数据」会按厂商自动绑定并写入随机血糖（演示用）。", locale)}}</text>
+    <text>{{i18n.t("华为设备可授权健康云后使用「云同步」；未授权或其他厂商走「演示同步」。待适配仅临时登记；「生成模拟数据」会按厂商自动绑定并写入随机血糖。", locale)}}</text>
   </view>
 
   <view wx:if="{{detailVisible}}" class="serial-overlay">
@@ -105,6 +119,8 @@
       <text class="serial-note">{{detail.deviceName}}</text>
       <text class="detail-line">{{i18n.t("序列号：" + (detail.deviceSn), locale)}}</text>
       <text class="detail-line">{{i18n.t("设备来源：" + (detail.providerName), locale)}}</text>
+      <text wx:if="{{detail.categoryLabel}}" class="detail-line">{{i18n.t("设备类型：" + (detail.categoryLabel), locale)}}</text>
+      <text wx:if="{{detail.modelLabel}}" class="detail-line">{{i18n.t("型号：" + (detail.modelLabel), locale)}}</text>
       <text class="detail-line">{{i18n.t("状态：" + (detail.statusText), locale)}}</text>
       <text class="detail-line">{{i18n.t("最近同步：" + (detail.lastSyncDisplay), locale)}}</text>
       <view class="sync-log-toggle" catchtap="onToggleSyncLogs">

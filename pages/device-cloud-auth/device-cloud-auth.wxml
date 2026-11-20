@@ -1,0 +1,13 @@
+<view class="cloud-auth-page">
+  <view wx:if="{{loading}}" class="cloud-auth-status">正在准备授权…</view>
+  <view wx:elif="{{error}}" class="cloud-auth-status">
+    <text>{{error}}</text>
+    <button class="cloud-auth-btn" bindtap="onRetry">重试</button>
+    <button class="cloud-auth-btn ghost" bindtap="onBack">返回</button>
+  </view>
+  <view wx:elif="{{done}}" class="cloud-auth-status">
+    <text>{{doneMessage}}</text>
+    <button class="cloud-auth-btn" bindtap="onBack">返回设备管理</button>
+  </view>
+  <web-view wx:elif="{{authorizeUrl}}" src="{{authorizeUrl}}"></web-view>
+</view>

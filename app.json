@@ -5,6 +5,7 @@
     "pages/voice/voice",
     "pages/ai/ai",
     "pages/devices/devices",
+    "pages/device-cloud-auth/device-cloud-auth",
     "pages/consultation/consultation",
     "pages/consultation-compose/consultation-compose",
     "pages/consultation-detail/consultation-detail",
