@@ -54,7 +54,14 @@ Page({
       if (this.current(version, run)) { this.setData({ loading: false, error: error.message || '交流记录加载失败，请重试' }); social.failure(this, error, version) }
     }
   },
-  merge(rows) { return social.mergeMessages(this.data.messages, rows) },
+  merge(rows) {
+    const messages = social.mergeMessages(this.data.messages, rows)
+    // 以完整日期和分钟分组；发送、轮询及加载历史后统一重算分界。
+    return messages.map((message, index) => ({
+      ...message,
+      showTime: !!message.timeLabel && (index === 0 || message.timeLabel !== messages[index - 1].timeLabel)
+    }))
+  },
   async loadMessages(direction) {
     if (!social.active(this) || !this.data.ready || this._busy) return
     this._busy = true

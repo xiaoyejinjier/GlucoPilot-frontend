@@ -3,7 +3,13 @@
   <view class="wallet-order-hero"><text class="wallet-title">{{i18n.t('我的订单',locale)}}</text><text class="wallet-muted wallet-block">{{i18n.t('充值与问诊，记录清清楚楚',locale)}}</text></view>
   <view class="wallet-tabs"><view class="{{type === 'CONSULTATION' ? 'active' : ''}}" data-type="CONSULTATION" bindtap="onType">{{i18n.t('问诊订单',locale)}}</view><view class="{{type === 'RECHARGE' ? 'active' : ''}}" data-type="RECHARGE" bindtap="onType">{{i18n.t('充值订单',locale)}}</view></view>
   <scroll-view class="wallet-status-scroll" scroll-x="{{true}}"><view class="wallet-statuses"><view wx:for="{{statuses}}" wx:key="code" class="{{status === item.code ? 'active' : ''}}" data-status="{{item.code}}" bindtap="onStatus">{{i18n.t(item.label,locale)}}</view></view></scroll-view>
-  <view wx:for="{{records}}" wx:key="orderNo" class="wallet-card wallet-order-card" data-order="{{item.orderNo}}" bindtap="onOpen" hover-class="ui-pressed"><view class="wallet-between"><text class="wallet-title">{{i18n.t(item.title,locale)}}</text><text class="wallet-order-status {{item.status === 'PAID' ? 'paid' : ''}}">{{i18n.t(item.statusLabel,locale)}}</text></view><text class="wallet-muted wallet-block">{{i18n.t('订单编号',locale)}}：{{item.orderNo}}</text><view class="wallet-between wallet-order-bottom"><text class="wallet-muted">{{item.time}}</text><text class="wallet-price">¥{{item.price}}</text></view><view class="wallet-detail-link">{{i18n.t('查看详情',locale)}} ›</view></view>
+  <view wx:for="{{records}}" wx:key="orderNo" class="wallet-card wallet-order-card" data-order="{{item.orderNo}}" bindtap="onOpen" hover-class="ui-pressed">
+    <view class="wallet-between"><text class="wallet-title">{{i18n.t(item.title,locale)}}</text><text class="wallet-order-status {{item.status === 'PAID' ? 'paid' : ''}}">{{i18n.t(item.statusLabel,locale)}}</text></view>
+    <text class="wallet-muted wallet-block">{{i18n.t('订单编号',locale)}}：{{item.orderNo}}</text>
+    <view class="wallet-between wallet-order-bottom"><text class="wallet-muted">{{item.time}}</text><text class="wallet-price">¥{{item.price}}</text></view>
+    <view wx:if="{{item.showBalanceAfter}}" class="wallet-order-balance"><text>{{i18n.t(item.balanceAfterLabel,locale)}}</text><text>{{item.balanceAfter !== null ? '¥' + item.balanceAfter : i18n.t('未记录',locale)}}</text></view>
+    <view class="wallet-detail-link">{{i18n.t('查看详情',locale)}} ›</view>
+  </view>
   <view wx:if="{{loading}}" class="wallet-empty"><view class="wallet-loading"></view><text>{{i18n.t('正在加载订单…',locale)}}</text></view>
   <view wx:elif="{{error}}" class="wallet-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('重试',locale)}}</view>
   <view wx:elif="{{records.length === 0}}" class="wallet-empty"><view class="wallet-empty-icon">≡</view><text class="wallet-title">{{i18n.t('暂无相关订单',locale)}}</text><text>{{i18n.t('服务开放后，真实订单会显示在这里',locale)}}</text></view>

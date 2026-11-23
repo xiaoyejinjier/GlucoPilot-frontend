@@ -7,6 +7,31 @@ const helpers = require('../../utils/wallet')
 const root = path.resolve(__dirname, '../..')
 const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve() }
 
+test('订单余额展示历史快照，零余额正常，缺失及非法值不转换为零',()=>{
+ for(const [raw,expected] of [[0,'0.00'],[101,'1.01'],['1234','12.34'],[null,null],[undefined,null],['',null],[-1,null],[1.5,null],[Number.MAX_SAFE_INTEGER+1,null]]){
+  const row=helpers.decorate({type:'RECHARGE',status:'PAID',amountCents:100,balanceAfterCents:raw})
+  assert.equal(row.balanceAfter,expected);assert.equal(row.showBalanceAfter,true)
+  assert.equal(row.balanceAfterLabel,'充值后余额')
+ }
+ assert.equal(helpers.decorate({type:'CONSULTATION',status:'PAID',balanceAfterCents:0}).balanceAfterLabel,'支付后余额')
+ for(const status of ['PENDING','CLOSED','REFUNDING','REFUNDED'])
+  assert.equal(helpers.decorate({status,balanceAfterCents:1234}).showBalanceAfter,false)
+})
+
+test('充值和问诊列表与详情读取同一历史余额，不使用当前钱包余额补齐旧订单',async()=>{
+ for(const type of ['RECHARGE','CONSULTATION']){
+  const row={orderNo:'order-test',type,status:'PAID',amountCents:100,balanceAfterCents:0}
+  const api={orders:async()=>({records:[row],pages:1}),detail:async()=>row,
+   summary:async()=>{throw Error('不应读取当前余额代替历史快照')}}
+  const list=harness('my-orders',api);list.page.onLoad({type});list.page.onShow();await flush()
+  assert.equal(list.page.data.records[0].balanceAfter,'0.00')
+  const detail=harness('order-detail',api);detail.page.onLoad({type,orderNo:row.orderNo});detail.page.onShow();await flush()
+  assert.equal(detail.page.data.order.balanceAfter,'0.00')
+  row.balanceAfterCents=null;await list.page.onPullDownRefresh();await detail.page.onPullDownRefresh()
+  assert.equal(list.page.data.records[0].balanceAfter,null);assert.equal(detail.page.data.order.balanceAfter,null)
+ }
+})
+
 function harness(name, overrides = {}) {
   const state = { token: 'one', modals: [], toasts: [], navs: [], writes: [], refreshStops: 0 }
   const request = { getToken: () => state.token }
