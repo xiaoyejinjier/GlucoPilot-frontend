@@ -41,7 +41,7 @@ test('提醒边界与后端一致：3.9不提示、10提示，低值严格小于
   assert.equal(buildGlucoseAlerts([measured(10)])[0].name, '早餐前')
 })
 
-test('正餐预测、空值、非法值和未保存节点均不生成提醒', () => {
+test('正餐节点、空值、非法值和未保存节点均不生成提醒', () => {
   const invalid = [null, undefined, '', '  ', 'bad', 0, -1, 40, Infinity, true, [], {}]
   for (const value of invalid) assert.equal(buildGlucoseAlerts([measured(value)]).length, 0)
   for (const extra of [{ isMeal: true }, { id: 'breakfast' }, { id: 'unknown' }, { hasRecord: false }]) {

@@ -1,5 +1,8 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab" style="{{displayStyle}}">
+  <view wx:if="{{picking}}" class="card">
+    <text class="empty-tip">{{i18n.t("点击食物即可填入餐食记录", locale)}}</text>
+  </view>
   <view class="card">
     <input
       class="search-input"
@@ -41,6 +44,7 @@
         <text class="food-name">{{i18n.t((item.name), locale)}}</text>
         <text class="food-info">{{i18n.t((item.carbs) + "克碳水/100g · " + (item.cal) + "kcal", locale)}}</text>
       </view>
+      <text wx:if="{{picking}}" class="food-pick">{{i18n.t("选择", locale)}}</text>
     </view>
   </view>
 </view>

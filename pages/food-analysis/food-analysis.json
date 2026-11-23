@@ -1,6 +1,7 @@
 {
-  "navigationBarTitleText": "饮食识别",
+  "navigationBarTitleText": "饮食记录",
   "usingComponents": {
-    "tab-bar": "/components/tab-bar/tab-bar"
+    "tab-bar": "/components/tab-bar/tab-bar",
+    "speech-input": "/components/speech-input/speech-input"
   }
 }

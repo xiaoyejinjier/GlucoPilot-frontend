@@ -71,6 +71,10 @@ function t(value, locale) {
     var prefix = prefixes[i];
     if (key.indexOf(prefix) === 0 && key.length > prefix.length) return (messages[prefix] || prefix) + ' ' + t(key.slice(prefix.length).replace(whitespace, ''), locale);
   }
+  match = pattern('^识别\\s*(\\d+)\\s*种食物$').exec(key);
+  if (match) return 'Recognised ' + match[1] + (match[1] === '1' ? ' food' : ' foods');
+  match = pattern('^展开\\s*(\\d+)\\s*项$').exec(key);
+  if (match) return 'Show ' + match[1] + ' items';
   match = pattern('^(.*)\\s*项$').exec(key);
   if (match) return match[1] + ' items';
   match = pattern('^([\\d.]+)克碳水/100g$').exec(key);

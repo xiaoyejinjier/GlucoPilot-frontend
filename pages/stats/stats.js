@@ -4,7 +4,6 @@ const { t } = require('../../utils/locales/en')
 const { applyDisplayToCurrentPage, getTheme, getDisplaySettings } = require('../../utils/display')
 const { parseLocalDate, getNaturalWeek, getWeekRangeText, getMonthWeeks } = require('../../utils/stats-week')
 const { buildMealDetails } = require('../../utils/meal-details')
-const { drawPredictionSeries } = require('../../utils/glucose-chart')
 
 /** 同时拉取六个血糖节点和三个正餐节点，供“日”视图拼成完整九时段。 */
 function recordsOfDay(year, month, day) {
@@ -20,13 +19,12 @@ function recordsOfDay(year, month, day) {
   }))
 }
 
-/** 两条曲线共用纵轴，低/高预测值也必须完整显示。 */
+/** 周图纵轴按实测日均值自适应。 */
 function getWeekYAxis(points) {
   const values = []
   ;(points || []).forEach((point) => {
-    ;[point.value, point.predictedValue].forEach((value) => {
-      if (value != null && value !== '' && Number.isFinite(Number(value))) values.push(Number(value))
-    })
+    const value = point.value
+    if (value != null && value !== '' && Number.isFinite(Number(value))) values.push(Number(value))
   })
   const dataMin = values.length ? Math.min(...values) : 4
   const dataMax = values.length ? Math.max(...values) : 10
@@ -436,9 +434,7 @@ Page({
 
     const points = (this.data.weekPoints || []).map((point) => {
       const value = point.value == null || point.value === '' ? null : Number(point.value)
-      const predicted = point.predictedValue == null || point.predictedValue === '' ? null : Number(point.predictedValue)
-      return { ...point, value: Number.isFinite(value) ? value : null,
-        predictedValue: Number.isFinite(predicted) && predicted > 0 && predicted < 40 ? predicted : null }
+      return { ...point, value: Number.isFinite(value) ? value : null }
     })
     const labels = points.map((p) => p.label)
     const brand = getTheme(getDisplaySettings().theme).brand
@@ -513,12 +509,6 @@ Page({
         ctx.beginPath()
         ctx.rect(pad.l - 6, pad.t - 6, cw + 12, ch + 12)
         ctx.clip()
-
-        const predictions = []
-        points.forEach((point, i) => {
-          if (point.predictedValue != null) predictions.push(toPoint(point.predictedValue, i))
-        })
-        drawPredictionSeries(ctx, predictions)
 
         // 跳过无记录日，按日期顺序连接已有值；稀疏数据也能形成可见趋势。
         ctx.strokeStyle = brand

@@ -186,8 +186,6 @@
 .node.meal.recorded .node-dot { background:#47976d; }
 .node.meal.recorded .node-recorded, .meal-legend-item { color:#397957; }
 .node.meal.recorded .meal-tag, .status-meal-badge { color:#397957; background:#e6f2eb; }
-.chart-details.prediction { background:#f2f8f4; border-color:#a9cfb9; }
-.chart-details.prediction .chart-details-name, .chart-details.prediction .chart-details-value { color:#397957; }
 
 .status-legend {
   display: flex;

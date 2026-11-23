@@ -1,4 +1,4 @@
-/** 只展示已保存的饮食快照；缺失营养不伪装成 0，不调用预测模块。 */
+/** 只展示已保存的饮食快照；缺失营养不伪装成 0，不携带任何预测字段。 */
 function nutrientValue(value) {
   if (value == null || typeof value === 'boolean' || typeof value === 'object') return null
   if (typeof value === 'string' && !value.trim()) return null

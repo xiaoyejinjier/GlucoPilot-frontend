@@ -347,46 +347,38 @@ function renderWeek(points) {
   return operations
 }
 
-test('周图分别连接预测和实测并保留缺日横轴，预测先画虚线白点、实测最后画实线', () => {
-  const points = Array.from({ length: 7 }, (_, index) => ({ label: String(index), value: null, predictedValue: null }))
-  points[0] = { ...points[0], value: 6, predictedValue: 14 }
-  points[6] = { ...points[6], value: 8, predictedValue: 7 }
+test('周图连接实测日均值并保留缺日横轴，不再绘制预测曲线', () => {
+  const points = Array.from({ length: 7 }, (_, index) => ({ label: String(index), value: null }))
+  points[0] = { ...points[0], value: 6 }
+  points[6] = { ...points[6], value: 8 }
   const operations = renderWeek(points)
-  const dashed = operations.findIndex((op) => op.method === 'setLineDash' && op.args[0].length)
-  const solid = operations.findIndex((op, i) => i > dashed && op.method === 'setLineDash' && !op.args[0].length)
-  assert.ok(dashed > 0 && solid > dashed)
+  assert.equal(operations.some((op) => op.method === 'setLineDash' && op.args[0].length), false)
   const arcs = operations.filter((op) => op.method === 'arc')
-  assert.equal(arcs.length, 4)
-  assert.deepEqual(arcs.map((op) => op.args[2]), [4, 4, 5, 5])
+  assert.equal(arcs.length, 2)
+  assert.deepEqual(arcs.map((op) => op.args[2]), [5, 5])
   assert.equal(arcs[0].args[0], 40)
   assert.equal(arcs[1].args[0], 308)
   assert.ok(arcs.every((op) => op.args[1] >= 16 && op.args[1] <= 122))
-  assert.ok(operations.some((op) => op.method === 'fillText' && op.args[0] === '14'))
-  assert.ok(operations.slice(solid).some((op) => op.method === 'style' && op.args[0] === 'fillStyle' && op.args[1] === '#fff'))
+  assert.ok(operations.some((op) => op.method === 'fillText' && op.args[0] === '8'))
 })
 
-test('只有推荐预测也显示周曲线，不生成实测点；无预测也不填零', () => {
-  const predictionOnly = renderWeek([{ label: '一', value: null, predictedValue: 7.1 },
-    { label: '二', value: null, predictedValue: null }])
-  assert.deepEqual(predictionOnly.filter((op) => op.method === 'arc').map((op) => op.args[2]), [4])
-  assert.equal(predictionOnly.some((op) => op.method === 'fillText' && op.args[0] === '本周暂无记录'), false)
-  const noData = renderWeek([{ label: '一', value: null, predictedValue: null },
-    { label: '二', value: null, predictedValue: 0 }])
+test('只有实测才画点；无记录显示空态且不填零', () => {
+  const noData = renderWeek([{ label: '一', value: null }, { label: '二', value: null }])
   assert.equal(noData.some((op) => op.method === 'arc'), false)
   assert.ok(noData.some((op) => op.method === 'fillText' && op.args[0] === '本周暂无记录'))
+  const single = renderWeek([{ label: '一', value: 7.1 }, { label: '二', value: null }])
+  assert.deepEqual(single.filter((op) => op.method === 'arc').map((op) => op.args[2]), [5])
+  assert.equal(single.some((op) => op.method === 'fillText' && op.args[0] === '本周暂无记录'), false)
 })
 
-test('摘要映射保留预测日均值与有效餐数，不覆盖实测日均值和周摘要', () => {
+test('摘要映射以实测日均值作为曲线值，不覆盖周摘要', () => {
   const module = { exports: {} }
   vm.runInNewContext(fs.readFileSync(path.resolve(directory, '../../utils/mappers.js'), 'utf8'), {
     module, require: () => ({ getFoodImage: () => '' })
   })
   const result = module.exports.mapSummary({ week: { avg: 6.5, max: 8, min: 5,
-    points: [{ avg: 6, count: 2, predictedAvg: 9, predictionCount: 3 },
-      { avg: null, count: 0, predictedAvg: null, predictionCount: 0 }] } })
+    points: [{ avg: 6, count: 2 }, { avg: null, count: 0 }] } })
   assert.equal(result.week.points[0].value, 6)
-  assert.equal(result.week.points[0].predictedValue, 9)
-  assert.equal(result.week.points[0].predictionCount, 3)
-  assert.equal(result.week.points[1].predictedValue, null)
+  assert.equal(result.week.points[1].value, null)
   assert.equal(result.week.avg, 6.5)
 })

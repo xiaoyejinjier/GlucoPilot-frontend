@@ -565,11 +565,51 @@ OCR 识别结果	OCR results
 照片上传后进行真实识别，请稍候。	The uploaded photo is being analysed. Please wait.
 餐食识别 · 食品库匹配 · 确认后保存	Recognise · Match foods · Confirm & save
 正在识别餐食并匹配食品库…	Recognising meal and matching foods…
+正在上传餐食照片…	Uploading meal photo…
+照片上传完成后自动开始识别。	Recognition starts automatically once the photo is uploaded.
+识别通常需要数秒，请稍候。	Recognition usually takes a few seconds.
 本次识别未完成	Recognition incomplete
+未识别到食物	No food recognised
+照片中未识别出可用食物，请重新拍摄或补充文字说明后重新识别。	No usable food was recognised. Retake the photo or add details, then recognise again.
+缺少餐食照片	Meal photo missing
+请返回拍照页重新拍摄，再进入识别。	Return to the camera, take a new photo, then come back for recognition.
 点击重量可修改；若识别有误，请在下方补充说明后重新识别	Tap a weight to edit. If something is incorrect, add details below and recognise again.
 补充食物信息	Add food details
 例如：这份是糙米饭，只吃了100克；左侧是豆腐，不是鸡肉	e.g. This is brown rice, only 100 g; the food on the left is tofu, not chicken
 按补充信息重新识别	Recognise with extra details
+改名	Rename
+删除	Delete
+份量	Portion
+换食物	Replace food
+添加食物	Add food
+从食物库选择	Choose from food library
+手动添加	Add manually
+名称	Name
+如 杂粮馒头	e.g. multigrain bun
+重量	Weight
+如 100	e.g. 100
+每100g碳水	Carbs per 100g
+每100g热量	Calories per 100g
+可留空	Optional
+碳水与热量为每 100g 数值，可留空；留空时该项不计入总量。	Carbs and calories are per 100g and optional; items without them are excluded from totals.
+添加	Add
+取消	Cancel
+语音输入	Voice input
+点击食物即可填入餐食记录	Tap a food to add it to the meal record
+选择	Select
+项识别置信度较低，请逐项勾选确认	item(s) with low confidence; tick each one to confirm
+识别置信度较低，请确认名称与份量	Low confidence: please confirm the name and portion
+请先勾选确认全部低置信食物	Tick all low-confidence foods before saving
+整餐升糖负担	Overall glycaemic load
+暂无法分析	Analysis unavailable
+分析中...	Analysing...
+分析中，请稍候…	Analysing, please wait…
+规则版本	Rule version
+血糖上下文	Glucose context
+只读	Read-only
+补录	Add record
+餐后减餐前	After minus before
+本餐前后暂无血糖记录，可点补录前往记录。	No glucose records before or after this meal; tap add record to log one.
 重新识别	Recognise again
 完整食物内容	Full food details
 图片原文：	Text in photo:\s
@@ -587,18 +627,7 @@ OCR 识别结果	OCR results
 碳水  · 热量	Carbs · Calories
 g · 热量	g · Calories
 确认食物及份量，保存饮食记录	Confirm foods and portions to save your meal
-餐前实测血糖	Before-meal glucose
-录入上方血糖后，自动生成预测	Enter glucose above to generate a prediction
-餐后血糖预测	After-meal glucose estimate
-正在计算餐后血糖预测…	Estimating after-meal glucose…
-按当前份量吃的餐后血糖	Estimated glucose with current portions
-按推荐份量吃的餐后血糖	Estimated glucose with suggested portions
-① 当前餐食	① Current meal
-② 推荐吃法	② Suggested portions
-建议吃	Suggested portion
 饱腹感：	Fullness:\s
-不建议	Not recommended
-重试预测	Retry estimate
 数据导出	Export data
 导出	Export
 导出范围	Date range
@@ -1021,9 +1050,6 @@ GI 暂无数据	GI unavailable
 需要修改	Changes needed
 需要摄像头权限才能拍照	Camera permission is required to take photos
 需要麦克风权限，请在设置中开启后重新录音	Enable microphone permission in settings, then record again
-项未分类食物未纳入预测	unclassified foods excluded from estimate
-预测失败，可重试；不影响饮食保存	Estimate unavailable. You can still save this meal.
-预测返回数据无效，请重试	Invalid estimate. Please retry.
 食品库数据	Food database
 餐前	Before meal
 餐点是饮食记录，不是实测血糖	Meal slots contain food logs, not glucose readings
@@ -1278,19 +1304,8 @@ SN：	SN:\s
 该标签已删除，请选择其他标签	This topic was removed. Please choose another
 用户自定义标签统一归入其他	Custom topics are grouped under Other
 全部其他	All other topics
-餐后预测 · 按推荐吃法	Post-meal prediction · recommended meal
-mmol/L · 餐后预测	mmol/L · post-meal prediction
-预测依据	Prediction basis
-按推荐吃法	Recommended meal
-预测仅供参考，不计入实测记录	Prediction for reference only; excluded from measurements
-已存预测	Prediction saved
 正餐已保存	Meal saved
 实测日均值	Measured daily average
-推荐吃法预测日均值	Predicted daily average · recommended meal
-预测按当天已保存的三餐推荐值取平均；不足三餐按已有值计算，不计入实测统计。	Predictions average the saved recommended values for up to three meals a day and are excluded from measured statistics.
-早餐后预测	Post-breakfast prediction
-中餐后预测	Post-lunch prediction
-晚餐后预测	Post-dinner prediction
 正餐照片加载失败	Could not load meal photo
 正在加载照片…	Loading photo…
 未绑定，点击绑定	Not linked · tap to link
@@ -1793,6 +1808,45 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 提交提现申请	Submit withdrawal request
 仅审核通过的医生可申请提现。	Only verified doctors can request withdrawals.
 审核与发放	Review and payout
+确认食物	Confirm foods
+查看分析	View analysis
+等待识别	Waiting for recognition
+食物分析	Food analysis
+按食物类别评估	Assessed by food category
+负担较低	Lower load
+负担中等	Moderate load
+负担较高	Higher load
+信息不足	Insufficient information
+本餐碳水估算约	Estimated meal carbs approx.
+（随份量变化）	(changes with portions)
+逐项建议	Per-food advice
+分析依据	How this is assessed
+查看全部	Show all
+没有该档位的食物	No foods in this category
+添加食物后给出逐项建议	Add foods to see per-food advice
+本餐血糖	Meal glucose
+待记录	Not recorded
+去修改	Edit
+餐后升幅	Post-meal rise
+支持随时补录或修改血糖，餐前、餐后均记录后即可自动计算升幅。	Add or edit glucose any time; the rise appears once both readings exist.
+餐食备注	Meal notes
+保存饮食记录	Save meal record
+请确认重量和营养后再保存。	Check weight and nutrition before saving.
+请先填写克重	Enter a weight first
+约	approx.
+份	portion
+热量	Calories
+营养未知，不计入总量	Nutrition unknown; excluded from totals
+（选填）可补充餐前运动、用药等情况，如：跑步20分钟、服用了阿卡波糖	(Optional) Add pre-meal exercise or medication, e.g. 20 min run, took acarbose
+添加食物后自动给出分析	Analysis appears after foods are added
+所选食物升糖负担都在可控范围	All selected foods have manageable glycaemic load
+补充食物重量或改用食品库食物后可评估	Add weights or use food-library items to assess
+建议减少份量或替换为升糖负担更低的食物	Reduce portions or switch to lower-load foods
+需要控制份量，先吃蔬菜和蛋白质	Control portions and start with vegetables and protein
+升糖负担较低，注意保持均衡搭配	Lower load; keep a balanced mix
+升糖负担中等，建议控制份量	Moderate load; watch the portion
+升糖负担较高，建议减少份量或替换为升糖负担更低的食物	Higher load; reduce the portion or switch to lower-load foods
+信息不足，建议补充重量或改用食品库食物	Not enough information; add weights or use food-library items
 审核通过后5个工作日模拟发放，节假日和调休以后台工作日历为准。	Simulated payout occurs on the fifth business day after approval, following the configured work calendar.
 当前为沙箱测试，不会向支付宝或银行卡真实转账。	Sandbox testing only. No real transfers to Alipay or bank accounts.
 当前为沙箱测试，医生提现仅模拟发放，不涉及真实转账。	Sandbox testing only. Doctor withdrawals are simulated; no real transfers occur.
@@ -1827,7 +1881,6 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 当前份量预计低于目标下限，建议适量加餐	Current portions may fall below your lower target; consider adding a little food.
 当前血糖偏高，建议少量进食并加强监测	Your glucose is elevated; eat lightly and monitor more closely.
 已接近最低建议量，仍可能超标，建议调整食物结构或咨询营养师	Near the minimum suggested amount and may still exceed target; adjust the food mix or consult a dietitian.
-当前预测已超出妊娠期严格目标，请按产科/营养科方案进食并加强监测	The estimate exceeds the strict pregnancy target; follow your obstetric/nutrition plan and monitor closely.
 在此之前直接登录即可自动终止注销，继续使用账号与全部数据。	Log in directly before then to cancel the deletion and keep your account and all data.
 · 钱包账户及未提现的余额（请务必提前提现）	· Wallet balance and unwithdrawn funds (withdraw in advance)
 · 已发布的问诊贴（含收费贴）将作为医疗记录匿名保留，其他用户仍可查看，但您的个人身份信息将被抹除。	· Published consultation posts (including paid ones) are kept anonymously as medical records and stay visible to others, but your identity is removed.
