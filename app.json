@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/login/login",
+    "pages/account-switch/account-switch",
     "pages/index/index",
     "pages/voice/voice",
     "pages/ai/ai",

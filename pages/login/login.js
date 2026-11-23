@@ -2,6 +2,7 @@ const { login } = require('../../utils/storage')
 const { applyDisplayToCurrentPage, getDisplayStyle } = require('../../utils/display')
 const { wechatLogin, sendSmsCode, phoneLogin, sendEmailCode, emailLogin } = require('../../services/api')
 const config = require('../../utils/config')
+const accountVault = require('../../utils/account-vault')
 const app = getApp()
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -22,7 +23,9 @@ Page({
     emailPanel: false,
     email: '',
     emailCode: '',
-    emailCooldown: 0
+    emailCooldown: 0,
+    hasSavedAccounts: false,
+    agreementChecked: false
   },
 
   onLoad() {
@@ -31,8 +34,53 @@ Page({
   },
 
   onShow() {
+    this._loginVisible = true
     applyDisplayToCurrentPage()
     this.updateLoginLayout()
+    this.setData({ hasSavedAccounts: !!app.globalData.accountSwitchFlow && accountVault.list().length > 0 })
+    const pending = app.globalData.pendingLoginPhone
+    app.globalData.pendingLoginPhone = ''
+    if (typeof pending === 'string' && PHONE_RE.test(pending)) {
+      this.setData({ phonePanel: true, emailPanel: false, phone: pending,
+        lastLoginPhone: pending, usingLastPhone: true, smsCode: '', phoneFocus: false })
+    }
+  },
+
+  onSavedAccounts() {
+    if (this.data.hasSavedAccounts && app.globalData.accountSwitchFlow)
+      wx.navigateTo({ url: '/pages/account-switch/account-switch' })
+  },
+
+  onAgreementChange(event) {
+    this.setData({ agreementChecked: (event.detail.value || []).includes('agreed') })
+  },
+
+  requireAgreement() {
+    if (this.data.agreementChecked) return true
+    if (this._agreementPrompt || this._loginVisible === false) return false
+    this._agreementPrompt = true
+    const epoch = this._agreementEpoch || 0
+    wx.showModal({
+      title: '请先同意协议',
+      content: '请阅读并同意《用户协议》《隐私政策》《免责声明》后继续。',
+      confirmText: '同意',
+      cancelText: '拒绝',
+      showCancel: true,
+      confirmColor: '#315b95',
+      success: result => {
+        if (epoch !== (this._agreementEpoch || 0) || this._loginVisible === false) return
+        this._agreementPrompt = false
+        if (result.confirm) this.setData({ agreementChecked: true })
+      },
+      fail: () => { if (epoch === (this._agreementEpoch || 0)) this._agreementPrompt = false }
+    })
+    return false
+  },
+
+  onHide() {
+    this._loginVisible = false
+    this._agreementEpoch = (this._agreementEpoch || 0) + 1
+    this._agreementPrompt = false
   },
 
   onResize() { this.updateLoginLayout() },
@@ -49,6 +97,7 @@ Page({
   },
 
   onUnload() {
+    this.onHide()
     if (this._smsTimer) clearInterval(this._smsTimer)
     if (this._emailTimer) clearInterval(this._emailTimer)
   },
@@ -61,6 +110,7 @@ Page({
   },
 
   finishLogin() {
+    app.globalData.accountSwitchFlow = false
     login()
     app.globalData.isLoggedIn = true
     // 按已同意的声明版本完成登录后的路由，邮箱登录同样走此流程。
@@ -69,6 +119,7 @@ Page({
   },
 
   onWechatLogin() {
+    if (!this.requireAgreement()) return
     if (!this.checkConnectionSettings()) return
     wx.showLoading({ title: '登录中...', mask: true })
     wx.login({
@@ -99,6 +150,7 @@ Page({
   },
 
   onPhoneLogin() {
+    if (!this.requireAgreement()) return
     if (this.data.phonePanel) return
     let lastLoginPhone = ''
     try {
@@ -135,6 +187,7 @@ Page({
   },
 
   onSendSms() {
+    if (!this.requireAgreement()) return
     if (!this.checkConnectionSettings()) return
     const phone = this.data.phone
     if (!/^1\d{10}$/.test(phone)) {
@@ -167,6 +220,7 @@ Page({
   },
 
   onConfirmPhoneLogin() {
+    if (!this.requireAgreement()) return
     if (!this.checkConnectionSettings()) return
     const { phone, smsCode } = this.data
     if (!/^1\d{10}$/.test(phone)) {
@@ -193,6 +247,7 @@ Page({
   },
 
   onEmailLogin() {
+    if (!this.requireAgreement()) return
     this.setData({ emailPanel: true, phonePanel: false })
   },
 
@@ -209,6 +264,7 @@ Page({
   },
 
   onSendEmailCode() {
+    if (!this.requireAgreement()) return
     if (!this.checkConnectionSettings()) return
     const email = this.data.email
     if (!EMAIL_RE.test(email)) {
@@ -241,6 +297,7 @@ Page({
   },
 
   onConfirmEmailLogin() {
+    if (!this.requireAgreement()) return
     if (!this.checkConnectionSettings()) return
     const { email, emailCode } = this.data
     if (!EMAIL_RE.test(email)) {

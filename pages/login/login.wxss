@@ -39,7 +39,8 @@
 .email-icon::after{content:'';position:absolute;left:5rpx;top:-4rpx;width:17rpx;height:17rpx;border-right:2rpx solid currentColor;border-bottom:2rpx solid currentColor;transform:rotate(45deg);border-radius:2rpx}
 .wechat-icon>view{position:absolute;left:0;top:2rpx;width:25rpx;height:21rpx;border:2rpx solid currentColor;border-radius:50%}
 .wechat-icon>view:last-child{left:11rpx;top:14rpx;width:21rpx;height:17rpx;background:var(--navy)}
-.login-agree{display:block;margin-top:68rpx;color:var(--hint);font-size:var(--fs-tiny);text-align:left;line-height:1.8;overflow-wrap:anywhere}
+.login-agree{display:flex;align-items:flex-start;gap:12rpx;margin-top:52rpx;color:var(--hint);font-size:var(--fs-tiny);text-align:left;line-height:1.8;overflow-wrap:anywhere}
+.login-agree-checkbox{flex:none;width:36rpx;margin-top:2rpx;transform:scale(.8);transform-origin:top left}.login-agree>text{flex:1;min-width:0}
 .login-footer{display:flex;flex:none;align-items:center;justify-content:center;gap:18rpx;padding:26rpx 32rpx 32rpx;color:var(--muted);font-size:var(--fs-tiny);line-height:1.6;text-align:center}
 .login-footer>view{height:1rpx;width:32rpx;background:#cddbeb;flex:none}
 .phone-mask{position:fixed;inset:0;background:rgba(19,42,72,.38);z-index:20}
@@ -51,7 +52,12 @@
 .phone-input{height:92rpx;min-height:92rpx;flex-shrink:0;border:1rpx solid #d5e2f1;border-radius:18rpx;padding:0 22rpx;font-size:var(--fs-body);background:#f4f7fc;color:var(--ink)}
 .sms-row{display:flex;align-items:center;gap:14rpx;flex-shrink:0}
 .sms-input{flex:1;width:0;min-width:0}
-.sms-btn{flex:none;margin:0;padding:0 20rpx;height:92rpx;line-height:1.5;max-width:48%;font-size:var(--fs-small)}
+.sms-row>.sms-btn{display:flex;align-items:center;justify-content:center;align-self:stretch;flex:none;width:220rpx;max-width:44%;height:92rpx;min-height:92rpx;margin:0;padding:0 18rpx;box-sizing:border-box;border:1rpx solid #d4e2f7;border-radius:18rpx;background:#edf3fc;color:#315b95;font-size:var(--fs-body);font-weight:600;line-height:1.4;text-align:center}
+.sms-btn-label{display:block;width:100%;text-align:center;line-height:1.4;word-break:normal}
+.sms-row>.sms-btn[disabled]{background:#f0f3f8;color:#9aa8bd;border-color:#e6ebf3}
+.phone-subtitle{display:block;margin-top:-14rpx;margin-bottom:2rpx;color:var(--muted);font-size:var(--fs-small);line-height:1.6}
+.login-panel .login-saved-accounts{justify-content:flex-start;gap:14rpx;min-height:64rpx;padding:16rpx 0 0;margin:18rpx 0 0;border:0;background:transparent;color:#315b95;font-size:var(--fs-small);text-align:left}
+.login-panel .login-saved-accounts::after{border:0}.login-panel .login-saved-accounts>text:not(.login-button-arrow){flex:none}.login-saved-icon{font-size:32rpx;line-height:1}
 .phone-panel .btn-primary{background:var(--navy);flex-shrink:0}
 .phone-panel .btn-ghost{flex-shrink:0}
 @media(max-height:740px){.login-screen{padding-top:16rpx}.login-hero{padding-bottom:68rpx}.login-intro{padding-top:28rpx}.login-illustration{min-height:158rpx;margin:20rpx 0 14rpx}.login-journal{height:158rpx;padding:18rpx 26rpx}.journal-chart,.journal-curve{height:68rpx}.journal-bars{margin-top:6rpx}.login-panel{padding-top:42rpx;padding-bottom:36rpx}.login-wechat{margin-top:32rpx}.login-alternatives{gap:18rpx;margin-top:18rpx}.login-footer{padding-top:24rpx;padding-bottom:28rpx}}

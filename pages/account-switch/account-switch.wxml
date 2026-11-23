@@ -1,0 +1,24 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="account-screen" style="{{displayStyle}}">
+  <view class="account-heading">
+    <view class="account-heading-icon">⇄</view>
+    <text class="account-title">{{i18n.t('选择账号', locale)}}</text>
+    <text class="account-subtitle">{{i18n.t('选择已登录的账号继续使用', locale)}}</text>
+  </view>
+  <view wx:if="{{loading}}" class="account-status">{{i18n.t('正在更新账号状态…', locale)}}</view>
+  <view wx:if="{{error}}" class="account-error" bindtap="onRefresh" aria-role="button">{{i18n.t(error, locale)}}</view>
+  <view class="account-list">
+    <view wx:for="{{accounts}}" wx:key="id" class="account-card {{item.current ? 'is-current' : ''}} ui-interactive" data-id="{{item.id}}" bindtap="onSelect" aria-role="button" aria-disabled="{{switching}}" hover-class="ui-pressed">
+      <view class="account-avatar {{item.role === 'DOCTOR' ? 'is-doctor' : ''}}">{{item.avatarText}}</view>
+      <view class="account-copy">
+        <view class="account-name-line"><text class="account-name">{{item.nickname}}</text><text wx:if="{{item.current}}" class="account-current">{{i18n.t('当前使用', locale)}}</text></view>
+        <text class="account-phone">{{item.phoneMasked || item.id}}</text>
+        <text class="account-role role-{{item.role}}">{{i18n.t(item.roleLabel, locale)}}</text>
+      </view>
+      <view class="account-action"><text>{{i18n.t(switchingId === item.id ? '切换中…' : item.current ? '使用中' : item.requiresLogin ? '重新登录' : '切换', locale)}}</text><text wx:if="{{!item.current}}" class="account-chevron">›</text><text wx:else class="account-check">✓</text></view>
+    </view>
+  </view>
+  <view wx:if="{{!loading && !accounts.length}}" class="account-empty">{{i18n.t('登录过的账号会显示在这里', locale)}}</view>
+  <button class="account-add ui-interactive" bindtap="onAddAccount" disabled="{{switching}}" hover-class="ui-pressed"><text>＋</text><text>{{i18n.t('添加账号', locale)}}</text></button>
+  <text class="account-footnote">{{i18n.t('账号信息仅保存在本机，切换后显示对应账号的数据', locale)}}</text>
+</view>

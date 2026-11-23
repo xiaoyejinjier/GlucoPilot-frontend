@@ -32,5 +32,13 @@
     <view class="mine-menu-row ui-interactive" data-url="/pages/consultation-doctor/consultation-doctor" bindtap="onMenuTap" hover-class="ui-pressed"><view class="mine-row-icon message-row-icon">＋</view><view class="mine-menu-copy"><text>{{i18n.t("医生工作台",locale)}}</text><text>{{i18n.t("身份申请与接诊",locale)}}</text></view><text class="mine-menu-arrow">›</text></view>
   </view>
   <view class="mine-service"><view class="mine-service-row ui-interactive" data-url="/pages/account-security/account-security" bindtap="onMenuTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text>{{i18n.t("账号与安全", locale)}}</text><text>›</text></view><view class="mine-service-row ui-interactive" data-url="/pages/disclaimer/disclaimer" bindtap="onMenuTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text>{{i18n.t("免责声明", locale)}}</text><text>›</text></view><view class="mine-service-row ui-interactive" data-url="/pages/about/about" bindtap="onMenuTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><text>{{i18n.t("关于我们", locale)}}</text><text>›</text></view></view>
-  <view class="mine-logout"><button class="mine-logout-button ui-interactive" bindtap="onLogout" disabled="{{loggingOut}}" loading="{{loggingOut}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("退出登录", locale)}}</button><text>{{i18n.t("慢慢来，每一天的认真都算数。", locale)}}</text></view>
+  <view class="mine-logout">
+    <button class="mine-logout-button ui-interactive" bindtap="onLogout" disabled="{{loggingOut}}" loading="{{loggingOut}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+      <view class="mine-logout-icon" aria-hidden="true"><view class="logout-door"></view><view class="logout-arrow"></view></view>
+      <text class="mine-logout-title">{{i18n.t(loggingOut ? '退出中…' : '退出登录', locale)}}</text>
+      <text class="mine-logout-chevron" aria-hidden="true">›</text>
+    </button>
+    <button class="mine-switch-button ui-interactive" bindtap="onSwitchAccount" disabled="{{loggingOut}}" hover-class="ui-pressed"><text class="mine-switch-icon">⇄</text><text>{{i18n.t("切换账号", locale)}}</text><text class="mine-switch-arrow">›</text></button>
+    <text>{{i18n.t("慢慢来，每一天的认真都算数。", locale)}}</text>
+  </view>
 </view>

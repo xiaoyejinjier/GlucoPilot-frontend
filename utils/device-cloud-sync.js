@@ -15,6 +15,7 @@ function tryAutoCloudPull(opts) {
   if (!app || !app.globalData) return Promise.resolve(null)
   if (!app.globalData.isLoggedIn || !getToken()) return Promise.resolve(null)
   if (app.globalData.disclaimerRequired) return Promise.resolve(null)
+  const token = getToken()
 
   const now = Date.now()
   if (!options.force) {
@@ -26,6 +27,7 @@ function tryAutoCloudPull(opts) {
 
   return pullDeviceCloud({})
     .then((result) => {
+      if (getToken() !== token || !app.globalData.isLoggedIn) return null
       wx.setStorageSync(STORAGE_KEY, now)
       return result
     })

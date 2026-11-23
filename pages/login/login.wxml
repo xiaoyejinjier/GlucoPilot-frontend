@@ -11,7 +11,10 @@
     <text class="login-panel-desc">{{i18n.t("选择一种方式，开始记录", locale)}}</text>
     <button class="btn-primary btn-block login-wechat ui-interactive" bindtap="onWechatLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view class="login-button-icon wechat-icon" aria-hidden="true"><view></view><view></view></view><text>{{i18n.t("微信一键登录", locale)}}</text><text class="login-button-arrow" aria-hidden="true">›</text></button>
     <view class="login-alternatives"><button class="btn-ghost ui-interactive" bindtap="onPhoneLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view class="login-button-icon phone-icon" aria-hidden="true"></view><text>{{i18n.t("手机号登录", locale)}}</text><text class="login-button-arrow" aria-hidden="true">›</text></button><button class="btn-ghost ui-interactive" bindtap="onEmailLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}"><view class="login-button-icon email-icon" aria-hidden="true"></view><text>{{i18n.t("邮箱登录", locale)}}</text><text class="login-button-arrow" aria-hidden="true">›</text></button></view>
-    <text class="login-agree">{{i18n.t("登录即表示同意《用户协议》《隐私政策》《免责声明》", locale)}}</text>
+    <checkbox-group bindchange="onAgreementChange">
+      <label class="login-agree"><checkbox class="login-agree-checkbox" value="agreed" checked="{{agreementChecked}}" color="#315b95" /><text>{{i18n.t('我已阅读并同意《用户协议》《隐私政策》《免责声明》', locale)}}</text></label>
+    </checkbox-group>
+    <button wx:if="{{hasSavedAccounts}}" class="login-saved-accounts ui-interactive" bindtap="onSavedAccounts" hover-class="ui-pressed"><text class="login-saved-label">{{i18n.t('切换已登录账号', locale)}}</text><text class="login-saved-icon">⇄</text></button>
   </view>
 
   <view class="login-footer"><view></view><text>{{i18n.t("记录点滴，也照顾好自己。", locale)}}</text><view></view></view>
@@ -19,12 +22,13 @@
   <view class="phone-mask" wx:if="{{phonePanel}}" bindtap="onClosePhonePanel"></view>
   <view class="phone-panel" wx:if="{{phonePanel}}">
     <text class="phone-title">{{i18n.t("手机号登录", locale)}}</text>
+    <text class="phone-subtitle">{{i18n.t('验证码登录，安全便捷', locale)}}</text>
     <view wx:if="{{lastLoginPhone}}" class="last-phone-row"><text class="last-phone-hint">{{i18n.t(usingLastPhone ? '已填入上次登录的手机号' : '可以使用上次登录的手机号',locale)}}</text><view class="last-phone-action" bindtap="onSwitchPhone" aria-role="button" hover-class="ui-pressed">{{i18n.t(usingLastPhone ? '换个手机号' : '使用上次手机号',locale)}}</view></view>
     <input class="phone-input" type="number" maxlength="11" placeholder="{{i18n.t('手机号', locale)}}" value="{{phone}}" focus="{{phoneFocus}}" bindinput="onPhoneInput" />
     <view class="sms-row">
       <input class="phone-input sms-input" type="number" maxlength="6" placeholder="{{i18n.t('验证码', locale)}}" value="{{smsCode}}" bindinput="onSmsInput" />
-      <button class="btn-ghost sms-btn ui-interactive" size="mini" disabled="{{smsCooldown > 0}}" bindtap="onSendSms" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-        {{i18n.t((smsCooldown > 0 ? smsCooldown + 's' : '获取验证码'), locale)}}
+      <button class="btn-ghost sms-btn ui-interactive" disabled="{{smsCooldown > 0}}" bindtap="onSendSms" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+        <text class="sms-btn-label">{{i18n.t((smsCooldown > 0 ? smsCooldown + 's' : '获取验证码'), locale)}}</text>
       </button>
     </view>
     <button class="btn-primary btn-block ui-interactive" bindtap="onConfirmPhoneLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("登录", locale)}}</button>
@@ -34,11 +38,12 @@
   <view class="phone-mask" wx:if="{{emailPanel}}" bindtap="onCloseEmailPanel"></view>
   <view class="phone-panel" wx:if="{{emailPanel}}">
     <text class="phone-title">{{i18n.t("邮箱登录", locale)}}</text>
+    <text class="phone-subtitle">{{i18n.t('验证码登录，安全便捷', locale)}}</text>
     <input class="phone-input" type="text" maxlength="128" placeholder="{{i18n.t('邮箱', locale)}}" value="{{email}}" bindinput="onEmailInput" />
     <view class="sms-row">
       <input class="phone-input sms-input" type="number" maxlength="6" placeholder="{{i18n.t('验证码', locale)}}" value="{{emailCode}}" bindinput="onEmailCodeInput" />
-      <button class="btn-ghost sms-btn ui-interactive" size="mini" disabled="{{emailCooldown > 0}}" bindtap="onSendEmailCode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-        {{i18n.t((emailCooldown > 0 ? emailCooldown + 's' : '获取验证码'), locale)}}
+      <button class="btn-ghost sms-btn ui-interactive" disabled="{{emailCooldown > 0}}" bindtap="onSendEmailCode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+        <text class="sms-btn-label">{{i18n.t((emailCooldown > 0 ? emailCooldown + 's' : '获取验证码'), locale)}}</text>
       </button>
     </view>
     <button class="btn-primary btn-block ui-interactive" bindtap="onConfirmEmailLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("登录", locale)}}</button>

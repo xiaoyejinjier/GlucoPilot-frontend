@@ -11,7 +11,7 @@ function createFlow(options = {}) {
     storage: new Map(Object.entries(options.storage || {})),
     route: options.route || 'pages/login/login',
     profile: { disclaimerAgreed: false, disclaimerVersion: '', ...options.profile },
-    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: [], sms:[]
+    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: [], sms:[], invalidated: []
   }
   const token = () => state.storage.get('accessToken') || ''
   const request = { getToken: token, setToken(value) { if (value) state.storage.set('accessToken', value); else state.storage.delete('accessToken') } }
@@ -47,9 +47,11 @@ function createFlow(options = {}) {
     login: (value) => value.success({ code: 'wechat-code' }),
     reLaunch(value) { state.routes.push(value.url); state.route = value.url.split('?')[0].slice(1); if (value.complete) value.complete() },
     switchTab(value) { state.routes.push(value.url); state.route = value.url.slice(1) },
+    navigateTo(value) { state.routes.push(value.url) },
     navigateBack() { state.routes.push('back') }
   }
   const dependencies = {
+    './utils/account-vault': { remember() {}, invalidateToken(token) { if(token)state.invalidated.push(token) }, list: () => [] },
     './utils/device-cloud-sync': { tryAutoCloudPull: async () => null },
     './utils/i18n': { install() {} },
     './utils/message-notifications': { start(){},stop(){},reset(){} },
@@ -67,6 +69,7 @@ function createFlow(options = {}) {
   function page(name) {
     let definition
     const pageDependencies = {
+      '../../utils/account-vault': { list: () => options.savedAccounts || [] },
       '../../utils/display': display, '../../utils/storage': storage, '../../utils/request': request,
       '../../services/api': services, '../../utils/constants': { DISCLAIMER_CONTENT: ['声明正文'] },
       '../../utils/config': config
@@ -77,7 +80,10 @@ function createFlow(options = {}) {
       setTimeout: (callback) => { state.timers.push(callback); return state.timers.length },
       clearInterval() {}, setInterval: () => 1
     })
-    return { ...definition, data: JSON.parse(JSON.stringify(definition.data)),
+    const data = JSON.parse(JSON.stringify(definition.data))
+    // Existing login-flow cases start after the user has checked the agreement.
+    if (name === 'login' && options.agreementChecked !== false) data.agreementChecked = true
+    return { ...definition, data,
       setData(value, callback) { Object.assign(this.data, value); if (callback) callback() },
       createSelectorQuery() {
         const query = { select() { return query }, boundingClientRect() { return query },
@@ -89,6 +95,79 @@ function createFlow(options = {}) {
 }
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+for (const action of ['onWechatLogin','onPhoneLogin','onEmailLogin']) test('默认未勾选，弹框同意后自动勾选，再次点击登录才继续：'+action, async()=>{
+ const flow=createFlow({agreementChecked:false}),page=flow.page('login')
+ page[action]();page[action]()
+ assert.equal(flow.state.modals.length,1);assert.equal(flow.state.logins.length,0)
+ assert.equal(page.data.phonePanel,false);assert.equal(page.data.emailPanel,false)
+ assert.equal(page.data.agreementChecked,false)
+ flow.state.modals[0].success({confirm:true});await flush()
+ assert.equal(page.data.agreementChecked,true)
+ assert.equal(flow.state.logins.length,0)
+ assert.equal(page.data.phonePanel,false);assert.equal(page.data.emailPanel,false)
+ assert.equal(flow.state.modals[0].showCancel,true)
+ assert.equal(flow.state.modals[0].confirmText,'同意')
+ assert.equal(flow.state.modals[0].cancelText,'拒绝')
+ page[action]();await flush()
+ assert.equal(page.data.agreementChecked,true)
+ if(action==='onWechatLogin')assert.equal(flow.state.logins.length,1)
+ if(action==='onPhoneLogin')assert.equal(page.data.phonePanel,true)
+ if(action==='onEmailLogin')assert.equal(page.data.emailPanel,true)
+ assert.equal(flow.state.sms.length,0)
+})
+
+test('拒绝只关闭提示不勾选不登录；手动勾选可继续，离开后旧同意回调作废', async()=>{
+ const flow=createFlow({agreementChecked:false}),page=flow.page('login')
+ page.onWechatLogin();flow.state.modals[0].success({confirm:false});await flush()
+ assert.equal(page.data.agreementChecked,false);assert.equal(flow.state.logins.length,0)
+ page.onAgreementChange({detail:{value:['agreed']}});page.onPhoneLogin()
+ assert.equal(page.data.phonePanel,true);assert.equal(flow.state.modals.length,1)
+ page.onAgreementChange({detail:{value:[]}});page.onWechatLogin();page.onHide()
+ flow.state.modals[1].success({confirm:true});await flush()
+ assert.equal(page.data.agreementChecked,false);assert.equal(flow.state.logins.length,0)
+})
+
+test('自动填充手机号也不能绕过协议，未同意不发送验证码或提交登录',()=>{
+ for(const action of ['onSendSms','onSendEmailCode','onConfirmPhoneLogin','onConfirmEmailLogin']){
+  const flow=createFlow({agreementChecked:false}),page=flow.page('login')
+  flow.app.globalData.pendingLoginPhone='13900000002';page.onShow()
+  page[action]();assert.equal(flow.state.modals.length,1)
+  assert.equal(flow.state.sms.length,0);assert.equal(flow.state.logins.length,0)
+ }
+})
+
+test('保存账号入口仅在切换流程展示，普通退出和冷启动隐藏',()=>{
+ const flow=createFlow({savedAccounts:[{id:'u1'}]}),page=flow.page('login')
+ page.onShow();assert.equal(page.data.hasSavedAccounts,false)
+ page.onSavedAccounts();assert.equal(flow.state.routes.length,0)
+ flow.app.globalData.accountSwitchFlow=true;page.onShow()
+ assert.equal(page.data.hasSavedAccounts,true)
+ page.onSavedAccounts();assert.equal(flow.state.routes.at(-1),'/pages/account-switch/account-switch')
+ flow.app.resetLoginState();page.onShow();assert.equal(page.data.hasSavedAccounts,false)
+ flow.app.globalData.accountSwitchFlow=true;flow.app.onLaunch();page.onShow()
+ assert.equal(page.data.hasSavedAccounts,false)
+})
+
+test('冷启动保留可切换会话，明确退出才使当前保存会话失效，迟到过期不影响新账号', () => {
+ const flow=createFlow({storage:{accessToken:'saved-token'}})
+ flow.app.onLaunch();assert.equal(flow.state.invalidated.length,0)
+ flow.request.setToken('current-token');flow.app.resetLoginState()
+ assert.deepEqual(flow.state.invalidated,['current-token'])
+ flow.request.setToken('new-token')
+ assert.equal(flow.app.handleSessionExpired('old-token'),false)
+ assert.equal(flow.request.getToken(),'new-token')
+ flow.request.setToken('');flow.app.handleSessionExpired('new-token')
+ assert.deepEqual(flow.state.invalidated,['current-token','new-token'])
+})
+
+test('切换失效账号回到登录页时填入对应手机号，不自动发送验证码', () => {
+ const flow=createFlow(),page=flow.page('login')
+ flow.app.globalData.pendingLoginPhone='13900000002';page.onShow()
+ assert.equal(page.data.phonePanel,true);assert.equal(page.data.phone,'13900000002')
+ assert.equal(page.data.smsCode,'');assert.equal(flow.state.sms.length,0)
+ assert.equal(flow.app.globalData.pendingLoginPhone,'')
+})
 
 test('成功手机号登录后记住号码，重新打开默认填入且仅主动点击才发送验证码',async()=>{
  const flow=createFlow(),first=flow.page('login')
