@@ -1,4 +1,4 @@
-const { analyzeMealPhoto, saveMealRecord, previewMealSuitability, fetchGlucoseRecords } = require('../../services/api')
+const { analyzeMealPhoto, saveMealRecord, previewMealSuitability, fetchGlucoseRecords, fetchFoods } = require('../../services/api')
 const { getTodayKey, getRecords, saveRecord } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { readShotImage, clearShotImage } = require('../../utils/shot')
@@ -29,6 +29,11 @@ function pickGlucose(page) {
   return { value, time: formatClock(record.recordedAt || record.time) }
 }
 // 三档展示文案与建议兜底：后端 adviceText 缺失时使用，不含绝对化结论
+// 单项建议去掉与右侧档位标签重复的开头，避免同一结论连续出现两次
+function stripTierPrefix(text, label) {
+  if (!text || !label || text.indexOf(label) !== 0) return text || ''
+  return text.slice(label.length).replace(/^[，,、；;：:\s]+/, '')
+}
 const TIER_LABELS = { LOW: '负担较低', MODERATE: '负担中等', HIGH: '负担较高', UNKNOWN: '信息不足' }
 const ADVICE_FALLBACK = {
   LOW: '升糖负担较低，注意保持均衡搭配',
@@ -55,7 +60,7 @@ Page({
     items: [],
     warnings: [],
     matchedCount: 0,
-    newFoodsCount: 0,
+    estimatedCount: 0,
     model: '',
     supplement: '',
     currentGlucose: '',
@@ -84,12 +89,21 @@ Page({
     analysisReady: false,
     nutritionUnknownCount: 0,
     pendingConfirmCount: 0,
+    confirmableCount: 0,
+    allConfirmed: false,
+    someConfirmed: false,
     saveError: '',
     speechVisible: false,
-    addMenuVisible: false,
+    addSheetVisible: false,
+    addReplacing: false,
+    addMode: 'search',
+    addKeyword: '',
+    addResults: [],
+    addLoading: false,
     deleteMode: false,
-    weightEditingIndex: -1,
-    addFormVisible: false,
+    gramEditingIndex: -1,
+    portionEditingIndex: -1,
+    portionInput: '',
     addForm: { name: '', weight: '', carbs: '', calories: '' }
   },
 
@@ -176,6 +190,7 @@ Page({
     this._previewVersion = (this._previewVersion || 0) + 1
     this._glucoseVersion = (this._glucoseVersion || 0) + 1
     clearTimeout(this._previewTimer)
+    this.clearAddSearch()
   },
 
   ensureOpen() {
@@ -261,8 +276,9 @@ Page({
         analysisToken: (result && result.analysisToken) || '',
         needsConfirmation: !!(result && result.needsConfirmation),
         warnings: (result && result.warnings) || [],
-        matchedCount: (result && result.matchedCount) || 0,
-        newFoodsCount: (result && result.newFoodsCount) || 0,
+        // 头部统计统一从当前 items 派生，避免后端口径与文案语义不一致
+        matchedCount: 0,
+        estimatedCount: 0,
         model: (result && result.model) || '',
         foodListExpanded: false
       }
@@ -312,10 +328,20 @@ Page({
     })
     const totalValid = carbs <= 1000 && calories <= 20000
     const ready = weightReady && totalValid
-    const pendingConfirm = items.filter((item) => item.needsConfirmation && !item.confirmed).length
+    const confirmable = items.filter((item) => item.needsConfirmation)
+    const confirmedCount = confirmable.filter((item) => item.confirmed).length
+    const pendingConfirm = confirmable.length - confirmedCount
+    const estimatedCount = items.filter((item) => item.nutritionSource === 'AI_ESTIMATE').length
+    const matchedCount = items.filter((item) => item.nutritionSource === 'LIBRARY'
+      && item.libraryStatus === 'AVAILABLE').length
     this.setData({
       items, analysisReady: ready, nutritionUnknownCount: unknownCount,
       pendingConfirmCount: pendingConfirm,
+      confirmableCount: confirmable.length,
+      estimatedCount,
+      matchedCount,
+      allConfirmed: confirmable.length > 0 && pendingConfirm === 0,
+      someConfirmed: confirmedCount > 0 && pendingConfirm > 0,
       carbsG: items.length ? rounded(carbs) : null,
       caloriesKcal: items.length ? rounded(calories) : null,
       foodsText: items.map((item) => item.foodName + (item.weightG > 0 ? ' ' + item.weightG + 'g' : '（重量待确认）')).join('、').slice(0, 512),
@@ -387,12 +413,17 @@ Page({
     else analysisSub = '补充食物重量或改用食品库食物后可评估'
     const active = filter || ''
     const shown = active ? list.filter((item) => item.tier === active) : list
-    const adviceItems = shown.map((item) => ({
-      foodName: item.foodName,
-      tier: item.tier || 'UNKNOWN',
-      tierLabel: item.tierLabel || TIER_LABELS[item.tier] || TIER_LABELS.UNKNOWN,
-      adviceText: item.adviceText || ADVICE_FALLBACK[item.tier] || ADVICE_FALLBACK.UNKNOWN
-    }))
+    // 逐项建议按“需要注意”优先排序：HIGH → MODERATE → LOW → UNKNOWN，同档保持识别顺序
+    const rank = { HIGH: 0, MODERATE: 1, LOW: 2, UNKNOWN: 3 }
+    const adviceItems = shown
+      .map((item) => {
+        const tier = item.tier || 'UNKNOWN'
+        const tierLabel = item.tierLabel || TIER_LABELS[tier] || TIER_LABELS.UNKNOWN
+        const adviceText = item.adviceText || ADVICE_FALLBACK[tier] || ADVICE_FALLBACK.UNKNOWN
+        return { foodName: item.foodName, tier, tierLabel, adviceText,
+          adviceLine: stripTierPrefix(adviceText, tierLabel) }
+      })
+      .sort((a, b) => (rank[a.tier] == null ? 3 : rank[a.tier]) - (rank[b.tier] == null ? 3 : rank[b.tier]))
     return {
       tierCounts,
       analysisSub,
@@ -433,15 +464,64 @@ Page({
     this.recalculate()
   },
   onWeightBlur(e) {
-    if (Number(e.currentTarget.dataset.index) === this.data.weightEditingIndex) {
-      this.setData({ weightEditingIndex: -1 })
+    if (Number(e.currentTarget.dataset.index) === this.data.gramEditingIndex) {
+      this.setData({ gramEditingIndex: -1 })
     }
   },
   onOpenWeightEdit(e) {
     if (this.data.busy) return
     const index = Number(e.currentTarget.dataset.index)
     if (!this.data.items[index]) return
-    this.setData({ weightEditingIndex: index })
+    // 克重输入框只替换克重本身，份量数值保持原位，避免焦点看起来跳到份量
+    this.setData({ gramEditingIndex: index, portionEditingIndex: -1 })
+  },
+  onPortionTap(e) {
+    if (this.data.busy) return
+    const index = Number(e.currentTarget.dataset.index)
+    const item = this.data.items[index]
+    if (!item) return
+    const now = Date.now()
+    if (this._portionTapIndex === index && now - this._portionTapTime < 300) {
+      this._portionTapIndex = -1
+      const base = numberOrNull(item.baseWeight)
+      if (!(base > 0)) {
+        wx.showToast({ title: '请先填写克重', icon: 'none' })
+        return
+      }
+      this.setData({
+        portionEditingIndex: index,
+        portionInput: item.portionValue === '—' ? '' : String(item.portionValue),
+        gramEditingIndex: -1
+      })
+      return
+    }
+    this._portionTapIndex = index
+    this._portionTapTime = now
+  },
+  onPortionInput(e) {
+    this.setData({ portionInput: e.detail.value })
+  },
+  onPortionBlur(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (index !== this.data.portionEditingIndex) return
+    const item = this.data.items[index]
+    const base = item ? numberOrNull(item.baseWeight) : null
+    if (!item || !(base > 0)) {
+      this.setData({ portionEditingIndex: -1, portionInput: '' })
+      return
+    }
+    const raw = numberOrNull(this.data.portionInput)
+    // 份量按 0.5 吸附，保持整份/半份精度
+    let portion = raw === null ? 0.5 : Math.round(raw * 2) / 2
+    if (portion < 0.5) portion = 0.5
+    if (portion > 20) portion = 20
+    let weight = Math.round(base * portion)
+    if (weight < 1) weight = 1
+    if (weight > 5000) weight = 5000
+    const items = this.data.items.map((current, position) => position === index
+      ? { ...current, weightInput: String(weight) } : current)
+    this.setData({ items, portionEditingIndex: -1, portionInput: '' })
+    this.recalculate()
   },
   onToggleConfirm(e) {
     if (this.data.busy) return
@@ -450,6 +530,15 @@ Page({
     if (!item) return
     const items = this.data.items.map((current, position) => position === index
       ? { ...current, confirmed: !current.confirmed } : current)
+    this.setData({ items, saveError: '' })
+    this.recalculate()
+  },
+  onToggleAllConfirm() {
+    if (this.data.busy) return
+    // 半选时点一下全选，全部确认后再点则全不选
+    const next = !this.data.allConfirmed
+    const items = this.data.items.map((item) => item.needsConfirmation
+      ? { ...item, confirmed: next } : item)
     this.setData({ items, saveError: '' })
     this.recalculate()
   },
@@ -497,6 +586,19 @@ Page({
   onRemoveItem(e) {
     if (this.data.busy) return
     const index = Number(e.currentTarget.dataset.index)
+    const item = this.data.items[index]
+    if (!item) return
+    wx.showModal({
+      title: '删除这项食物？',
+      content: item.foodName,
+      confirmText: '删除',
+      confirmColor: '#c0392b',
+      success: (res) => {
+        if (res.confirm) this.removeItemAt(index)
+      }
+    })
+  },
+  removeItemAt(index) {
     const items = this.data.items.filter((_, position) => position !== index)
     if (!items.length) {
       this.setData({ items: [], phase: 'empty', deleteMode: false })
@@ -530,29 +632,88 @@ Page({
   },
   onReplaceItem(e) {
     if (this.data.busy) return
-    this._editingIndex = Number(e.currentTarget.dataset.index)
-    this.openFoodPicker()
+    const index = Number(e.currentTarget.dataset.index)
+    if (!(index >= 0 && index < this.data.items.length)) return
+    this._editingIndex = index
+    this.openAddSheet('search', true)
   },
-  onAddFromLibrary() {
+  onOpenAddSheet() {
     if (this.data.busy) return
     if (this.data.items.length >= 50) {
       wx.showToast({ title: '最多添加 50 项食物', icon: 'none' })
       return
     }
     this._editingIndex = -1
-    this.setData({ addMenuVisible: false })
-    this.openFoodPicker()
+    this.openAddSheet('search', false)
   },
-  openFoodPicker() {
-    wx.navigateTo({
-      url: '/pages/nutrition/nutrition?pick=1',
-      events: {
-        foodSelected: (food) => this.applyPickedFood(food)
-      }
+  openAddSheet(mode, replacing) {
+    this.setData({
+      addSheetVisible: true,
+      addReplacing: !!replacing,
+      addMode: mode || 'search',
+      addKeyword: '',
+      addResults: [],
+      addLoading: false,
+      deleteMode: false,
+      addForm: { name: '', weight: '', carbs: '', calories: '' }
     })
   },
+  onCloseAddSheet() {
+    this.clearAddSearch()
+    this._editingIndex = -1
+    this.setData({ addSheetVisible: false, addReplacing: false, addMode: 'search', addLoading: false })
+  },
+  clearAddSearch() {
+    if (this._addTimer) { clearTimeout(this._addTimer); this._addTimer = null }
+    this._addSearchSeq = (this._addSearchSeq || 0) + 1
+  },
+  onAddKeywordInput(e) {
+    const keyword = String(e.detail.value || '').trim()
+    this.setData({ addKeyword: keyword })
+    this.clearAddSearch()
+    if (!keyword) { this.setData({ addResults: [], addLoading: false }); return }
+    this._addTimer = setTimeout(() => this.searchFoods(keyword), 250)
+  },
+  searchFoods(keyword) {
+    this._addTimer = null
+    const seq = (this._addSearchSeq || 0) + 1
+    this._addSearchSeq = seq
+    this.setData({ addLoading: true })
+    fetchFoods({ keyword, pageNum: 1, pageSize: 20 })
+      .then((page) => {
+        if (seq !== this._addSearchSeq || !this.data.addSheetVisible) return
+        const results = ((page && page.records) || []).map((food) => ({
+          ...food,
+          per100Text: '每100g：碳水 ' + (food.carbs == null ? '未知' : food.carbs + 'g')
+            + ' · 热量 ' + (food.cal == null ? '未知' : food.cal + 'kcal')
+            + (food.gi == null ? '' : ' · GI ' + food.gi)
+        }))
+        this.setData({ addResults: results, addLoading: false })
+      })
+      .catch(() => {
+        if (seq !== this._addSearchSeq) return
+        this.setData({ addResults: [], addLoading: false })
+        wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
+      })
+  },
+  onAddResultTap(e) {
+    if (this.data.busy) return
+    const food = this.data.addResults[Number(e.currentTarget.dataset.index)]
+    if (food) this.applyPickedFood(food)
+  },
+  onSwitchAddMode(e) {
+    const mode = e.currentTarget.dataset.mode === 'custom' ? 'custom' : 'search'
+    if (mode === 'custom' && !this.data.addReplacing && this.data.items.length >= 50) {
+      wx.showToast({ title: '最多添加 50 项食物', icon: 'none' })
+      return
+    }
+    this.setData({ addMode: mode })
+  },
   applyPickedFood(food) {
-    if (!food || food.id == null) return
+    if (!food || food.id == null) {
+      wx.showToast({ title: '该食物暂不支持选择', icon: 'none' })
+      return
+    }
     const index = typeof this._editingIndex === 'number' ? this._editingIndex : -1
     const current = index >= 0 ? this.data.items[index] : null
     if (!current && this.data.items.length >= 50) {
@@ -586,40 +747,33 @@ Page({
       ? this.data.items.map((item, position) => position === index ? picked : item)
       : this.data.items.concat(picked)
     this._editingIndex = -1
-    this.setData({ items, phase: 'ready' })
+    this.setData({
+      items,
+      phase: 'ready',
+      addSheetVisible: false,
+      addReplacing: false,
+      addMode: 'search',
+      addKeyword: '',
+      addResults: []
+    })
     this.recalculate()
-  },
-  onToggleAddMenu() {
-    if (this.data.busy) return
-    this.setData({ addMenuVisible: !this.data.addMenuVisible, deleteMode: false })
   },
   onToggleDeleteMode() {
     if (this.data.busy) return
-    this.setData({ deleteMode: !this.data.deleteMode, addMenuVisible: false })
+    this.setData({ deleteMode: !this.data.deleteMode })
   },
   onExitModes() {
-    this.setData({ addMenuVisible: false, deleteMode: false })
-  },
-  onCloseAddMenu() {
-    this.setData({ addMenuVisible: false })
+    this.setData({ deleteMode: false })
   },
   onSheetTap() {},
-  onOpenAddForm() {
-    if (this.data.busy) return
-    if (this.data.items.length >= 50) {
-      wx.showToast({ title: '最多添加 50 项食物', icon: 'none' })
-      return
-    }
-    this.setData({ addFormVisible: true, addMenuVisible: false,
-      addForm: { name: '', weight: '', carbs: '', calories: '' } })
-  },
   onAddFormInput(e) {
     const field = e.currentTarget.dataset.field
     if (!['name', 'weight', 'carbs', 'calories'].includes(field)) return
     this.setData({ ['addForm.' + field]: e.detail.value })
   },
   onCancelAdd() {
-    this.setData({ addFormVisible: false, addForm: { name: '', weight: '', carbs: '', calories: '' } })
+    this.onCloseAddSheet()
+    this.setData({ addForm: { name: '', weight: '', carbs: '', calories: '' } })
   },
   onConfirmAdd() {
     if (this.data.busy) return
@@ -664,7 +818,8 @@ Page({
       per100Text: nutritionKnown ? '每100g：碳水 ' + carbs + 'g · 热量 ' + calories + 'kcal' : '营养未知，不计入总量'
     }
     this.setData({ items: this.data.items.concat(picked), phase: 'ready',
-      addFormVisible: false, addForm: { name: '', weight: '', carbs: '', calories: '' } })
+      addSheetVisible: false, addReplacing: false, addMode: 'search', addKeyword: '', addResults: [],
+      addForm: { name: '', weight: '', carbs: '', calories: '' } })
     this.recalculate()
   },
   onGoMeasure(e) {
@@ -673,9 +828,9 @@ Page({
     const nodeCode = dataset.node || BEFORE_MEAL[this.data.nodeId]
     if (!nodeCode) return
     const node = GLUCOSE_NODES.find((item) => item.id === nodeCode)
-    // 只读上下文：跳既有血糖确认页补录，不在本页写血糖库
+    // 只读上下文：先拍血糖仪照片，再由 food-confirm → confirm 完成 OCR 与入库，本页不写血糖库
     wx.navigateTo({
-      url: '/pages/confirm/confirm?nodeId=' + nodeCode + '&nodeName=' + encodeURIComponent(node ? node.name : '血糖')
+      url: '/pages/camera/camera?nodeId=' + nodeCode + '&nodeName=' + encodeURIComponent(node ? node.name : '血糖')
     })
   },
   onToggleFoodList() {

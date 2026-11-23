@@ -29,7 +29,7 @@ function createPage(options = {}) {
   let timerSeq = 0
   const timers = new Map()
   const calls = { analysis: 0, upload: 0, payloads: [], previews: [], glucoseQueries: [],
-    records: [], toasts: [], modals: [], switchTabs: [], redirects: [], navigations: [], setDataKeys: [] }
+    foodQueries: [], records: [], toasts: [], modals: [], switchTabs: [], redirects: [], navigations: [], setDataKeys: [] }
   const modules = {
     '../../services/api': {
       analyzeMealPhoto: async (payload) => {
@@ -65,6 +65,14 @@ function createPage(options = {}) {
           return options.glucose != null ? { records: [{ value: options.glucose, nodeCode: params.nodeCode }] } : { records: [] }
         }
         return options.afterGlucose != null ? { records: [{ value: options.afterGlucose, nodeCode: params.nodeCode }] } : { records: [] }
+      },
+      // 添加食物抽屉：直接搜索营养库，不再跳转 nutrition 选择页
+      fetchFoods: async (params) => {
+        calls.foodQueries.push(params)
+        if (options.foodsFail) throw new Error('load failed')
+        return options.foodResults || { records: [
+          { id: 5, name: '馒头', categoryCode: 1, carbs: 47, cal: 230, gi: 88 }
+        ] }
       }
     },
     '../../utils/storage': {
@@ -299,31 +307,38 @@ test('点克数进入手输，份数随克重自动重算', async () => {
   await page.onLoad({ nodeId: 'breakfast' })
   await flush()
   page.onOpenWeightEdit({ currentTarget: { dataset: { index: 0 } } })
-  assert.equal(page.data.weightEditingIndex, 0)
+  assert.equal(page.data.gramEditingIndex, 0)
   page.onWeightInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '250' } })
   assert.equal(page.data.items[0].portionValue, '2.5')
   page.onWeightBlur({ currentTarget: { dataset: { index: 0 } } })
-  assert.equal(page.data.weightEditingIndex, -1)
+  assert.equal(page.data.gramEditingIndex, -1)
 })
 
 test('删除最后一项回到 empty 态', async () => {
   const { page } = createPage()
   await page.onLoad({ nodeId: 'breakfast' })
   await flush()
-  page.onRemoveItem({ currentTarget: { dataset: { index: 0 } } })
+  // 删除入口先弹二次确认，真正移除在确认后执行
+  page.removeItemAt(0)
   assert.equal(page.data.items.length, 0)
   assert.equal(page.data.phase, 'empty')
   assert.equal(page.data.analysisReady, false)
 })
 
-test('从食物库添加：picker 回传后追加并保留默认 100g', async () => {
+test('从食物库添加：抽屉搜索后追加并保留默认 100g', async () => {
   const { page, calls } = createPage()
   await page.onLoad({ nodeId: 'breakfast' })
   await flush()
-  page.onAddFromLibrary()
-  const nav = calls.navigations.at(-1)[0]
-  assert.match(nav.url, /pages\/nutrition\/nutrition\?pick=1/)
-  nav.events.foodSelected({ id: 5, name: '馒头', categoryCode: 1, carbs: 47, cal: 230, gi: 88 })
+  page.onOpenAddSheet()
+  assert.equal(page.data.addSheetVisible, true)
+  page.setData({ addKeyword: '馒头' })
+  page.searchFoods('馒头')
+  await flush()
+  assert.equal(calls.foodQueries.at(-1).keyword, '馒头')
+  assert.equal(page.data.addResults.length, 1)
+  assert.match(page.data.addResults[0].per100Text, /碳水 47g/)
+  page.onAddResultTap({ currentTarget: { dataset: { index: 0 } } })
+  assert.equal(page.data.addSheetVisible, false)
   assert.equal(page.data.items.length, 2)
   const added = page.data.items[1]
   assert.equal(added.foodName, '馒头')
@@ -334,24 +349,28 @@ test('从食物库添加：picker 回传后追加并保留默认 100g', async ()
 })
 
 test('换食物保留原克重并替换营养', async () => {
-  const { page, calls } = createPage()
+  const { page } = createPage()
   await page.onLoad({ nodeId: 'breakfast' })
   await flush()
   page.onWeightInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '180' } })
   page.onReplaceItem({ currentTarget: { dataset: { index: 0 } } })
-  calls.navigations.at(-1)[0].events.foodSelected({ id: 9, name: '糙米饭', categoryCode: 1, carbs: 23, cal: 112, gi: 68 })
+  assert.equal(page.data.addSheetVisible, true)
+  assert.equal(page.data.addReplacing, true)
+  page.applyPickedFood({ id: 9, name: '糙米饭', categoryCode: 1, carbs: 23, cal: 112, gi: 68 })
   const item = page.data.items[0]
   assert.equal(item.foodName, '糙米饭')
   assert.equal(item.weightInput, '180')
   assert.equal(item.carbsG, 41.4)
   assert.equal(item.userCorrected, true)
+  assert.equal(page.data.addSheetVisible, false)
 })
 
 test('手动添加营养留空：可保存、不计入总量', async () => {
   const { page, calls } = createPage()
   await page.onLoad({ nodeId: 'breakfast' })
   await flush()
-  page.onOpenAddForm()
+  page.onOpenAddSheet()
+  page.onSwitchAddMode({ currentTarget: { dataset: { mode: 'custom' } } })
   page.onAddFormInput({ currentTarget: { dataset: { field: 'name' } }, detail: { value: '自制沙拉' } })
   page.onAddFormInput({ currentTarget: { dataset: { field: 'weight' } }, detail: { value: '150' } })
   page.onConfirmAdd()
@@ -374,7 +393,8 @@ test('手动添加并填写营养后计入总量', async () => {
   const { page } = createPage()
   await page.onLoad({ nodeId: 'breakfast' })
   await flush()
-  page.onOpenAddForm()
+  page.onOpenAddSheet()
+  page.onSwitchAddMode({ currentTarget: { dataset: { mode: 'custom' } } })
   page.onAddFormInput({ currentTarget: { dataset: { field: 'name' } }, detail: { value: '全麦面包' } })
   page.onAddFormInput({ currentTarget: { dataset: { field: 'weight' } }, detail: { value: '50' } })
   page.onAddFormInput({ currentTarget: { dataset: { field: 'carbs' } }, detail: { value: '40' } })
@@ -394,8 +414,9 @@ test('重量越界或达 50 项上限时拒绝保存/添加', async () => {
   assert.equal(page.data.analysisReady, false)
   page.onWeightInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '100' } })
   page.setData({ items: new Array(50).fill(page.data.items[0]) })
-  page.onOpenAddForm()
-  assert.equal(page.data.addFormVisible, false)
+  page.onOpenAddSheet()
+  page.onSwitchAddMode({ currentTarget: { dataset: { mode: 'custom' } } })
+  assert.equal(page.data.addSheetVisible, false)
   assert.match(calls.toasts.at(-1)[0].title, /50/)
 })
 
@@ -606,18 +627,18 @@ test('缺少餐后记录时保留餐前值、差值置空', async () => {
   assert.equal(page.data.glucoseNodes[1].value, null)
 })
 
-test('血糖补录跳既有确认页，页面内不再写入血糖', async () => {
+test('血糖补录先进入血糖拍照流程，页面内不再写入血糖', async () => {
   const { page, calls } = createPage({ glucose: 5.6 })
   await page.onLoad({ nodeId: 'breakfast' })
   await flush()
   page.onGoMeasure({ currentTarget: { dataset: { node: 'before_breakfast' } } })
   const url = calls.navigations.at(-1)[0].url
-  assert.match(url, /^\/pages\/confirm\/confirm\?nodeId=before_breakfast&nodeName=/)
+  assert.match(url, /^\/pages\/camera\/camera\?nodeId=before_breakfast&nodeName=/)
   const nodeName = decodeURIComponent(url.split('nodeName=')[1])
   assert.equal(nodeName, '早餐前')
   page.onGoMeasure({ currentTarget: { dataset: { node: 'after_breakfast' } } })
   const afterUrl = calls.navigations.at(-1)[0].url
-  assert.match(afterUrl, /nodeId=after_breakfast/)
+  assert.match(afterUrl, /^\/pages\/camera\/camera\?nodeId=after_breakfast&nodeName=/)
   assert.equal(decodeURIComponent(afterUrl.split('nodeName=')[1]), '早餐后')
   // 默认节点回落到本餐餐前，不再使用页面内血糖输入
   page.onGoMeasure({ currentTarget: { dataset: {} } })

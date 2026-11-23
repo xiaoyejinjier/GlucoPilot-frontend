@@ -597,7 +597,12 @@ OCR 识别结果	OCR results
 语音输入	Voice input
 点击食物即可填入餐食记录	Tap a food to add it to the meal record
 选择	Select
-项识别置信度较低，请逐项勾选确认	item(s) with low confidence; tick each one to confirm
+项识别置信度较低，请确认	item(s) with low confidence, please confirm
+模型估算	Estimated
+全选	Select all
+已全部确认	All confirmed
+完成	Done
+删除这项食物？	Delete this food?
 识别置信度较低，请确认名称与份量	Low confidence: please confirm the name and portion
 请先勾选确认全部低置信食物	Tick all low-confidence foods before saving
 整餐升糖负担	Overall glycaemic load
@@ -1843,6 +1848,19 @@ SN：	SN:\s
 补充食物重量或改用食品库食物后可评估	Add weights or use food-library items to assess
 建议减少份量或替换为升糖负担更低的食物	Reduce portions or switch to lower-load foods
 需要控制份量，先吃蔬菜和蛋白质	Control portions and start with vegetables and protein
+松手结束	Release to finish
+松开取消	Release to cancel
+准备中…	Preparing…
+按住重试	Hold to retry
+松开手指，取消录音	Release to cancel recording
+按住圆形按钮开始录音	Hold the round button to start
+松手结束，识别后可修改再发送	Release to stop; review before sending
+替换食物	Replace food
+搜索食物名称	Search food name
+输入食物名称，从营养库选择	Enter a food name to search the library
+没有找到相关食物	No matching food found
+营养库没有？自定义添加	Not in the library? Add manually
+返回搜索	Back to search
 升糖负担较低，注意保持均衡搭配	Lower load; keep a balanced mix
 升糖负担中等，建议控制份量	Moderate load; watch the portion
 升糖负担较高，建议减少份量或替换为升糖负担更低的食物	Higher load; reduce the portion or switch to lower-load foods
