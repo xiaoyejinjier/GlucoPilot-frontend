@@ -1,5 +1,6 @@
 const api = require('../services/api')
 const { getToken } = require('./request')
+const realtime = require('./message-realtime')
 let timer = null, token = '', epoch = 0, busy = false, latest = '', latestNotice = '', latestReport = '', latestConsultation = '', enabled = false
 let promptedConsultations = new Set()
 function consultationConversations(value) {
@@ -90,18 +91,26 @@ function start() {
   const current = getToken()
   if (!current) { stop(); return }
   if (enabled && token === current) {
+    realtime.start()
     const app = currentApp()
     if (app && app.globalData) publish(app.globalData.informationCounts || app.globalData.unreadCount, app)
     return
   }
   if (token !== current) { latest = latestNotice = latestReport = latestConsultation = ''; promptedConsultations = new Set(); publish(0) }
   stop(); token = current; enabled = true; refresh()
+  realtime.start()
   timer = setInterval(refresh,5000)
 }
 function stop() {
+  realtime.stop()
   if (timer) clearInterval(timer)
   timer = null; epoch++; busy = false; enabled = false
   // Keep the high-water mark across a background/foreground cycle of this account.
 }
 function reset(owner) { stop(); token = ''; latest = latestNotice = latestReport = latestConsultation = ''; promptedConsultations = new Set(); publish(0, owner) }
 module.exports = { start, stop, reset, refresh, count, label, consultationConversations }
+
+// WebSocket及时唤醒未读汇总；其他类型通知仍由原汇总轮询负责。
+realtime.subscribe(event => {
+  if (enabled && (event.type === 'CONNECTED' || event.type === 'DM_CHANGED')) refresh(true)
+})

@@ -9,7 +9,7 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a, b)
 const message = (id, mine = false) => ({ id: String(id), content: `消息${id}`, senderId: mine ? '1' : '2', recipientId: mine ? '2' : '1', mine, createdAt: '2026-10-19T12:30:00', readAt: null })
 
 function harness(name, options = {}) {
-  const state = { token: 'account-one', calls: [], toasts: [], feedback:[], ticks:[], navs: [], scrolls: [], intervals: new Map(), timeouts:new Map(), modals: [], clipboard: [], reset: 0, speech:[] }
+  const state = { token: 'account-one', calls: [], toasts: [], feedback:[], ticks:[], navs: [], scrolls: [], intervals: new Map(), timeouts:new Map(), modals: [], clipboard: [], reset: 0, speech:[], realtimeListeners:new Set() }
   const app = { checkLogin: () => !!state.token, resetLoginState() { state.token = ''; state.reset++ } }
   const request = { getToken: () => state.token }
   const wx = { showToast: v => state.toasts.push(v), navigateTo: v => state.navs.push(v), reLaunch: v => state.navs.push(v),
@@ -40,6 +40,8 @@ function harness(name, options = {}) {
     setTimeout:(fn,ms)=>{if(!options.manualTimeouts){fn();return 0}const id=++timerId;state.timeouts.set(id,{fn:()=>{state.timeouts.delete(id);fn()},ms});return id},
     clearTimeout:id=>state.timeouts.delete(id),
     require: key => ({ '../../services/api': api, '../../utils/community': socialModule.exports, '../../utils/dm-permission':require('../../utils/dm-permission'),
+      '../../utils/message-realtime':{ start(){}, connected:()=>!!state.socketReady, send:(...args)=>options.socketSend?options.socketSend(...args):null,
+        subscribe(fn){state.realtimeListeners.add(fn);return()=>state.realtimeListeners.delete(fn)} },
       '../../utils/request': request, '../../utils/message-notifications':{refresh:()=>state.calls.push({name:'refreshUnread'}),count:v=>Math.max(0,Number(v)||0),label:v=>Number(v)>99?'99+':Number(v)>0?String(v):''}, '../../utils/remote-image':{mapField:async rows=>rows,loadRemoteImage:async url=>options.cover ? options.cover(url) : url}, '../../utils/display': { applyDisplayToCurrentPage() {} } }[key])
   })
   const page = { ...definition, selectComponent:selector=>selector==='#social-feedback'?{show:text=>state.feedback.push(text)}:({beginHold:()=>state.speech.push('start'),endHold:cancel=>state.speech.push(cancel?'cancel':'stop')}), data: JSON.parse(JSON.stringify(definition.data)), setData(patch,callback) {
@@ -441,6 +443,67 @@ test('发送结果晚于账号变化时不显示旧消息，也不清空新草�
   late.resolve(message(9, true)); await sending
   assert.equal(page.data.input, '账号二草稿'); assert.equal(page.data.messages.length, 0); page.onUnload()
 })
+test('WebSocket唤醒后跨多页增量补拉，保留旧页、已读边界及账号隔离', async () => {
+  const {page,state}=harness('messages',{api:{fetchDirectMessages:async(peer,params)=>{
+    if(!params.afterId)return {records:[message(1)],hasMore:true,nextBeforeId:'1'}
+    const start=Number(params.afterId)+1,end=Math.min(start+49,106)
+    return {records:Array.from({length:Math.max(0,end-start+1)},(_,i)=>message(start+i)),hasMore:end<106,nextBeforeId:null}
+  }}})
+  await flush();state.socketReady=true
+  for(const fn of state.realtimeListeners)fn({type:'DM_CHANGED',peerUserId:'99'})
+  assert.equal(state.calls.filter(call=>call.name==='fetchDirectMessages').length,1)
+  for(const fn of state.realtimeListeners)fn({type:'DM_CHANGED',peerUserId:'2',kind:'MESSAGE'})
+  await flush()
+  assert.equal(page.data.messages.length,106)
+  assert.equal(new Set(page.data.messages.map(row=>row.id)).size,106)
+  assert.equal(page.data.beforeId,'1');assert.equal(page.data.hasMore,true)
+  assert.equal(state.calls.filter(call=>call.name==='readDirectMessages').at(-1).args[1],'106')
+  const count=state.calls.filter(call=>call.name==='fetchDirectMessages').length
+  for(const timer of state.intervals.values())timer.fn()
+  await flush();assert.equal(state.calls.filter(call=>call.name==='fetchDirectMessages').length,count)
+  page.onHide();assert.equal(state.realtimeListeners.size,0)
+  state.token='account-two';page.onShow();await flush()
+  const first=state.calls.filter(call=>call.name==='fetchDirectMessages').at(-1)
+  assert.equal(first.args[1].afterId,undefined)
+  page.onUnload()
+})
+
+test('WebSocket发送使用保存后的确认，失败重试复用编号并保留HTTP兜底',async()=>{
+  let fail=true;const attempts=[]
+  const {page,state}=harness('messages',{socketSend:async(peer,payload)=>{
+    attempts.push({...payload});if(fail)throw new Error('连接丢失');return message(9,true)
+  }})
+  await flush();page.onInput({detail:{value:'实时消息'}});await page.onSend()
+  assert.equal(page.data.input,'实时消息')
+  fail=false;await page.onSend()
+  assert.equal(attempts[0].clientRequestId,attempts[1].clientRequestId)
+  assert.equal(page.data.input,'');assert.equal(page.data.messages[0].id,'9')
+  assert.equal(state.calls.some(call=>call.name==='sendDirectMessage'),false)
+  page.onUnload()
+})
+
+test('私信会话列表收到实时事件后立即刷新，打开列表不自动标已读',async()=>{
+  let unread=0
+  const {page,state}=harness('information',{route:{group:'messages'},api:{fetchCommunityList:async()=>({records:[{peer:{key:'u2',userId:'2'},unreadCount:unread,lastMessage:message(9)}],pages:1})}})
+  await flush();assert.equal(page.data.list[0].unreadCount,0)
+  unread=1
+  for(const fn of state.realtimeListeners)fn({type:'DM_CHANGED',peerUserId:'2',kind:'MESSAGE'})
+  await flush();assert.equal(page.data.list[0].unreadCount,1)
+  assert.equal(state.calls.some(call=>call.name==='readDirectMessages'),false)
+  page.onUnload();assert.equal(state.realtimeListeners.size,0)
+})
+
+test('对方已读事件立即核对已发送消息状态',async()=>{
+  let readAt=null
+  const {page,state}=harness('messages',{api:{fetchDirectMessages:async(peer,params)=>params.afterId
+    ? {records:[],hasMore:false} : {records:[{...message(5,true),readAt}],hasMore:false}}})
+  await flush();assert.equal(page.data.messages[0].readAt,null)
+  readAt='2026-11-23T11:16:00'
+  for(const fn of state.realtimeListeners)fn({type:'DM_CHANGED',peerUserId:'2',messageId:'5',kind:'READ'})
+  await flush();assert.equal(page.data.messages[0].readAt,readAt)
+  page.onUnload()
+})
+
 test('私信游标读取旧页并去重，保留当前消息和定位', async () => {
   const { page, state } = harness('messages', { api: { fetchDirectMessages: async (peer, params) => params.beforeId
     ? { records: [message(1), message(2)], hasMore: false, nextBeforeId: '1' }

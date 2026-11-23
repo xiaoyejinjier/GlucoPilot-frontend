@@ -9,7 +9,7 @@ function runtime(){
   const notifications={exports:{}}
   vm.runInNewContext(fs.readFileSync(path.join(root,'utils/message-notifications.js'),'utf8'),{
     module:notifications,wx,getApp:()=>app,getCurrentPages:()=>state.pages,
-    require:name=>name==='../services/api'?api:request,
+    require:name=>name==='./message-realtime'?{start(){},stop(){},subscribe(){}}:name==='../services/api'?api:request,
     setInterval:fn=>{state.timers.set(++sequence,fn);return sequence},clearInterval:id=>state.timers.delete(id)
   })
   const deps={'./utils/i18n':{install(){}},'./utils/message-notifications':notifications.exports,

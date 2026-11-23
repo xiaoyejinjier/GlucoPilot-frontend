@@ -10,7 +10,7 @@ function harness(combined=false) {
   const module={exports:{}}
   vm.runInNewContext(fs.readFileSync(path.join(root,'utils/message-notifications.js'),'utf8'),{
     module,getApp:()=>app,getCurrentPages:()=>[page],wx:{showToast:value=>state.toasts.push(value)},
-    require:key=>key==='./request'?{getToken:()=>state.token}:{[combined?'fetchInformationSummary':'fetchUnreadMessages'](){state.calls++;return state.queue.length?state.queue.shift():Promise.resolve({unreadCount:0})}},
+    require:key=>key==='./message-realtime'?{start(){},stop(){},subscribe(fn){state.realtime=fn}}:key==='./request'?{getToken:()=>state.token}:{[combined?'fetchInformationSummary':'fetchUnreadMessages'](){state.calls++;return state.queue.length?state.queue.shift():Promise.resolve({unreadCount:0})}},
     setInterval:(fn,ms)=>{assert.equal(ms,5000);state.timers.set(1,fn);return 1},clearInterval:id=>state.timers.delete(id)
   })
   return {notifications:module.exports,state,page,tab,app}
@@ -23,6 +23,15 @@ test('全会话未读提示不含正文、无0角标，读后更新且不会把�
   state.queue.push(Promise.resolve({unreadCount:'0',latestMessageId:null}));await n.refresh();assert.equal(page.data.unreadLabel,'');assert.equal(tab.unreadCount,0)
   state.queue.push(Promise.resolve({unreadCount:120,latestMessageId:'101',latestSenderId:'3'}));await n.refresh();assert.equal(page.data.unreadLabel,'99+');assert.equal(state.toasts.length,2)
   n.stop();assert.equal(state.timers.size,0)
+})
+
+test('实时私信事件立即刷新汇总和角标，停止后不再触发请求',async()=>{
+  const {notifications:n,state,page}=harness(true)
+  state.queue.push(Promise.resolve({total:0,messages:0}));n.start();await flush()
+  state.queue.push(Promise.resolve({total:1,messages:1,latestMessageId:'77',latestSenderId:'2'}))
+  state.realtime({type:'DM_CHANGED'});await flush()
+  assert.equal(page.data.unreadCount,1);assert.equal(state.toasts.length,1)
+  n.stop();const count=state.calls;state.realtime({type:'DM_CHANGED'});await flush();assert.equal(state.calls,count)
 })
 
 test('全局角标同时汇总五类信息，读后归零并保留类别数量供记录页显示',async()=>{

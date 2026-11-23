@@ -2,6 +2,7 @@ const api = require('../../services/api')
 const social = require('../../utils/community')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const notifications = require('../../utils/message-notifications')
+const realtime = require('../../utils/message-realtime')
 const { normalizePermission } = require('../../utils/dm-permission')
 const EMOJIS = ['😀','😊','🥰','😄','😂','😉','🤗','🤔','😮','🥺','😢','😅','👍','👏','🙌','💪','🙏','❤️','💙','🌹','🎉','☀️','🌙','🍎','🥗','🍚','🏃','✅']
 Page({
@@ -15,7 +16,7 @@ Page({
     this._permissionEpoch=(this._permissionEpoch||0)+1;this._permissionReload=false
     this.clearRefreshFeedback(); this._refreshTask = this._messageReadTask = null; this._edgeTouch=null; this._atBottom=false; this._scrollTop=0; this._scrollHeight=0
     this.attachKeyboard()
-    if (previous && previous !== this._communityToken) { this._attempt = null; this.setData({ messages: [], input: '', peer: null, me:null, beforeId: null, hasMore: false }) }
+    if (previous && previous !== this._communityToken) { this._attempt = null; this._afterId = null; this.setData({ messages: [], input: '', peer: null, me:null, beforeId: null, hasMore: false }) }
     this.setData({ sending: false, loading: false, ready: false, sendPermission:null, permissionError:'', followingPeer:false, refreshing:false, speechVisible:false, holdingSpeech:false, emojiVisible:false }); applyDisplayToCurrentPage()
     const version = this._communityVersion
     if (!this._peer) { this.setData({ error: '用户不存在' }); return }
@@ -27,9 +28,25 @@ Page({
       this.setData({peer:{...peer,followed}});wx.setNavigationBarTitle({title:peer.nickname})
     }).catch(error => social.failure(this, error, version))
     api.fetchMe().then(me=>{if(social.active(this,version))this.setData({me:{...me,key:me.communityKey}})}).catch(error=>social.failure(this,error,version))
-    this.loadLatest(); this._pollTimer = setInterval(() => this.loadLatest(true), 5000)
+    this._realtimeReload = false; this._lastSync = 0
+    this._unsubscribeMessages = realtime.subscribe(event => {
+      if (!social.active(this, version)) return
+      if (event.type !== 'CONNECTED' && (event.type !== 'DM_CHANGED' || String(event.peerUserId) !== this._peer)) return
+      if (event.kind === 'READ') this._refreshReadState = true
+      if (this._loading) this._realtimeReload = true
+      else this.loadLatest(true)
+    })
+    realtime.start()
+    this.loadLatest(); this._pollTimer = setInterval(() => {
+      if (!realtime.connected() || !this.canCompose() || Date.now() - this._lastSync >= 30000) this.loadLatest(true)
+    }, 5000)
   },
-  stopPolling() { if (this._pollTimer) clearInterval(this._pollTimer); this._pollTimer = null },
+  stopPolling() {
+    if (this._pollTimer) clearInterval(this._pollTimer)
+    this._pollTimer = null
+    if (this._unsubscribeMessages) this._unsubscribeMessages()
+    this._unsubscribeMessages = null
+  },
   onHide() {
     this.onCloseSpeechInput(); social.end(this); this.stopPolling(); this.clearRefreshFeedback(); this._edgeTouch=null
     this._inputFocused = false; this._keyboardLayoutVersion = (this._keyboardLayoutVersion || 0) + 1
@@ -235,20 +252,54 @@ Page({
     this._loading = true; const version = this._communityVersion,permissionEpoch=this._permissionEpoch
     if (!quiet) this.setData({ loading: true }); this.setData({ error: '' })
     try {
-      const page = await api.fetchDirectMessages(this._peer, { pageSize: 50 })
+      // 初次展示最新一页；之后从连续游标补拉，离线超过50条也不会跳过中间消息。
+      const afterId = this._afterId
+      let page = await api.fetchDirectMessages(this._peer, { pageSize: 50, ...(afterId ? { afterId } : {}) })
       if (!social.active(this, version)) return
+      const incremental = !!afterId
+      if (incremental) {
+        const records = [...page.records]
+        let batches = 1, previousCursor = String(afterId)
+        while (page.hasMore && page.records.length && batches++ < 10) {
+          const cursor = String(page.records[page.records.length - 1].id)
+          // 旧版后端忽略afterId时不能无限补拉同一页。
+          if (cursor.length < previousCursor.length || (cursor.length === previousCursor.length && cursor <= previousCursor)) {
+            page = { ...page, hasMore:false }; break
+          }
+          previousCursor = cursor
+          page = await api.fetchDirectMessages(this._peer, { pageSize:50, afterId:cursor })
+          if (!social.active(this, version)) return
+          records.push(...page.records)
+        }
+        if (page.hasMore) this._realtimeReload = true
+        page = { ...page, records }
+      }
       const oldLast = this.data.messages[this.data.messages.length - 1], empty = !this.data.messages.length
       const known = new Set(this.data.messages.map(item => item.id))
       // After a long absence, use a contiguous latest page instead of silently leaving a gap.
-      const reset = !empty && page.hasMore && !page.records.some(item => known.has(item.id))
-      const messages = social.mergeMessages(reset ? [] : this.data.messages, page.records)
+      const reset = !incremental && !empty && page.hasMore && !page.records.some(item => known.has(item.id))
+      let messages = social.mergeMessages(reset ? [] : this.data.messages, page.records)
+      if (this._refreshReadState) {
+        this._refreshReadState = false
+        const recent = await api.fetchDirectMessages(this._peer, { pageSize:50 })
+        if (!social.active(this, version)) return
+        messages = social.mergeMessages(messages, recent.records)
+      }
       const last = messages[messages.length - 1], changed = last && (!oldLast || last.id !== oldLast.id)
-      this.setData({ messages, ready: true, ...(empty || reset ? { hasMore: page.hasMore, beforeId: page.nextBeforeId } : {}),
+      this._afterId = page.records.length ? page.records[page.records.length - 1].id : afterId
+      this._lastSync = Date.now()
+      this.setData({ messages, ready: true, ...(!incremental && (empty || reset) ? { hasMore: page.hasMore, beforeId: page.nextBeforeId } : {}),
         ...(changed && !preservePosition && !this.data.refreshing ? { scrollTarget: `dm-${last.id}` } : {}) },()=>this.measureList())
       this.applySendPermission(page.sendPermission,permissionEpoch)
       if (page.records.length) api.readDirectMessages(this._peer, page.records[page.records.length - 1].id).then(() => { if (social.active(this,version)) notifications.refresh(true) }).catch(error => { if (error.code === 40100) social.failure(this, error, version) })
     } catch (error) { if (social.active(this, version, error)) { this.setData({ error: error.message || '消息加载失败，点击重试' }); if (!quiet || error.code === 40100) social.failure(this, error, version) } }
-    finally { if (social.active(this, version)) { this._loading = false; this.setData({ loading: false });if(this._permissionReload){this._permissionReload=false;this.refreshPermission()} } }
+    finally {
+      if (social.active(this, version)) {
+        this._loading = false; this.setData({ loading:false })
+        if (this._permissionReload) { this._permissionReload = false; this.refreshPermission() }
+        if (this._realtimeReload) { this._realtimeReload = false; this.loadLatest(true) }
+      }
+    }
   },
   onOlder(){if(this._loading)return this._messageReadTask||Promise.resolve();return this.trackMessageRead(this.readOlder())},
   async readOlder() {
@@ -262,7 +313,13 @@ Page({
         beforeId: page.nextBeforeId, ...(anchor ? { scrollTarget: `dm-${anchor.id}` } : {}) },()=>this.measureList())
       this.applySendPermission(page.sendPermission,permissionEpoch)
     } catch (error) { social.failure(this, error, version) }
-    finally { if (social.active(this, version)) { this._loading = false; this.setData({ loading: false });if(this._permissionReload){this._permissionReload=false;this.refreshPermission()} } }
+    finally {
+      if (social.active(this, version)) {
+        this._loading = false; this.setData({ loading:false })
+        if (this._permissionReload) { this._permissionReload = false; this.refreshPermission() }
+        if (this._realtimeReload) { this._realtimeReload = false; this.loadLatest(true) }
+      }
+    }
   },
   async onSend() {
     const content = this.data.input.trim()
@@ -272,7 +329,7 @@ Page({
     if (!this._attempt || this._attempt.content !== content) this._attempt = { content, clientRequestId: social.requestId() }
     const payload = this._attempt, version = this._communityVersion; this.setData({ sending: true })
     try {
-      const message = await api.sendDirectMessage(this._peer, payload)
+      const message = await (realtime.send(this._peer, payload) || api.sendDirectMessage(this._peer, payload))
       if (!social.active(this, version)) return
       this._attempt = null
       this._cursor = 0

@@ -4,7 +4,7 @@ test('问诊未读纳入全局数量，新消息只提示一次，当前聊天�
   const app={globalData:{}},toasts=[],module={exports:{}}
   let state={total:2,consultations:2,latestConsultationMessageId:'7'},route='pages/ai/ai'
   vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,'../../utils/message-notifications.js'),'utf8'),{
-    module,require:name=>name==='../services/api'?{fetchInformationSummary:async()=>state}:{getToken:()=> 'same-user'},
+    module,require:name=>name==='./message-realtime'?{start(){},stop(){},subscribe(){}}:name==='../services/api'?{fetchInformationSummary:async()=>state}:{getToken:()=> 'same-user'},
     getApp:()=>app,getCurrentPages:()=>[{route,setData(){}}],wx:{showToast:value=>toasts.push(value)},setInterval:()=>1,clearInterval(){}
   })
   const notifications=module.exports
@@ -21,7 +21,7 @@ test('用户标记已读后的强制刷新使在途旧汇总失效，不恢复�
   const pending=[],toasts=[],app={globalData:{}},module={exports:{}}
   const api={fetchInformationSummary:()=>new Promise(resolve=>pending.push(resolve))}
   vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,'../../utils/message-notifications.js'),'utf8'),{
-    module,require:name=>name==='../services/api'?api:{getToken:()=> 'same-user'},getApp:()=>app,getCurrentPages:()=>[],
+    module,require:name=>name==='./message-realtime'?{start(){},stop(){},subscribe(){}}:name==='../services/api'?api:{getToken:()=> 'same-user'},getApp:()=>app,getCurrentPages:()=>[],
     wx:{showToast:value=>toasts.push(value)},setInterval:()=>1,clearInterval(){}
   })
   const notifications=module.exports

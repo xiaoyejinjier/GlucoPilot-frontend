@@ -1,6 +1,7 @@
 const api = require('../../services/api')
 const social = require('../../utils/community')
 const notices = require('../../utils/message-notifications')
+const realtime = require('../../utils/message-realtime')
 const { getToken } = require('../../utils/request')
 const { mapField } = require('../../utils/remote-image')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
@@ -50,10 +51,19 @@ Page({
     this.setData({ list: [], pageNum: 0, hasMore: false, loading: false, error: '',
       ...(previous && previous !== this._communityToken ? { keyword: '', searchQuery: '' } : {}) })
     this.load(true)
+    if (this._unsubscribeMessages) this._unsubscribeMessages()
+    this._unsubscribeMessages = realtime.subscribe(event => {
+      if (!social.active(this) || this.data.activeTab !== 'messages' || this.data.pageNum > 1) return
+      if (event.type !== 'CONNECTED' && event.type !== 'DM_CHANGED') return
+      if (this._busy) this._realtimeReload = true
+      else this.load(true, true)
+    })
     if (this._timer) clearInterval(this._timer)
     this._timer = setInterval(() => { if (this.data.pageNum <= 1) this.load(true, true) }, 5000)
   },
   onHide() {
+    if (this._unsubscribeMessages) this._unsubscribeMessages()
+    this._unsubscribeMessages = null; this._realtimeReload = false
     social.end(this); this._run = (this._run || 0) + 1; this._busy = false
     if (this._timer) clearInterval(this._timer)
     this._timer = null
@@ -97,7 +107,10 @@ Page({
         if (error.code === 40100) social.failure(this, error, version)
       }
     } finally {
-      if (social.active(this, version) && run === this._run) { this._busy = false; this.setData({ loading: false }) }
+      if (social.active(this, version) && run === this._run) {
+        this._busy = false; this.setData({ loading: false })
+        if (this._realtimeReload) { this._realtimeReload = false; this.load(true, true) }
+      }
     }
   },
   decorate(item, tab) {
