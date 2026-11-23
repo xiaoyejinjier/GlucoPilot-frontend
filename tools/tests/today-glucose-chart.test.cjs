@@ -148,7 +148,7 @@ test('隐藏页面后关闭提醒弹窗不会重启绘图，原选中数据不�
   assert.equal(calls.writes.length, 0)
 })
 
-test('只允许有效实测血糖，正餐预测、空值、未记录和非法值不能绘为血糖', () => {
+test('只允许有效实测血糖，空值、未记录和非法值不能绘为血糖', () => {
   assert.equal(chart.hasMeasuredGlucose({ value: 6, hasRecord: true }), true)
   for (const node of [{ value: 6, isMeal: true }, { value: 6, hasRecord: false }, { value: null },
     { value: '' }, { value: 'invalid' }, { value: 0 }, { value: -1 }, { value: 40 }]) {
@@ -180,17 +180,16 @@ test('Canvas本地坐标不乘DPR，client坐标按当前视口矩形换算并�
     { left: 10, top: 50, width: 200, height: 240 }, { width: 400, height: 120 }), { x: 200, y: 60 })
 })
 
-test('曲线保留六实测横轴，进度按九时段包含正餐，预测独立映射到餐后', () => {
+test('曲线保留六实测横轴，进度按九时段包含正餐', () => {
   const { page, canvas, render } = createPage({ records: {
-    before_breakfast: measured(), breakfast: { type: 'meal', value: 39, suggestedGlucose: 39 }
+    before_breakfast: measured(), breakfast: { type: 'meal', value: 39 }
   }, dpr: 3 })
   render()
   assert.equal(canvas.width, 960)
   assert.equal(page._chartGeometry.points.length, 6)
   assert.equal(page._chartGeometry.points.filter((point) => point.has).length, 1)
   assert.equal(page._chartGeometry.points.some((point) => point.nodeId === 'breakfast'), false)
-  assert.equal(page._chartGeometry.predictionPoints[0].value, 39)
-  assert.equal(page._chartGeometry.predictionPoints[0].x, page._chartGeometry.points[1].x)
+  assert.equal('predictionPoints' in page._chartGeometry, false)
   assert.equal(page.data.recordCount, 2)
   assert.equal(page.data.glucoseTotalNodes, 9)
 })
@@ -235,18 +234,12 @@ test('点击实测点显示真实明细并高亮，截止时段仍可查看且�
   assert.equal(calls.writes.length, 0)
 })
 
-test('缺测位置不伪造实测，点击推荐预测明确展示预测依据', () => {
-  const { page, calls, render } = createPage({ records: { breakfast: { type: 'meal', suggestedGlucose: 8 } } })
+test('缺测位置不伪造实测，点击空白不打开详情', () => {
+  const { page, calls, render } = createPage({ records: { breakfast: { type: 'meal' } } })
   render()
   tap(page, page._chartGeometry.points[0])
   assert.equal(page.data.chartSelection, null)
   assert.match(calls.toasts.at(-1).title, /暂无实测血糖/)
-  render()
-  tap(page, page._chartGeometry.predictionPoints[0])
-  assert.equal(page.data.chartSelection.value, 8)
-  assert.equal(page.data.chartSelection.isPrediction, true)
-  assert.equal(page.data.chartSelection.sourceText, '按推荐吃法')
-  assert.equal(page.data.chartSelection.recordedAtText, undefined)
 })
 
 test('同一实测点可反复打开/收起，支持Canvas和client坐标，收起同步取消高亮且不写入', () => {
@@ -404,99 +397,4 @@ test('日看板映射保留已有sourceType，无后端DTO修改', () => {
   assert.equal(result.nodes[0].sourceType, 3)
 })
 
-test('三餐完成度计三次，预测映射三个餐后且不回退当前吃法', () => {
-  const { page, render } = createPage({ records: {
-    breakfast: { type: 'meal', predictedGlucose: 30, suggestedGlucose: 7.2 },
-    lunch: { type: 'meal', predictedGlucose: 31, suggestedGlucose: 8 },
-    dinner: { type: 'meal', predictedGlucose: 32, suggestedGlucose: 6.9 }
-  } })
-  render()
-  assert.equal(page.data.recordCount, 3)
-  assert.deepEqual(Array.from(page._chartGeometry.predictionPoints, (point) => point.value), [7.2, 8, 6.9])
-  assert.deepEqual(Array.from(page._chartGeometry.predictionPoints, (point) => point.x),
-    [1, 3, 5].map((index) => page._chartGeometry.points[index].x))
-  for (const value of [null, undefined, '', 'bad', 0, -1, 40]) {
-    assert.equal(chart.getRecommendedPrediction({ isMeal: true, hasRecord: true, predictionValue: value }), null)
-  }
-  const invalid = createPage({ records: { breakfast: { type: 'meal', predictedGlucose: 9 } } })
-  invalid.render()
-  assert.equal(invalid.page._chartGeometry.predictionPoints.length, 0)
-})
 
-test('预测虚线白底空心点先绘制，实测实线和异常实心点最后突出', () => {
-  const { render, calls } = createPage({ records: {
-    after_breakfast: measured(3.2), after_dinner: measured(8.1),
-    breakfast: { type: 'meal', suggestedGlucose: 7 }, dinner: { type: 'meal', suggestedGlucose: 8 }
-  } })
-  render()
-  const dashed = calls.canvas.findIndex((call) => call.method === 'setLineDash' && call.args[0].length > 0)
-  const solid = calls.canvas.findIndex((call, index) => index > dashed && call.method === 'setLineDash' && call.args[0].length === 0)
-  assert.ok(dashed >= 0 && solid > dashed)
-  const styleAfter = calls.canvas.slice(solid).filter((call) => call.method === 'style')
-  assert.ok(styleAfter.some((call) => call.args[0] === 'fillStyle' && call.args[1] === '#fff'))
-  assert.ok(styleAfter.some((call) => call.args[0] === 'fillStyle' && call.args[1] === '#fa5151'))
-  assert.ok(styleAfter.some((call) => call.args[0] === 'lineWidth' && call.args[1] === 2.5))
-})
-
-function dashedOperations(calls) {
-  const first = calls.canvas.findIndex((op) => op.method === 'setLineDash' && op.args[0].length)
-  const last = calls.canvas.findIndex((op, i) => i > first && op.method === 'setLineDash' && !op.args[0].length)
-  return calls.canvas.slice(first + 1, last)
-}
-
-test('每日参考虚线连续连接六时段，包含早后到中前、中后到晚前', () => {
-  const { page, render, calls } = createPage({ records: {
-    before_breakfast: measured(5.2), before_lunch: measured(6.1), before_dinner: measured(5.9),
-    after_breakfast: measured(8.1), after_lunch: measured(8.5), after_dinner: measured(7.9),
-    breakfast: { type: 'meal', suggestedGlucose: 7.1 }, lunch: { type: 'meal', suggestedGlucose: 7.3 },
-    dinner: { type: 'meal', suggestedGlucose: 6.9 }
-  } })
-  render()
-  const operations = dashedOperations(calls).filter((op) => ['moveTo', 'lineTo'].includes(op.method))
-  assert.deepEqual(operations.map((op) => op.method), ['moveTo', 'lineTo', 'lineTo', 'lineTo', 'lineTo', 'lineTo'])
-  for (let i = 0; i < 3; i++) {
-    const start = page._chartGeometry.points[i * 2], end = page._chartGeometry.predictionPoints[i]
-    assert.deepEqual(operations[i * 2].args, [start.x, start.y])
-    assert.deepEqual(operations[i * 2 + 1].args, [end.x, end.y])
-  }
-  assert.equal(page.data.recordCount, 9)
-})
-
-test('参考虚线跳过缺失餐前，不把餐后实测混入预测线或填零', () => {
-  const { page, render, calls } = createPage({ records: {
-    after_breakfast: measured(8.2), before_lunch: measured(5.6), before_dinner: measured('invalid'),
-    breakfast: { type: 'meal', suggestedGlucose: 7.1 }, lunch: { type: 'meal', suggestedGlucose: 7.2 },
-    dinner: { type: 'meal', suggestedGlucose: 6.8 }
-  } })
-  render()
-  const operations = dashedOperations(calls).filter((op) => ['moveTo', 'lineTo'].includes(op.method))
-  assert.deepEqual(operations.map((op) => op.method), ['moveTo', 'lineTo', 'lineTo', 'lineTo'])
-  const geometry = page._chartGeometry
-  const expected = [geometry.predictionPoints[0], geometry.points[2], geometry.predictionPoints[1], geometry.predictionPoints[2]]
-  expected.forEach((point, index) => assert.deepEqual(operations[index].args, [point.x, point.y]))
-  assert.equal(page._chartGeometry.predictionPoints.length, 3)
-  assert.equal(page.data.recordCount, 5)
-  const actualOnly = createPage({ records: { before_breakfast: measured(5.2), before_lunch: measured(5.6) } })
-  actualOnly.render()
-  assert.equal(dashedOperations(actualOnly.calls).some((op) => op.method === 'lineTo'), false)
-})
-
-test('重合点优先实测，预测刷新和删除会同步更新已打开详情', async () => {
-  let meals = [{ nodeCode: 'breakfast', predictNow: 20, predictSuggest: 7 }]
-  const { page, render } = createPage({ records: { after_breakfast: measured(7),
-    breakfast: { type: 'meal', suggestedGlucose: 7 } }, meals: () => ({ meals }),
-    glucose: () => ({ records: [] }) })
-  render()
-  tap(page, page._chartGeometry.predictionPoints[0])
-  assert.equal(page.data.chartSelection.nodeId, 'after_breakfast')
-  await page.syncTodayFromServer()
-  render()
-  tap(page, page._chartGeometry.predictionPoints[0])
-  assert.equal(page.data.chartSelection.nodeId, 'breakfast')
-  meals = [{ nodeCode: 'breakfast', predictNow: 30, predictSuggest: 8.1 }]
-  await page.syncTodayFromServer()
-  assert.equal(page.data.chartSelection.value, 8.1)
-  meals = []
-  await page.syncTodayFromServer()
-  assert.equal(page.data.chartSelection, null)
-})

@@ -12,7 +12,6 @@
       bindtouchend="onChartTouchEnd" bindtouchcancel="onChartTouchCancel"></canvas>
     <view class="glucose-series-legend">
       <view class="glucose-series-item"><view class="glucose-series-line"></view><text>{{i18n.t("实测血糖", locale)}}</text></view>
-      <view class="glucose-series-item"><view class="glucose-series-line predicted"></view><text>{{i18n.t("餐后预测 · 按推荐吃法", locale)}}</text></view>
     </view>
     <view wx:if="{{chartSelection}}" class="chart-details {{chartSelection.status}}">
       <view class="chart-details-heading">
@@ -20,10 +19,10 @@
         <text class="chart-details-close ui-interactive" bindtap="onCloseChartDetails" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("收起", locale)}}</text>
       </view>
       <view class="chart-details-value">
-        <text>{{i18n.t((chartSelection.value), locale)}}</text><text class="chart-details-unit">{{i18n.t(chartSelection.isPrediction ? "mmol/L · 餐后预测" : "mmol/L · 实测血糖", locale)}}</text>
+        <text>{{i18n.t((chartSelection.value), locale)}}</text><text class="chart-details-unit">{{i18n.t("mmol/L · 实测血糖", locale)}}</text>
       </view>
-      <view wx:if="{{!chartSelection.isPrediction}}" class="chart-details-row"><text>{{i18n.t("记录时间", locale)}}</text><text>{{i18n.t((chartSelection.recordedAtText), locale)}}</text></view>
-      <view class="chart-details-row"><text>{{i18n.t(chartSelection.isPrediction ? "预测依据" : "记录来源", locale)}}</text><text>{{i18n.t((chartSelection.sourceText), locale)}}</text></view>
+      <view class="chart-details-row"><text>{{i18n.t("记录时间", locale)}}</text><text>{{i18n.t((chartSelection.recordedAtText), locale)}}</text></view>
+      <view class="chart-details-row"><text>{{i18n.t("记录来源", locale)}}</text><text>{{i18n.t((chartSelection.sourceText), locale)}}</text></view>
       <view wx:if="{{chartSelection.remark}}" class="chart-details-row chart-details-remark"><text>{{i18n.t("备注", locale)}}</text><text>{{chartSelection.remark}}</text></view>
     </view>
   </view>
@@ -47,7 +46,7 @@
         <view class="node-dot"></view>
         <text class="node-name">{{i18n.t((item.name), locale)}}</text>
         <text wx:if="{{item.value != null}}" class="node-val">{{i18n.t((item.value), locale)}}</text>
-        <text wx:elif="{{item.hasRecord}}" class="node-recorded">{{i18n.t(item.isMeal && item.predictionValue != null ? "已存预测" : "已记录", locale)}}</text>
+        <text wx:elif="{{item.hasRecord}}" class="node-recorded">{{i18n.t("已记录", locale)}}</text>
         <text wx:else class="node-empty">{{i18n.t("未记录", locale)}}</text>
         <text wx:if="{{item.isMeal}}" class="meal-tag">{{i18n.t("餐", locale)}}</text>
         <text wx:if="{{item.locked}}" class="lock-tag">{{i18n.t("已截止", locale)}}</text>

@@ -16,7 +16,17 @@ Page({
     searchResults: [],
     categoryImageRevision: 0,
     foodImageRevision: 0,
-    usingRemote: false
+    usingRemote: false,
+    picking: false
+  },
+
+  onLoad(options) {
+    // 选择器模式：由餐食页以 pick=1 打开，点击结果即回传并返回
+    this._picking = !!options && options.pick === '1'
+    if (this._picking) {
+      this.setData({ picking: true })
+      wx.setNavigationBarTitle({ title: '选择食物' })
+    }
   },
 
   onShow() {
@@ -103,6 +113,22 @@ Page({
   onFoodTap(e) {
     const food = this.data.searchResults[Number(e.currentTarget.dataset.index)]
     if (!food) return
+
+    if (this._picking) {
+      if (!food.id) {
+        wx.showToast({ title: '该食物暂不支持选择', icon: 'none' })
+        return
+      }
+      const channel = this.getOpenerEventChannel && this.getOpenerEventChannel()
+      if (channel) {
+        channel.emit('foodSelected', {
+          id: food.id, name: food.name, categoryCode: food.categoryCode,
+          carbs: food.carbs, cal: food.cal, gi: food.gi
+        })
+      }
+      wx.navigateBack()
+      return
+    }
 
     const show = (item) => wx.showModal({
       title: item.name,

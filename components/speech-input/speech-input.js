@@ -2,20 +2,23 @@ const { startSpeechRecording, removeAudio } = require('../../utils/speech-record
 const { getToken } = require('../../utils/request')
 const { transcribeSpeech } = require('../../services/api')
 
+// 上滑超过该距离（px）松手即取消本段录音
+const HOLD_CANCEL_DISTANCE = 60
+
 Component({
   properties: {
     visible: { type: Boolean, value: false, observer(visible) {
       if (this._panelVisible === visible) return
       this._panelVisible = visible
       this.invalidateRecording()
-      if (visible) this.setData({ phase: 'ready', text: '', error: '', seconds: 0, permissionDenied: false })
+      if (visible) this.setData({ phase: 'ready', text: '', error: '', seconds: 0, permissionDenied: false, willCancel: false })
     } },
     draft: { type: String, value: '' },
     maxLength: { type:Number, value:4000 },
     disabled: { type: Boolean, value: false, observer(disabled) { if (disabled && this.data.visible) this.close() } },
     viewportHeight: { type: Number, value: 0 }
   },
-  data: { phase: 'ready', text: '', error: '', seconds: 0, permissionDenied: false },
+  data: { phase: 'ready', text: '', error: '', seconds: 0, permissionDenied: false, willCancel: false },
   lifetimes: { detached() { this.invalidateRecording() } },
   pageLifetimes: { hide() { this.close() } },
   methods: {
@@ -38,11 +41,47 @@ Component({
       return false
     },
     beginHold() { return this.start() },
+    onHoldStart(event) {
+      if (!this.data.visible || this.data.disabled) return
+      const touch = (event && event.touches && event.touches[0]) || {}
+      this._holdStartY = typeof touch.clientY === 'number' ? touch.clientY : null
+      if (this.data.willCancel) this.setData({ willCancel: false })
+      this.beginHold()
+    },
+    onHoldMove(event) {
+      if (!this._holdSession || this._holdStartY === null) return
+      const touch = (event && event.touches && event.touches[0]) || {}
+      if (typeof touch.clientY !== 'number') return
+      const willCancel = touch.clientY < this._holdStartY - HOLD_CANCEL_DISTANCE
+      if (willCancel !== this.data.willCancel) this.setData({ willCancel })
+    },
+    onHoldEnd() {
+      const cancelled = this.data.willCancel
+      if (cancelled) this.setData({ willCancel: false })
+      this.endHold(cancelled)
+    },
+    onHoldCancel() {
+      if (this.data.willCancel) this.setData({ willCancel: false })
+      this.endHold(true)
+    },
     endHold(cancelled = false) {
       if (!this._holdSession) return
       this._holding = false
-      if (cancelled) { this.close(); return }
+      if (cancelled) {
+        // 已开始录音：丢弃本段并回到按住说话；授权阶段尚未录音时仍按取消关闭弹层
+        if (this.data.phase === 'recording' || (this.data.phase === 'authorizing' && this._recording)) {
+          this.cancelRecording()
+          return
+        }
+        this.close()
+        return
+      }
       if (this.data.phase === 'recording' || (this.data.phase === 'authorizing' && this._recording)) this.stop()
+    },
+    cancelRecording() {
+      this.invalidateRecording()
+      if (!this.data.visible) return
+      this.setData({ phase: 'ready', text: '', error: '', seconds: 0, permissionDenied: false, willCancel: false })
     },
     async start() {
       if (!this.data.visible || this.data.disabled || ['authorizing', 'recording', 'stopping', 'transcribing'].includes(this.data.phase)) return
@@ -53,7 +92,7 @@ Component({
       this._token = token
       if (!token) { this.close(); wx.reLaunch({ url: '/pages/login/login' }); return }
       this._draft = (this.data.draft || '').trim()
-      this.setData({ phase: 'authorizing', text: '', error: '', seconds: 0, permissionDenied: false })
+      this.setData({ phase: 'authorizing', text: '', error: '', seconds: 0, permissionDenied: false, willCancel: false })
       try {
         await new Promise((resolve, reject) => wx.authorize({ scope: 'scope.record', success: resolve,
           fail: () => reject(Object.assign(new Error('需要麦克风权限，请在设置中开启后重新录音'), { permissionDenied: true })) }))
@@ -113,7 +152,12 @@ Component({
       } finally { removeAudio(path) }
     },
     edit(event) { if (this.data.phase === 'review') this.setData({ text: event.detail.value }) },
-    retry() { this.close() },
+    retry() {
+      // 只回到按住说话，不关闭弹层、也不自动开始录音
+      if (!this.data.visible) return
+      this.invalidateRecording()
+      this.setData({ phase: 'ready', text: '', error: '', seconds: 0, permissionDenied: false, willCancel: false })
+    },
     confirm() {
       const text = (this.data.text || '').trim()
       if (!this.data.visible || this.data.disabled || this.data.phase !== 'review' || !text || this._confirmed) return

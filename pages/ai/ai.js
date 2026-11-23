@@ -5,8 +5,7 @@ const { getToken } = require('../../utils/request')
 const { getTodayKey, getRecords, replaceDayRecords } = require('../../utils/storage')
 const { applyDisplayToCurrentPage, getTheme, getDisplaySettings } = require('../../utils/display')
 const { getNodeRecordWindow, getRecordWindowHint } = require('../../utils/record-window')
-const { hasMeasuredGlucose, getRecommendedPrediction, getChartPointDetails, drawPredictionSeries,
-  PREDICTION_COLOR, getTouchPosition, findChartPoint } = require('../../utils/glucose-chart')
+const { hasMeasuredGlucose, getChartPointDetails, getTouchPosition, findChartPoint } = require('../../utils/glucose-chart')
 
 const HUNGER_LEVEL_TEXT = ['', '饱腹', '一般', '微饿']
 
@@ -155,8 +154,6 @@ Page({
               foods: meal.foodsText || '',
               carbs: meal.carbsG,
               hunger: HUNGER_LEVEL_TEXT[meal.hungerLevel] || '',
-              predictedGlucose: meal.predictNow,
-              suggestedGlucose: meal.predictSuggest,
               supplement: meal.supplementText || '',
               imageUrl: meal.mediaUrl || ''
             }
@@ -189,13 +186,12 @@ Page({
     const now = new Date()
     const nodes = GLUCOSE_NODES.map(n => {
       const rec = records[n.id]
-      // 正餐计入九时段完成度，推荐预测与实测值仍分别绘制。
+      // 正餐计入九时段完成度，实测值单独绘制。
       const value = !n.isMeal && rec && rec.value != null ? rec.value : null
       return {
         ...n,
         ...getNodeRecordWindow(n.id, now),
         value,
-        predictionValue: n.isMeal && rec ? rec.suggestedGlucose : null,
         recordedAt: rec ? rec.recordedAt || '' : '',
         sourceType: rec ? rec.sourceType : undefined,
         remark: rec ? rec.remark || '' : '',
@@ -304,13 +300,11 @@ Page({
       ctx.stroke()
 
       const measuredNodes = nodes.filter((node) => !node.isMeal)
-      const mealNodes = nodes.filter((node) => getRecommendedPrediction(node) != null)
       const count = measuredNodes.length || 6
       const stepX = count > 1 ? chartW / (count - 1) : 0
       const glucoseValues = nodes
         .filter(hasMeasuredGlucose)
         .map((node) => Number(node.value))
-        .concat(mealNodes.map(getRecommendedPrediction))
       const smallestValue = glucoseValues.length ? Math.min(...glucoseValues) : 3
       const largestValue = glucoseValues.length ? Math.max(...glucoseValues) : 12
       const minY = smallestValue < 3 ? 0 : 3
@@ -342,7 +336,7 @@ Page({
         ctx.fillText(String(val), padding.left - 6, y)
       })
 
-      // 六个实测横轴；正餐预测位于对应的餐后位置。
+      // 六个实测横轴
       const allPoints = measuredNodes.map((n, i) => {
         const x = padding.left + i * stepX
         const numericValue = Number(n.value)
@@ -354,20 +348,7 @@ Page({
         return { x, y, has, nodeId: n.id, isMeal: n.isMeal,
           value: has ? numericValue : null, status: n.status, short: n.short }
       })
-      const predictionPoints = mealNodes.map((node) => {
-        const target = allPoints.find((point) => point.nodeId === 'after_' + node.id)
-        if (!target) return null
-        const value = getRecommendedPrediction(node)
-        return { x: target.x, y: padding.top + chartH - ((value - minY) / (maxY - minY)) * chartH,
-          has: true, nodeId: node.id, value, isPrediction: true }
-      }).filter(Boolean)
-      this._chartGeometry = { width, height, points: allPoints, predictionPoints }
-      // 六时段连续参考线：餐前实测与餐后推荐预测交替，包含两处跨餐连接。
-      const referencePoints = predictionPoints.length ? allPoints.map((point) => {
-        if (point.nodeId.startsWith('before_')) return point.has ? point : null
-        return predictionPoints.find((prediction) => prediction.x === point.x) || null
-      }).filter(Boolean) : []
-      drawPredictionSeries(ctx, predictionPoints, [referencePoints])
+      this._chartGeometry = { width, height, points: allPoints }
 
       // 折线只连接有值点
       const valued = allPoints.filter(p => p.has)
@@ -391,8 +372,7 @@ Page({
           ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2)
           ctx.fill()
         } else {
-          // 缺测位置使用灰色占位，预测值不会被当成实测。
-          if (predictionPoints.some((point) => point.x === p.x)) return
+          // 缺测位置使用灰色占位
           ctx.strokeStyle = '#c8c8c8'
           ctx.lineWidth = 2
           ctx.beginPath()
@@ -401,9 +381,9 @@ Page({
         }
       })
 
-      const selected = valued.concat(predictionPoints).find((point) => point.nodeId === this.data.selectedChartNodeId)
+      const selected = valued.find((point) => point.nodeId === this.data.selectedChartNodeId)
       if (selected) {
-        ctx.strokeStyle = selected.isPrediction ? PREDICTION_COLOR : colors[selected.status] || brand
+        ctx.strokeStyle = colors[selected.status] || brand
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.arc(selected.x, selected.y, 8, 0, Math.PI * 2)
@@ -458,8 +438,7 @@ Page({
 
   selectChartPoint(position, geometry) {
     if (geometry !== this._chartGeometry || this._visible === false || !position) return
-    // 重合时优先选实测，预测也能查看明确标注的推荐依据。
-    const point = findChartPoint((geometry.predictionPoints || []).concat(geometry.points.filter((p) => p.has)), position)
+    const point = findChartPoint(geometry.points.filter((p) => p.has), position)
       || findChartPoint(geometry.points, position)
     if (!point || !point.has) {
       this.onCloseChartDetails()

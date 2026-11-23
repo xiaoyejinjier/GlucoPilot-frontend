@@ -440,12 +440,13 @@ function analyzeMealPhoto(payload, idempotencyKey) {
   })
 }
 
-function predictMealGlucose(payload) {
-  return post('/predictions/meal-glucose', payload, { auth: true })
-}
-
 function saveMealRecord(payload) {
   return post('/meal-records', payload, { auth: true })
+}
+
+/** 适食分析预览：纯计算不落库，用于编辑中的档位卡片。 */
+function previewMealSuitability(payload) {
+  return post('/meal-suitability/preview', payload, { auth: true })
 }
 
 function fetchDayMeals(recordDate) {
@@ -794,8 +795,8 @@ module.exports = {
   createOcrTask,
   fetchOcrTask,
   saveMealRecord,
+  previewMealSuitability,
   analyzeMealPhoto,
-  predictMealGlucose,
   fetchDayMeals,
   deleteMealRecord,
   fetchMyDevices,

@@ -66,11 +66,15 @@ function t(value, locale) {
   match = pattern('^这条(.*)有什么问题？$').exec(key);
   if (match) return 'What is wrong with this ' + t(match[1], locale).toLowerCase() + '?';
   if (key.slice(-2) === '举报') return t(key.slice(0, -2), locale) + ' report';
-  var prefixes = ['当前节点：','当前：字号','主题','版本','提交于','举报编号 #','SN：','新信息','血糖提醒','血糖','饮食','回复','测量时间：','推荐碳水','碳水','食品库匹配','新增待审核','展开查看全部（','查看文章：','编辑文章：','识别置信度','图片原文：','序列号：','来源：','最近同步：'];
+  var prefixes = ['当前节点：','当前：字号','主题','版本','提交于','举报编号 #','SN：','新信息','血糖提醒','血糖','饮食','回复','测量时间：','推荐碳水','碳水','食品库匹配','新增待审核','模型估算','展开查看全部（','查看文章：','编辑文章：','识别置信度','图片原文：','序列号：','来源：','最近同步：'];
   for (var i = 0; i < prefixes.length; i++) {
     var prefix = prefixes[i];
     if (key.indexOf(prefix) === 0 && key.length > prefix.length) return (messages[prefix] || prefix) + ' ' + t(key.slice(prefix.length).replace(whitespace, ''), locale);
   }
+  match = pattern('^识别\\s*(\\d+)\\s*种食物$').exec(key);
+  if (match) return 'Recognised ' + match[1] + (match[1] === '1' ? ' food' : ' foods');
+  match = pattern('^展开\\s*(\\d+)\\s*项$').exec(key);
+  if (match) return 'Show ' + match[1] + ' items';
   match = pattern('^(.*)\\s*项$').exec(key);
   if (match) return match[1] + ' items';
   match = pattern('^([\\d.]+)克碳水/100g$').exec(key);

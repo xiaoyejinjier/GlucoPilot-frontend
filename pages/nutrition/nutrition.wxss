@@ -83,6 +83,16 @@
   margin-top: 8rpx;
 }
 
+.food-pick {
+  flex-shrink: 0;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
 .empty-tip {
   font-size: var(--fs-small);
   color: var(--muted);

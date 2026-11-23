@@ -1,106 +1,161 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="page-no-tab page-embed-tab food-page" style="{{displayStyle}}">
-  <view class="page-intro"><text class="page-intro-text">{{i18n.t("餐食识别 · 食品库匹配 · 确认后保存", locale)}}</text></view>
+  <view class="page-intro"><text class="page-intro-text">{{i18n.t("拍照识别 · 确认食物 · 查看分析", locale)}}</text></view>
 
-  <view class="card">
+  <view class="card meal-hero">
     <image wx:if="{{imagePath}}" class="photo-meal-img" src="{{imagePath}}" mode="aspectFill" />
     <view wx:else class="photo-meal">{{i18n.t("未找到餐食照片，请重新拍照", locale)}}</view>
-    <view class="metrics">
-      <view class="metric"><text class="metric-val">{{i18n.t((metrics.glucose), locale)}}</text><text class="metric-label">{{i18n.t("实测血糖", locale)}}</text></view>
-      <view class="metric"><text class="metric-val">{{i18n.t((metrics.carbs), locale)}}</text><text class="metric-label">{{i18n.t("本餐碳水", locale)}}</text></view>
-      <view class="metric"><text class="metric-val">{{i18n.t((metrics.extra), locale)}}</text><text class="metric-label">{{i18n.t("本餐热量", locale)}}</text></view>
+    <view class="meal-hero-head">
+      <text class="meal-hero-title">{{i18n.t((nodeName), locale)}} · {{i18n.t((mealSummaryText), locale)}}</text>
+      <text class="meal-hero-chip">{{i18n.t(("食品库匹配 " + matchedCount + " 项"), locale)}}</text>
     </view>
+    <text class="meal-hero-foods">{{foodNamesText || '—'}}</text>
   </view>
 
-  <view wx:if="{{recognizing}}" class="card recognition-status">
-    <text class="section-title">{{i18n.t("正在识别餐食并匹配食品库…", locale)}}</text>
-    <text class="result-desc">{{i18n.t("照片上传后进行真实识别，请稍候。", locale)}}</text>
+  <view wx:if="{{phase === 'uploading' || phase === 'recognizing'}}" class="card recognition-status">
+    <text class="section-title">{{i18n.t(phase === 'uploading' ? "正在上传餐食照片…" : "正在识别餐食并匹配食品库…", locale)}}</text>
+    <text class="result-desc">{{i18n.t(phase === 'uploading' ? "照片上传完成后自动开始识别。" : "识别通常需要数秒，请稍候。", locale)}}</text>
   </view>
-  <view wx:if="{{analysisError}}" class="card recognition-error">
+  <view wx:if="{{phase === 'recognize_failed'}}" class="card recognition-error">
     <text class="section-title">{{i18n.t("本次识别未完成", locale)}}</text>
-    <text class="result-desc">{{i18n.t((analysisError), locale)}}</text>
+    <text class="result-desc">{{errorMessage}}</text>
     <view class="meal-actions">
       <button class="btn-primary btn-sm ui-interactive" bindtap="onRetry" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新识别", locale)}}</button>
       <button class="btn-ghost btn-sm ui-interactive" bindtap="onRetake" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新拍照", locale)}}</button>
     </view>
   </view>
-
-  <view wx:if="{{hasAnalysis && !recognizing && !analysisError && !needsReanalysis && !beforeMealRecorded}}" class="card glucose-entry-card">
-    <view class="glucose-entry-head">
-      <text class="section-title">{{i18n.t("餐前实测血糖", locale)}}</text>
-      <view class="glucose-entry-link ui-interactive" bindtap="onGoMeasure" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-        <text>{{i18n.t("去拍照记录", locale)}}</text>
-        <text class="glucose-entry-arrow">›</text>
-      </view>
+  <view wx:if="{{phase === 'empty'}}" class="card recognition-error">
+    <text class="section-title">{{i18n.t("未识别到食物", locale)}}</text>
+    <text class="result-desc">{{i18n.t("照片中未识别出可用食物，请重新拍摄或补充文字说明后重新识别。", locale)}}</text>
+    <view class="meal-actions">
+      <button class="btn-primary btn-sm ui-interactive" bindtap="onRetry" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新识别", locale)}}</button>
+      <button class="btn-ghost btn-sm ui-interactive" bindtap="onRetake" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新拍照", locale)}}</button>
     </view>
-    <view class="meal-weight glucose-entry-row">
-      <text>{{i18n.t("当前血糖", locale)}}</text>
-      <input type="digit" value="{{glucoseInput}}" placeholder="{{i18n.t('如 5.6', locale)}}" bindinput="onGlucoseInput" disabled="{{busy}}" />
-      <text>mmol/L</text>
+  </view>
+  <view wx:if="{{phase === 'idle'}}" class="card recognition-error">
+    <text class="section-title">{{i18n.t("缺少餐食照片", locale)}}</text>
+    <text class="result-desc">{{i18n.t("请返回拍照页重新拍摄，再进入识别。", locale)}}</text>
+    <view class="meal-actions">
+      <button class="btn-primary btn-sm ui-interactive" bindtap="onRetake" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重新拍照", locale)}}</button>
     </view>
-    <button class="btn-primary btn-block btn-sm ui-interactive" bindtap="onConfirmGlucose" loading="{{busy}}" disabled="{{busy || predictLoading}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("确定", locale)}}</button>
   </view>
 
-  <view wx:if="{{hasAnalysis && !recognizing && !analysisError && !needsReanalysis}}" class="card predict-card">
-    <view class="section-title">{{i18n.t("餐后血糖预测", locale)}}</view>
-    <text wx:if="{{predictLoading}}" class="recognition-tip">{{i18n.t("正在计算餐后血糖预测…", locale)}}</text>
-    <view wx:if="{{predictResult}}" class="predict-compare">
-      <view class="predict-col">
-        <text class="predict-col-title">{{i18n.t("① 当前餐食", locale)}}</text>
-        <view class="predict-value-row">
-          <text class="predict-value">{{i18n.t((predictResult.predictNow), locale)}}</text>
-          <text class="predict-unit">mmol/L</text>
-        </view>
-        <text class="predict-col-label">{{i18n.t("按当前份量吃的餐后血糖", locale)}}</text>
-        <text class="predict-carbs">{{i18n.t("碳水 " + (predictResult.predictCarbs) + "g", locale)}}</text>
+  <view wx:if="{{phase === 'ready'}}" class="card analysis-card">
+    <view class="card-head">
+      <text class="section-title">{{i18n.t("食物分析", locale)}}</text>
+      <text class="analysis-chip">{{i18n.t("按食物类别评估", locale)}}</text>
+    </view>
+    <view class="meal-verdict verdict-{{preview ? preview.tier : 'UNKNOWN'}}">
+      <text class="mv-tier">{{i18n.t((preview ? preview.tierLabel : (previewLoading ? '分析中，请稍候…' : '暂无法分析')), locale)}}</text>
+      <text wx:if="{{analysisSub}}" class="mv-sub">{{i18n.t((analysisSub), locale)}}</text>
+    </view>
+    <text wx:if="{{previewError}}" class="recognition-tip">{{previewError}}</text>
+    <view class="rate-sum">
+      <view class="rate-chip low {{rateFilter === 'LOW' ? 'active' : ''}} {{tierCounts.LOW === 0 ? 'is-zero' : ''}}" data-tier="LOW" bindtap="onFilterTier" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">
+        <text class="rc-label">{{i18n.t("负担较低", locale)}}</text>
+        <text class="rc-num">{{tierCounts.LOW}}</text>
       </view>
-      <view class="predict-divider"></view>
-      <view class="predict-col">
-        <text class="predict-col-title">{{i18n.t("② 推荐吃法", locale)}}</text>
-        <view wx:if="{{predictResult.recommendationStatus === 'IN_RANGE'}}" class="predict-value-row">
-          <text class="predict-value predict-value-text">{{i18n.t("当前份量已合适，无需调整", locale)}}</text>
-        </view>
-        <block wx:elif="{{predictResult.recommendationStatus === 'ABOVE' || predictResult.recommendationStatus === 'BELOW'}}">
-          <view class="predict-value-row">
-            <text class="predict-value">{{i18n.t((predictResult.predictSuggest), locale)}}</text>
-            <text class="predict-unit">mmol/L</text>
+      <view class="rate-chip moderate {{rateFilter === 'MODERATE' ? 'active' : ''}} {{tierCounts.MODERATE === 0 ? 'is-zero' : ''}}" data-tier="MODERATE" bindtap="onFilterTier" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">
+        <text class="rc-label">{{i18n.t("负担中等", locale)}}</text>
+        <text class="rc-num">{{tierCounts.MODERATE}}</text>
+      </view>
+      <view class="rate-chip high {{rateFilter === 'HIGH' ? 'active' : ''}} {{tierCounts.HIGH === 0 ? 'is-zero' : ''}}" data-tier="HIGH" bindtap="onFilterTier" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">
+        <text class="rc-label">{{i18n.t("负担较高", locale)}}</text>
+        <text class="rc-num">{{tierCounts.HIGH}}</text>
+      </view>
+    </view>
+    <text wx:if="{{tierCounts.UNKNOWN > 0}}" class="rate-unknown">{{i18n.t("信息不足", locale)}} {{tierCounts.UNKNOWN}}</text>
+    <text wx:if="{{carbsG !== null}}" class="carb-line">{{i18n.t("本餐碳水估算约", locale)}} {{carbsG}}g <text class="carb-note">{{i18n.t("（随份量变化）", locale)}}</text></text>
+    <view class="advice-panel">
+      <view class="advice-head-row">
+        <view class="advice-toggle" bindtap="onToggleAdvice" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">
+          <text class="advice-title">{{i18n.t((adviceTitle), locale)}}</text>
+          <view class="at-action">
+            <text class="at-action-text">{{i18n.t((adviceToggleLabel), locale)}}</text>
+            <view class="at-chev {{adviceOpen ? 'up' : ''}}"></view>
           </view>
-          <text class="predict-col-label">{{i18n.t("按推荐份量吃的餐后血糖", locale)}}</text>
-          <text class="predict-carbs">{{i18n.t("推荐碳水 " + (predictResult.suggestCarbs == null ? '—' : predictResult.suggestCarbs) + "g", locale)}}</text>
-        </block>
-        <view wx:else class="predict-value-row">
-          <text class="predict-value predict-value-text">{{i18n.t((predictResult.statusText), locale)}}</text>
         </view>
+        <text wx:if="{{rateFilter}}" class="at-reset" bindtap="onClearFilter" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">{{i18n.t("查看全部", locale)}}</text>
+      </view>
+      <view wx:if="{{adviceOpen}}" class="advice-body">
+        <view wx:for="{{adviceItems}}" wx:key="foodName" class="advice-row tier-bar-{{item.tier}}">
+          <view class="advice-head">
+            <text class="advice-name">{{item.foodName}}</text>
+            <text class="analysis-item-tier tier-{{item.tier}}">{{i18n.t((item.tierLabel), locale)}}</text>
+          </view>
+          <text class="advice-text">{{locale === 'en' ? i18n.t((item.adviceText), locale) : item.adviceLine}}</text>
+        </view>
+        <text wx:if="{{!adviceItems.length}}" class="advice-text">{{i18n.t((adviceEmptyText), locale)}}</text>
       </view>
     </view>
-    <text wx:if="{{predictError}}" class="recognition-warning">{{i18n.t((predictError), locale)}}</text>
-    <button wx:if="{{predictError}}" class="btn-ghost btn-block btn-sm ui-interactive" bindtap="onRetryPredict" disabled="{{busy || predictLoading}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("重试预测", locale)}}</button>
-    <text wx:if="{{!predictLoading && !predictResult && !predictError}}" class="recognition-tip">{{i18n.t("录入上方血糖后，自动生成预测", locale)}}</text>
-    <text wx:if="{{predictNotice}}" class="recognition-tip">{{i18n.t((predictNotice), locale)}}</text>
-    <text wx:for="{{statusHints}}" wx:key="*this" class="recognition-tip">{{i18n.t((item), locale)}}</text>
+    <view class="basis">
+      <view class="advice-head-row">
+        <view class="advice-toggle" bindtap="onToggleRuleBasis" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">
+          <text class="advice-title">{{i18n.t("分析依据", locale)}}</text>
+          <view class="at-action">
+            <text class="at-action-text">{{i18n.t((ruleBasisOpen ? '收起' : '展开'), locale)}}</text>
+            <view class="at-chev {{ruleBasisOpen ? 'up' : ''}}"></view>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{ruleBasisOpen}}" class="basis-body">
+        <text class="analysis-disclaimer">{{i18n.t((preview && preview.disclaimer ? preview.disclaimer : ''), locale)}}</text>
+        <text wx:if="{{preview && preview.ruleVersion}}" class="analysis-rule">{{i18n.t("规则版本", locale)}} {{preview.ruleVersion}}</text>
+      </view>
+    </view>
   </view>
 
-  <view wx:if="{{hasAnalysis}}" class="card">
-    <view class="section-title">{{i18n.t("识别的食物与营养", locale)}}</view>
-    <text class="recognition-summary">{{i18n.t("食品库匹配 " + (matchedCount) + " 项 · 新增待审核 " + (newFoodsCount) + " 项", locale)}}</text>
-    <text class="recognition-tip">{{i18n.t("点击重量可修改；若识别有误，请在下方补充说明后重新识别", locale)}}</text>
-    <view wx:for="{{items}}" wx:key="key" wx:if="{{foodListExpanded || index < 2}}" class="meal-food-item">
+  <view wx:if="{{phase === 'ready'}}" class="card food-card">
+    <view class="card-head">
+      <text class="section-title">{{i18n.t("识别的食物与营养", locale)}}</text>
+      <view class="head-actions">
+        <text class="icon-btn" bindtap="onOpenAddSheet" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">+</text>
+        <view class="icon-btn trash-btn {{deleteMode ? 'on danger' : ''}}" bindtap="onToggleDeleteMode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" aria-role="button" aria-label="{{i18n.t('删除', locale)}}">
+          <view class="trash-icon"><view class="trash-lid"></view><view class="trash-body"></view></view>
+        </view>
+        <text wx:if="{{deleteMode}}" class="cancel-link" bindtap="onExitModes" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">{{i18n.t("完成", locale)}}</text>
+      </view>
+    </view>
+    <text class="recognition-summary">{{i18n.t(("食品库匹配 " + matchedCount + " 项"), locale)}} · {{i18n.t(("模型估算 " + estimatedCount + " 项"), locale)}}</text>
+    <view wx:if="{{confirmableCount > 0}}" class="confirm-summary-row">
+      <text wx:if="{{pendingConfirmCount > 0}}" class="confirm-summary">{{pendingConfirmCount}} {{i18n.t("项识别置信度较低，请确认", locale)}}</text>
+      <text wx:else class="confirm-summary">{{i18n.t("已全部确认", locale)}}</text>
+      <view class="select-all" bindtap="onToggleAllConfirm" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">
+        <checkbox checked="{{allConfirmed}}" color="#b26a00" />
+        <text class="select-all-label">{{i18n.t("全选", locale)}}</text>
+      </view>
+    </view>
+    <view wx:for="{{items}}" wx:key="key" wx:if="{{foodListExpanded || index < 2}}" class="meal-food-item {{item.needsConfirmation ? (item.confirmed ? 'low-confidence-confirmed' : 'low-confidence') : ''}}">
       <view class="meal-food-head">
         <text class="meal-food-name">{{item.foodName}}</text>
         <text class="nutrition-source {{item.nutritionSource === 'AI_ESTIMATE' ? 'estimated' : ''}}">{{i18n.t((item.sourceText), locale)}}</text>
+        <text wx:if="{{deleteMode}}" class="del-x ui-interactive" data-index="{{index}}" bindtap="onRemoveItem" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">×</text>
       </view>
-      <view class="meal-weight">
-        <text>{{i18n.t("食用重量", locale)}}</text>
-        <input type="digit" value="{{item.weightInput}}" placeholder="{{i18n.t('确认克数', locale)}}" data-index="{{index}}" bindinput="onWeightInput" disabled="{{busy}}" />
-        <text class="weight-unit">g</text>
-        <view wx:if="{{suggestCount > 0 && item.suggestMatched}}" class="food-suggest-group">
-          <text class="food-suggest-arrow {{item.suggestWeight > 0 ? 'arrow-good' : item.suggestWeight === 0 ? 'arrow-bad' : 'arrow-neutral'}}">→</text>
-          <text wx:if="{{item.suggestWeight > 0}}" class="food-suggest-value">{{i18n.t("建议吃 " + (item.suggestWeight) + "g" + (item.suggestHint), locale)}}</text>
-          <text wx:elif="{{item.suggestWeight === 0}}" class="food-suggest-muted muted-bad">{{i18n.t("不建议", locale)}}</text>
-          <text wx:else class="food-suggest-muted muted-neutral">{{i18n.t("正常", locale)}}</text>
-        </view>
+      <view wx:if="{{item.needsConfirmation}}" class="low-confidence-row" data-index="{{index}}" bindtap="onToggleConfirm">
+        <checkbox checked="{{item.confirmed}}" color="#b26a00" />
+        <text class="low-confidence-text">{{i18n.t("识别置信度较低，请确认名称与份量", locale)}}</text>
       </view>
-      <text class="meal-nutrition">{{i18n.t((item.portionText), locale)}}</text>
+      <view class="portion-row">
+        <text class="portion-label">{{i18n.t("份量", locale)}}</text>
+        <text class="step-btn {{item.portionDisabled ? 'disabled' : ''}}" data-index="{{index}}" data-delta="-0.5" bindtap="onPortionStep" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">−</text>
+        <text wx:if="{{portionEditingIndex !== index}}" class="portion-num" data-index="{{index}}" bindtap="onPortionTap">{{item.portionValue}} {{i18n.t("份", locale)}}</text>
+        <input wx:else class="portion-num-input" type="digit" value="{{portionInput}}" data-index="{{index}}" bindinput="onPortionInput" bindblur="onPortionBlur" focus="{{true}}" />
+        <text class="step-btn {{item.portionDisabled ? 'disabled' : ''}}" data-index="{{index}}" data-delta="0.5" bindtap="onPortionStep" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">+</text>
+        <block wx:if="{{gramEditingIndex !== index}}">
+          <text class="portion-gram" data-index="{{index}}" bindtap="onOpenWeightEdit" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">（{{i18n.t("约", locale)}} {{item.weightG || '—'}}g）</text>
+        </block>
+        <block wx:else>
+          <input class="portion-gram-input" type="digit" value="{{item.weightInput}}" data-index="{{index}}" bindinput="onWeightInput" bindblur="onWeightBlur" focus="{{true}}" />
+          <text class="portion-gram">g</text>
+        </block>
+      </view>
+      <text wx:if="{{item.portionDisabled}}" class="portion-hint">{{i18n.t("请先填写克重", locale)}}</text>
+      <text wx:if="{{item.nutritionKnown}}" class="food-nut">{{i18n.t("碳水", locale)}} {{i18n.t("约", locale)}} {{item.carbsG}}g ｜ {{i18n.t("热量", locale)}} {{i18n.t("约", locale)}} {{item.caloriesKcal}}kcal</text>
+      <text wx:else class="food-nut nutrition-unknown">{{i18n.t("营养未知，不计入总量", locale)}}</text>
+      <view class="food-links">
+        <text class="food-action ui-interactive" data-index="{{index}}" bindtap="onRenameItem" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">{{i18n.t("改名", locale)}}</text>
+        <text class="food-action ui-interactive" data-index="{{index}}" bindtap="onReplaceItem" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">{{i18n.t("换食物", locale)}}</text>
+      </view>
     </view>
     <view wx:if="{{items.length > 2}}" class="food-list-toggle ui-interactive" bindtap="onToggleFoodList" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <text>{{i18n.t((foodListExpanded ? '收起' : '展开查看全部（' + items.length + ' 项）'), locale)}}</text>
@@ -109,15 +164,100 @@
     <text wx:for="{{warnings}}" wx:key="*this" class="recognition-warning">{{i18n.t((item), locale)}}</text>
   </view>
 
-  <view class="card">
-    <view class="section-title">{{i18n.t("补充食物信息", locale)}}</view>
-    <textarea class="voice-input" placeholder="{{i18n.t('例如：这份是糙米饭，只吃了100克；左侧是豆腐，不是鸡肉', locale)}}" value="{{supplement}}" maxlength="200" bindinput="onSupplementInput" disabled="{{busy}}" />
-    <button class="btn-primary btn-block btn-sm ui-interactive" bindtap="onReAnalyze" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("按补充信息重新识别", locale)}}</button>
+  <view class="card glucose-card">
+    <view class="card-head">
+      <text class="section-title">{{i18n.t("本餐血糖", locale)}}</text>
+      <text class="glucose-readonly">{{i18n.t("只读", locale)}}</text>
+    </view>
+    <view class="glucose-timeline">
+      <view class="glucose-track"></view>
+      <view wx:for="{{glucoseNodes}}" wx:key="key" class="glucose-node {{item.value !== null ? 'done' : ''}}">
+        <view class="glucose-dot"></view>
+        <view class="glucose-node-name">
+          <text class="glucose-node-label">{{i18n.t((item.label), locale)}}</text>
+          <text class="glucose-node-pill {{item.value !== null ? 'done' : ''}}" data-node="{{item.nodeCode}}" bindtap="onGoMeasure" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">{{i18n.t((item.value !== null ? '修改' : '去记录'), locale)}} ›</text>
+        </view>
+        <block wx:if="{{item.value !== null}}">
+          <text class="glucose-node-value">{{item.value}}</text>
+          <text class="glucose-node-unit">mmol/L</text>
+          <text wx:if="{{item.time}}" class="glucose-node-time">{{item.time}}</text>
+        </block>
+        <text wx:else class="glucose-node-empty">{{i18n.t("待记录", locale)}}</text>
+      </view>
+    </view>
+    <view wx:if="{{glucoseContext && glucoseContext.delta !== null}}" class="glu-foot center">{{i18n.t("餐后升幅", locale)}} <text class="delta-num">{{glucoseContext.delta > 0 ? '+' : ''}}{{glucoseContext.delta}}</text> mmol/L</view>
+    <text wx:else class="glu-foot">{{i18n.t("支持随时补录或修改血糖，餐前、餐后均记录后即可自动计算升幅。", locale)}}</text>
   </view>
 
   <view class="card">
-    <button class="btn-primary btn-block btn-sm ui-interactive" bindtap="onSave" disabled="{{busy || !analysisReady}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("确认食物及份量，保存饮食记录", locale)}}</button>
-    <text wx:if="{{hasAnalysis && !analysisReady}}" class="recognition-tip">{{i18n.t("请确认重量和营养；修改补充信息后请重新识别。", locale)}}</text>
+    <view class="voice-head">
+      <text class="section-title">{{i18n.t("餐食备注", locale)}}</text>
+      <text class="voice-trigger ui-interactive" bindtap="onOpenSpeechInput" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">{{i18n.t("语音输入", locale)}}</text>
+    </view>
+    <textarea class="voice-input" placeholder="{{i18n.t('（选填）可补充餐前运动、用药等情况，如：跑步20分钟、服用了阿卡波糖', locale)}}" value="{{supplement}}" maxlength="200" bindinput="onSupplementInput" disabled="{{busy}}" />
+  </view>
+  <speech-input visible="{{speechVisible}}" draft="{{supplement}}" max-length="200" disabled="{{busy}}" bind:close="onCloseSpeechInput" bind:confirm="onSpeechConfirm"></speech-input>
+
+  <view class="save-bar">
+    <button class="btn-primary btn-block ui-interactive" bindtap="onSave" disabled="{{phase !== 'ready' || busy || !analysisReady || pendingConfirmCount > 0}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("保存饮食记录", locale)}}</button>
+    <text wx:if="{{pendingConfirmCount > 0}}" class="confirm-summary">{{i18n.t("请先勾选确认全部低置信食物", locale)}}</text>
+    <text wx:if="{{phase === 'ready' && !analysisReady}}" class="recognition-tip">{{i18n.t("请确认重量和营养后再保存。", locale)}}</text>
+    <text wx:if="{{saveError}}" class="save-error">{{saveError}}</text>
   </view>
   <tab-bar selected="{{0}}"></tab-bar>
+</view>
+
+<view wx:if="{{addSheetVisible}}" class="sheet-mask" bindtap="onCloseAddSheet">
+  <view class="add-sheet" catchtap="onSheetTap">
+    <view class="add-sheet-head">
+      <text class="sheet-title">{{i18n.t(addReplacing ? "替换食物" : "添加食物", locale)}}</text>
+      <view class="add-sheet-close ui-interactive" bindtap="onCloseAddSheet" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">×</view>
+    </view>
+
+    <block wx:if="{{addMode === 'search'}}">
+      <view class="add-search">
+        <input class="add-search-input" value="{{addKeyword}}" placeholder="{{i18n.t('搜索食物名称', locale)}}" confirm-type="search" bindinput="onAddKeywordInput" />
+      </view>
+      <scroll-view class="add-results" scroll-y>
+        <view wx:for="{{addResults}}" wx:key="id" class="add-result" data-index="{{index}}" bindtap="onAddResultTap" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">
+          <view class="add-result-main">
+            <text class="add-result-name">{{item.name}}</text>
+            <text class="add-result-meta">{{item.per100Text}}</text>
+          </view>
+          <text class="add-result-action">+</text>
+        </view>
+        <text wx:if="{{addLoading}}" class="add-empty">{{i18n.t("加载中…", locale)}}</text>
+        <text wx:elif="{{!addKeyword}}" class="add-empty">{{i18n.t("输入食物名称，从营养库选择", locale)}}</text>
+        <text wx:elif="{{addResults.length === 0}}" class="add-empty">{{i18n.t("没有找到相关食物", locale)}}</text>
+      </scroll-view>
+      <view wx:if="{{!addReplacing}}" class="add-custom-entry ui-interactive" bindtap="onSwitchAddMode" data-mode="custom" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">{{i18n.t("营养库没有？自定义添加", locale)}} ›</view>
+    </block>
+
+    <block wx:else>
+      <view class="meal-weight">
+        <text>{{i18n.t("名称", locale)}}</text>
+        <input type="text" value="{{addForm.name}}" placeholder="{{i18n.t('如 杂粮馒头', locale)}}" maxlength="64" data-field="name" bindinput="onAddFormInput" disabled="{{busy}}" />
+      </view>
+      <view class="meal-weight">
+        <text>{{i18n.t("重量", locale)}}</text>
+        <input type="digit" value="{{addForm.weight}}" placeholder="{{i18n.t('如 100', locale)}}" data-field="weight" bindinput="onAddFormInput" disabled="{{busy}}" />
+        <text class="weight-unit">g</text>
+      </view>
+      <view class="meal-weight">
+        <text>{{i18n.t("每100g碳水", locale)}}</text>
+        <input type="digit" value="{{addForm.carbs}}" placeholder="{{i18n.t('可留空', locale)}}" data-field="carbs" bindinput="onAddFormInput" disabled="{{busy}}" />
+        <text class="weight-unit">g</text>
+      </view>
+      <view class="meal-weight">
+        <text>{{i18n.t("每100g热量", locale)}}</text>
+        <input type="digit" value="{{addForm.calories}}" placeholder="{{i18n.t('可留空', locale)}}" data-field="calories" bindinput="onAddFormInput" disabled="{{busy}}" />
+        <text class="weight-unit">kcal</text>
+      </view>
+      <text class="recognition-tip">{{i18n.t("碳水与热量为每 100g 数值，可留空；留空时该项不计入总量。", locale)}}</text>
+      <view class="meal-actions">
+        <button class="btn-primary btn-sm ui-interactive" bindtap="onConfirmAdd" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("添加", locale)}}</button>
+        <button class="btn-ghost btn-sm ui-interactive" bindtap="onSwitchAddMode" data-mode="search" disabled="{{busy}}" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("返回搜索", locale)}}</button>
+      </view>
+    </block>
+  </view>
 </view>

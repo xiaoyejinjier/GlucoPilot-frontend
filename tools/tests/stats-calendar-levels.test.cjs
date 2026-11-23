@@ -206,7 +206,7 @@ test('点击已选月份保留选中日，日历和选中日记录同时存在',
 test('日明细合并实测血糖和正餐，只按实测血糖计算均值', async () => {
   const { page } = createPage({
     glucose: () => ({ records: [{ nodeCode: 'before_breakfast', value: 5 }, { nodeCode: 'after_breakfast', value: 7 }] }),
-    meals: () => ({ meals: [{ nodeCode: 'breakfast', foodsText: '米饭100g', predictNow: 30 }] })
+    meals: () => ({ meals: [{ nodeCode: 'breakfast', foodsText: '米饭100g' }] })
   })
   await page.onMonthTap(monthEvent(10))
   await flush()
