@@ -2,32 +2,38 @@
 
 ## 入口
 
-- 唯一入口：我的 → 设备管理封面卡 → `frontend/pages/devices/devices`（普通页 `navigateTo`，不在底部 Tab）：统一为「已绑定 + 待适配」布局（无设备时汇总为 0），确认绑定 / 同步 / 解绑。
+- 底部 Tab「设备管理」→ `frontend/pages/devices/devices`：统一为「已绑定 + 待适配」布局（无设备时汇总为 0），确认绑定 / 同步 / 解绑。
 - 记录页「绑定设备」或管理页「添加设备」→ 全屏 `frontend/pages/device-add/device-add`。导航标题为「添加设备」。
 
 ## 设备管理（已接服务端）
 
 - 列表：`GET /api/v1/devices`，仅返回当前用户已绑定档案。
-- 确认绑定：`POST /api/v1/devices/bind`，请求体 `{ deviceSn, provider, deviceName? }`。唯一认设备靠 `deviceSn`；选适配器用 `provider`（MOCK / HUAWEI / HEALTH_CONNECT / APPLE_HEALTH / NIGHTSCOUT）。
+- 确认绑定：`POST /api/v1/devices/bind`，请求体 `{ deviceSn, provider, deviceName?, deviceCategory?, deviceModel? }`。唯一认设备靠 `deviceSn`；选适配器用 `provider`（MOCK / HUAWEI / HEALTH_CONNECT / APPLE_HEALTH / NIGHTSCOUT）。`deviceCategory`（CGM/BGM/PUMP/PEN/BAND/WATCH/RING/HUB/SCALE/BP/OXIMETER/OTHER）与 `deviceModel` 为产品分类，与 `provider` 分离；小程序可不填，管理端可后补。
 - 解绑：`POST /api/v1/devices/{id}/unbind`，清空 `user_id`，保留档案供管理端查看。
 - 同步流水：`GET /api/v1/devices/{id}/sync-logs?limit=10`；详情弹层可展开查看近 10 次（时间、厂商、样本数、新建条数）。功能上线前的历史同步不会回填。
 - 离线徽标：已绑定且 `lastSyncAt` 为空或超过 48 小时显示「已离线」。
 
 ## 同步总线（自研数据流）
 
-读数不绑死厂家云。统一路径：
+读数不绑死厂家云。统一下游：门禁 → 适配器 → 幂等入库 → `last_sync_at` / `device_sync_log`。
 
-1. 小程序按 `provider` 选择 **Ingress（入口）** 得到 raw `payload`
+### 演示 push（Ingress 在小程序）
+
+1. 小程序按 `provider` 生成 raw `payload`（`buildRandomPayload`）
 2. `POST /api/v1/device/glucose-sync`，带 `provider` + 可选 `deviceSn`
-3. 后端门禁（SN 归属 / 启用 / 厂商一致）→ 适配器转 `UnifiedGlucoseSample` → 按用户+日期+节点覆盖写入；带 `deviceSn` 成功时刷新 `last_sync_at` 并写 `device_sync_log`
 
 | provider | 演示同步入口 |
 | --- | --- |
-| MOCK / HUAWEI / HEALTH_CONNECT / APPLE_HEALTH / NIGHTSCOUT | 设备页「同步记录」用 `buildRandomPayload` 生成该厂商形态随机样本后 `syncDeviceGlucose` |
+| MOCK / 未授权的 HUAWEI / HEALTH_CONNECT / APPLE_HEALTH / NIGHTSCOUT | 设备页按钮文案为「演示同步」，走随机 payload |
 
-说明：演示入口 **契约兼容** 各厂商适配器 payload，**不是** OAuth 直连厂家云。二期可将 Ingress 替换为 Nightscout URL 实拉、厂家云或 BLE，下游门禁与适配层无需改模型。
+### 华为云 pull（Ingress 在服务端）
 
-实现：`frontend/services/device-sim-generator.js`、`syncDeviceGlucose`、`pages/devices` 的 `onSync`；流水查询 `fetchDeviceSyncLogs`。
+1. 设备页「授权华为健康」→ `GET /api/v1/devices/cloud/huawei/authorize-url` → `web-view` 打开授权页
+2. 华为回调后端 `.../callback` 换 token 加密落库；列表项 `cloudLinked=true`
+3. 已授权设备按钮为「云同步」→ `POST /api/v1/devices/cloud-pull`；服务端用 token 拉 `samplePoints` 再走同一适配器
+4. 进小程序（`App.onShow` / 登录成功后）或进入设备管理页（`devices` `onShow`）对已授权设备自动 `cloud-pull`，本地 15 分钟节流（共用同一节流键）；失败静默；设备页若拉到结果会再刷列表
+
+实现：`syncDeviceGlucose`（演示）、`pullDeviceCloud`（云）、`utils/device-cloud-sync.js`（进端/进设备页自动拉）、`pages/device-cloud-auth`（授权 web-view）。
 
 ## 生成模拟数据
 
@@ -51,14 +57,16 @@
 
 ## 尚未实现
 
-真实厂商 BLE 协议读数、厂家云 OAuth 代拉、Nightscout 用户自填 URL 实拉。读数进入九时段前仍须校验来源、单位与幂等；契约变更先更新 `backend/docs/API-CONTRACT.md`。
+真实厂商 BLE 协议读数、Nightscout 用户自填 URL 实拉；其它厂商云 OAuth（非华为）。读数进入九时段前仍须校验来源、单位与幂等；契约变更先更新 `backend/docs/API-CONTRACT.md`。
 
 ## 验证
 
 - 空列表显示空状态；绑定后出现已绑定卡片与汇总。
 - 待适配仍会话级；确认绑定后进入已绑定并从草稿消失。
 - 解绑后列表更新；管理端仍能看到该 SN（`user_id` 空）。
-- 任一已支持厂商点「同步记录」可写入血糖并更新 `lastSyncAt`。
+- 未授权华为 / 其它厂商点「演示同步」可写入血糖并更新 `lastSyncAt`；已授权华为点「云同步」走 `cloud-pull`。
+- 华为设备「授权华为健康」可打开授权页；撤销后 `cloudLinked` 变为 false。
+- 登录后、进小程序或进入设备管理页（间隔 >15min）会静默尝试 `cloud-pull`，失败不打断主流程。
 - 解绑后设备从已绑定列表消失，可再「生成模拟数据」。
 - 同步数次后进详情展开「同步记录」，可见最多 10 条流水（新→旧）。
 - 「生成模拟数据」选任一厂商 → 新建设备并入库随机血糖。

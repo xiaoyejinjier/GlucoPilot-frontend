@@ -1,0 +1,14 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="cloud-auth-page">
+  <view wx:if="{{loading}}" class="cloud-auth-status">{{i18n.t("正在准备授权…", locale)}}</view>
+  <view wx:elif="{{error}}" class="cloud-auth-status">
+    <text>{{i18n.t(error, locale)}}</text>
+    <button class="cloud-auth-btn" bindtap="onRetry">{{i18n.t("重试", locale)}}</button>
+    <button class="cloud-auth-btn ghost" bindtap="onBack">{{i18n.t("返回", locale)}}</button>
+  </view>
+  <view wx:elif="{{done}}" class="cloud-auth-status">
+    <text>{{i18n.t(doneMessage, locale)}}</text>
+    <button class="cloud-auth-btn" bindtap="onBack">{{i18n.t("返回设备管理", locale)}}</button>
+  </view>
+  <web-view wx:elif="{{authorizeUrl}}" src="{{authorizeUrl}}"></web-view>
+</view>

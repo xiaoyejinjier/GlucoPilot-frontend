@@ -1,0 +1,27 @@
+.cloud-auth-page {
+  min-height: 100vh;
+  background: #f4f7f6;
+}
+
+.cloud-auth-status {
+  padding: 48rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  color: #1f2328;
+  font-size: 30rpx;
+  line-height: 1.5;
+}
+
+.cloud-auth-btn {
+  margin-top: 8rpx;
+  background: #0969da;
+  color: #fff;
+  border-radius: 12rpx;
+}
+
+.cloud-auth-btn.ghost {
+  background: #fff;
+  color: #0969da;
+  border: 1px solid #0969da;
+}

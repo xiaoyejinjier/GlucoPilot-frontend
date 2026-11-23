@@ -2027,3 +2027,25 @@ mmol/L · 餐后预测	mmol/L · post-meal prediction
 填写设备品牌、型号（未选择设备时必填）	Brand and model (required if no device is selected)
 请先加载反馈类型	Please load the feedback types first
 请选择设备或填写设备品牌型号	Select a device or enter its brand and model
+
+正在准备授权…	Preparing authorization…
+授权华为健康	Authorize Huawei Health
+撤销云授权	Revoke cloud authorization
+返回设备管理	Back to devices
+授权未完成	Authorization was not completed
+华为健康授权成功，可返回设备页进行云同步。	Huawei Health is authorized. Return to Devices to sync from the cloud.
+云同步	Cloud sync
+演示同步	Demo sync
+未授权云 · 可先授权或演示同步	Cloud not authorized · Authorize or use demo sync
+云已授权 · 可拉取厂商血糖	Cloud authorized · Vendor glucose data can be synced
+华为设备可授权健康云后使用「云同步」；未授权或其他厂商走「演示同步」。待适配仅临时登记；「生成模拟数据」会按厂商自动绑定并写入随机血糖。	Authorize Huawei Health to use cloud sync. Unauthorised devices and other providers use demo sync. Pending devices are only saved temporarily. Generate demo data binds a device and saves random glucose readings.
+
+设备类型：	Device type:
+设备型号：	Device model:
+云授权：	Cloud authorization:
+已授权	Authorized
+未授权	Not authorized
+未获取到授权地址，请确认云同步已启用	No authorization URL was returned. Check that cloud sync is enabled.
+无法开始授权	Unable to start authorization
+
+型号：	Model:

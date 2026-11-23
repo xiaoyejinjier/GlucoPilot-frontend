@@ -5,10 +5,13 @@ const {
   bindDevice,
   unbindDevice,
   syncDeviceGlucose,
+  pullDeviceCloud,
+  revokeDeviceCloudAuth,
   createSimDeviceAndSync,
   fetchDeviceSyncLogs
 } = require('../../services/api')
 const { buildRandomPayload } = require('../../services/device-sim-generator')
+const { tryAutoCloudPull } = require('../../utils/device-cloud-sync')
 const { getToken } = require('../../utils/request')
 
 const PROVIDERS = [
@@ -31,14 +34,50 @@ function enrichDevice(device) {
   const lastSyncDisplay = device.lastSyncAt
     ? String(device.lastSyncAt).replace('T', ' ').slice(0, 19)
     : '暂无同步记录'
+  const provider = String(device.provider || '').toUpperCase()
+  const cloudLinked = device.cloudLinked === true
+  const isHuawei = provider === 'HUAWEI'
+  let syncActionText = '演示同步'
+  if (isHuawei && cloudLinked) syncActionText = '云同步'
+  let syncText = device.lastSyncAt ? '最近同步：' + lastSyncDisplay : '尚未同步 · 可同步演示读数'
+  if (isHuawei && cloudLinked) {
+    syncText = device.lastSyncAt
+      ? '云已授权 · 最近同步：' + lastSyncDisplay
+      : '云已授权 · 可拉取厂商血糖'
+  } else if (isHuawei) {
+    syncText = device.lastSyncAt
+      ? '未授权云 · 最近同步：' + lastSyncDisplay
+      : '未授权云 · 可先授权或演示同步'
+  }
+  const categoryCode = String(device.deviceCategory || '').toUpperCase()
+  const categoryLabel = ({
+    CGM: '连续血糖',
+    BGM: '指尖血糖',
+    PUMP: '胰岛素泵',
+    PEN: '胰岛素笔',
+    BAND: '运动手环',
+    WATCH: '智能手表',
+    RING: '智能戒指',
+    HUB: '数据网关',
+    SCALE: '体脂秤',
+    BP: '血压计',
+    OXIMETER: '血氧仪',
+    OTHER: '其他'
+  })[categoryCode] || ''
+  const modelLabel = device.deviceModel ? String(device.deviceModel) : ''
   return {
     ...device,
     id: String(device.id),
     online: enabled,
     statusText: enabled ? '已绑定' : '已停用',
     providerName: PROVIDERS.find((p) => p.code === device.provider)?.name || '其他设备',
-    syncActionText: '同步记录',
-    syncText: device.lastSyncAt ? '最近同步：' + lastSyncDisplay : '尚未同步 · 可同步演示读数',
+    categoryLabel,
+    modelLabel,
+    cloudLinked,
+    showCloudAuth: isHuawei && !cloudLinked,
+    showCloudRevoke: isHuawei && cloudLinked,
+    syncActionText,
+    syncText,
     lastSyncDisplay
   }
 }
@@ -113,7 +152,12 @@ Page({
       wx.reLaunch({ url: '/pages/login/login' })
       return
     }
-    return this.refresh()
+    return this.refresh().then((ok) => {
+      if (!ok || !this.current()) return
+      return tryAutoCloudPull({ reason: 'devices-onShow' }).then((result) => {
+        if (result && this.current()) return this.refresh()
+      })
+    })
   },
 
   onHide() {
@@ -215,6 +259,45 @@ Page({
     }
   },
 
+  onAuthorizeCloud(event) {
+    if (!this.current()) return
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!id) return
+    wx.navigateTo({
+      url: '/pages/device-cloud-auth/device-cloud-auth?deviceId=' + encodeURIComponent(id)
+    })
+  },
+
+  async onRevokeCloud(event) {
+    if (!this.current()) return
+    const id = String(event.currentTarget.dataset.id || '')
+    const device = this.data.boundDevices.find((d) => d.id === id)
+    if (!device) return
+    const token = this._token
+    const lifecycle = this._lifecycle
+    wx.showModal({
+      title: '撤销云授权',
+      content: '确定撤销「' + device.deviceName + '」的华为健康授权？',
+      confirmText: '撤销',
+      success: async (result) => {
+        if (!result.confirm || !this.current(token, lifecycle)) return
+        wx.showLoading({ title: '处理中', mask: true })
+        try {
+          await revokeDeviceCloudAuth(id)
+          if (!this.current(token, lifecycle)) return
+          wx.showToast({ title: '已撤销', icon: 'success' })
+          await this.refresh()
+        } catch (error) {
+          if (this.current(token, lifecycle)) {
+            wx.showToast({ title: error.message || '撤销失败', icon: 'none' })
+          }
+        } finally {
+          wx.hideLoading()
+        }
+      }
+    })
+  },
+
   async onSync(event) {
     if (!this.current() || this.data.loading) return
     const id = String(event.currentTarget.dataset.id)
@@ -228,18 +311,22 @@ Page({
       wx.showToast({ title: '不支持的厂商', icon: 'none' })
       return
     }
-    let payload
-    try {
-      payload = buildRandomPayload(provider)
-    } catch (error) {
-      wx.showToast({ title: (error && error.message) || '无法生成同步数据', icon: 'none' })
-      return
-    }
     const token = this._token
     const lifecycle = this._lifecycle
     wx.showLoading({ title: '同步中', mask: true })
     try {
-      await syncDeviceGlucose({ provider, deviceSn: device.deviceSn, payload })
+      if (provider === 'HUAWEI' && device.cloudLinked) {
+        await pullDeviceCloud({ deviceId: device.id })
+      } else {
+        let payload
+        try {
+          payload = buildRandomPayload(provider)
+        } catch (error) {
+          wx.showToast({ title: (error && error.message) || '无法生成同步数据', icon: 'none' })
+          return
+        }
+        await syncDeviceGlucose({ provider, deviceSn: device.deviceSn, payload })
+      }
       if (!this.current(token, lifecycle)) return
       wx.showToast({ title: '同步完成', icon: 'success' })
       await this.refresh()

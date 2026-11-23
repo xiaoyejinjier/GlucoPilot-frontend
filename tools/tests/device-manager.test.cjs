@@ -4,9 +4,10 @@ function setup(){
   let definition,token='account-a',drafts=[{id:'draft-a',sn:'SN-A',name:'我的设备'}]
   const calls={list:[],bind:[],unbind:[],sync:[],toasts:[],modals:[],guide:0,stopped:0}
   const api={fetchMyDevices(){const request=deferred();calls.list.push(request);return request.promise},bindDevice(payload){const request=deferred();calls.bind.push({...request,payload});return request.promise},unbindDevice(id){const request=deferred();calls.unbind.push({...request,id});return request.promise},syncDeviceGlucose(payload){const request=deferred();calls.sync.push({...request,payload});return request.promise},fetchDeviceSyncLogs:async()=>[]}
+  const cloud={tryAutoCloudPull:async()=>null}
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../pages/devices/devices.js'),'utf8'),{
     Page:value=>definition=value,Date,
-    require:name=>({'../../services/device-sim-generator':require('../../services/device-sim-generator'),'../../utils/display':{applyDisplayToCurrentPage(){}},'../../utils/request':{getToken:()=>token},'../../services/api':api,'../../utils/device-drafts':{listDeviceDrafts:()=>drafts.map(d=>({...d})),removeDeviceDraft:(session,id)=>{assert.equal(session,token);drafts=drafts.filter(d=>d.id!==id);return drafts},updateDeviceDraftSn(){},validateSerial(){}}}[name]),
+    require:name=>({'../../utils/device-cloud-sync':cloud,'../../services/device-sim-generator':require('../../services/device-sim-generator'),'../../utils/display':{applyDisplayToCurrentPage(){}},'../../utils/request':{getToken:()=>token},'../../services/api':api,'../../utils/device-drafts':{listDeviceDrafts:()=>drafts.map(d=>({...d})),removeDeviceDraft:(session,id)=>{assert.equal(session,token);drafts=drafts.filter(d=>d.id!==id);return drafts},updateDeviceDraftSn(){},validateSerial(){}}}[name]),
     wx:{showLoading(){},hideLoading(){},showToast:value=>calls.toasts.push(value),showModal:value=>calls.modals.push(value),reLaunch(){},navigateTo(){},stopPullDownRefresh(){calls.stopped++}}
   })
   const page={...definition,data:JSON.parse(JSON.stringify(definition.data)),setData(value){Object.assign(this.data,value)},getTabBar:()=>({setData(){},refreshGuide(){calls.guide++}})}
@@ -16,7 +17,7 @@ const device={id:'1',deviceSn:'SN-A',deviceName:'我的设备',provider:'HUAWEI'
 const event=id=>({currentTarget:{dataset:{id}}})
 test('设备管理从我的进入仍刷新真实列表且不更改导航选中项，没有同步时间也仍为已绑定',async()=>{
   const {page,calls}=setup();const loading=page.onShow();calls.list[0].resolve([device]);await loading
-  assert.equal(calls.guide,0);assert.equal(page.data.boundDevices[0].statusText,'已绑定');assert.equal(page.data.boundDevices[0].syncText,'尚未同步 · 可同步演示读数')
+  assert.equal(calls.guide,0);assert.equal(page.data.boundDevices[0].statusText,'已绑定');assert.equal(page.data.boundDevices[0].syncText,'未授权云 · 可先授权或演示同步')
   const refresh=page.onSync(event('1'));assert.equal(calls.sync.length,1);assert.equal(calls.sync[0].payload.provider,'HUAWEI');assert.equal(calls.sync[0].payload.deviceSn,'SN-A')
   calls.sync[0].resolve({createdCount:2});await new Promise(setImmediate);assert.equal(calls.list.length,2);calls.list[1].resolve([device]);await refresh
   assert.equal(calls.toasts.at(-1).title,'同步完成');assert.equal(calls.bind.length,0)

@@ -13,6 +13,7 @@ function runtime(){
     setInterval:fn=>{state.timers.set(++sequence,fn);return sequence},clearInterval:id=>state.timers.delete(id)
   })
   const deps={'./utils/i18n':{install(){}},'./utils/message-notifications':notifications.exports,
+    './utils/device-cloud-sync':{tryAutoCloudPull:async()=>null},
     './utils/display':{applyDisplayToCurrentPage(){},saveDisplaySettings(){}},'./utils/storage':{getUserInfo(){},saveUserInfo(){}},
     './utils/request':request,'./services/api':api,'./utils/mappers':{},
     './utils/config':{baseUrl:'https://example.test/api/v1',resolveBaseUrl:()=>({url:'https://example.test/api/v1',source:'test'}),envVersion:()=> 'develop',devicePlatform:()=> 'android'}}

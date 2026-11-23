@@ -50,6 +50,7 @@ function createFlow(options = {}) {
     navigateBack() { state.routes.push('back') }
   }
   const dependencies = {
+    './utils/device-cloud-sync': { tryAutoCloudPull: async () => null },
     './utils/i18n': { install() {} },
     './utils/message-notifications': { start(){},stop(){},reset(){} },
     './utils/display': display, './utils/storage': storage, './utils/request': request,
