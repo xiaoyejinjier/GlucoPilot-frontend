@@ -2120,3 +2120,36 @@ SN：	SN:\s
 无法开始授权	Unable to start authorization
 
 型号：	Model:
+切换账号	Switch account
+切换已登录账号	Switch to a saved account
+验证码登录，安全便捷	Quick and secure code login
+选择账号	Choose an account
+选择已登录的账号继续使用	Choose a saved account to continue
+正在更新账号状态…	Updating account status…
+医生账号	Doctor account
+普通账号	Personal account
+身份待确认	Role not yet verified
+当前使用	Current
+使用中	In use
+重新登录	Log in again
+切换	Switch
+切换中…	Switching…
+登录过的账号会显示在这里	Accounts you log in to will appear here
+添加账号	Add account
+账号信息仅保存在本机，切换后显示对应账号的数据	Saved on this device. Switching loads the selected account’s data.
+部分账号状态暂时无法更新，点击重试	Some accounts could not be checked. Tap to retry.
+该账号需要重新验证登录	Please verify this account again
+切换失败，请重试	Could not switch accounts. Please retry.
+该账号需要重新登录	Please log in to this account again
+账号信息已变化，请重新登录	Account details changed. Please log in again.
+账号当前不可切换，请重新登录查看状态	This account is unavailable. Log in again to check its status.
+我已阅读并同意《用户协议》《隐私政策》《免责声明》	I have read and agree to the Terms, Privacy Policy and Disclaimer.
+请先同意协议	Please accept the agreements
+同意	Agree
+充值后余额	Balance after recharge
+支付后余额	Balance after payment
+拒绝	Decline
+请先勾选并同意《用户协议》《隐私政策》《免责声明》，才能继续使用。	Please check the box to accept the Terms, Privacy Policy and Disclaimer before continuing.
+请阅读并同意《用户协议》《隐私政策》《免责声明》后继续。	Please read and accept the Terms, Privacy Policy and Disclaimer to continue.
+同意并继续	Agree and continue
+暂不同意	Not now

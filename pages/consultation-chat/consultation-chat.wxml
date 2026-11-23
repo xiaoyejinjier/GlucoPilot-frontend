@@ -9,7 +9,7 @@
     <view wx:if="{{hasMore}}" class="consult-chat-state" bindtap="onOlder">{{i18n.t(loading ? '正在加载…' : '查看更早的交流',locale)}}</view>
     <view wx:if="{{!messages.length}}" class="consult-chat-state">{{i18n.t(loading ? '正在加载消息…' : '可以在这里补充情况或回复对方。',locale)}}</view>
     <view wx:for="{{messages}}" wx:key="id" id="consult-msg-{{item.id}}" class="consult-chat-message {{item.mine ? 'mine' : ''}}">
-      <text class="consult-chat-time">{{item.timeLabel}}</text>
+      <text wx:if="{{item.showTime}}" class="consult-chat-time">{{item.timeLabel}}</text>
       <view class="consult-chat-message-row"><view class="consult-chat-avatar">{{i18n.t(item.mine ? '我' : item.senderRole === 'DOCTOR' ? '医' : '患',locale)}}</view><text class="consult-chat-bubble" selectable>{{item.content}}</text></view>
     </view>
   </scroll-view>

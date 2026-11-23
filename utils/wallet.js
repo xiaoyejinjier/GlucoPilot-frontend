@@ -15,7 +15,12 @@ function amountCents(value) {
   return cents >= 100 && cents <= 100000 ? cents : null
 }
 function decorate(row) {
+  const rawBalance = row.balanceAfterCents
+  const balance = typeof rawBalance === 'number' || (typeof rawBalance === 'string' && /^\d+$/.test(rawBalance)) ? Number(rawBalance) : NaN
+  const balanceAfter = Number.isSafeInteger(balance) && balance >= 0 ? money(balance) : null
   return { ...row, price: money(row.amountCents), statusLabel: (STATUSES.find(item => item.code === row.status) || {}).label || '处理中',
+    showBalanceAfter: row.status === 'PAID', balanceAfter,
+    balanceAfterLabel: row.type === 'RECHARGE' ? '充值后余额' : '支付后余额',
     time: timeLabel(row.createdAt), paidTime: timeLabel(row.paidAt), closedTime: timeLabel(row.closedAt), creditedTime: timeLabel(row.creditedAt) }
 }
 module.exports = { amountCents, decorate, STATUSES }

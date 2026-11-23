@@ -2,6 +2,7 @@ const { fetchMe, fetchGlucoseSummary, logoutRemote, fetchMyDevices, fetchDeviceS
 const { getUserInfo, saveUserInfo, logout } = require('../../utils/storage')
 const { getToken } = require('../../utils/request')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
+const accountVault = require('../../utils/account-vault')
 
 const app = getApp()
 const PROVIDER_NAMES = {
@@ -75,6 +76,7 @@ Page({
       .then((userInfo) => {
         if(!this.sessionActive(token,epoch))return
         saveUserInfo(userInfo)
+        accountVault.remember(userInfo, token)
         app.globalData.userInfo = userInfo
         this.setData({ userInfo })
       })
@@ -165,6 +167,10 @@ Page({
 
   onEditProfile() {
     wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+  },
+  onSwitchAccount() {
+    if (this.sessionActive(getToken(), this._mineEpoch) && !this._logoutPending)
+      wx.navigateTo({ url: '/pages/account-switch/account-switch' })
   },
   onPublicProfile(){const key=this.data.userInfo.communityKey;if(this.sessionActive(getToken(),this._mineEpoch)&&/^u[1-9]\d{0,18}$/.test(String(key||'')))wx.navigateTo({url:`/pages/community-profile/community-profile?key=${key}`})},
 

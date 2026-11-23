@@ -8,6 +8,7 @@ function harness(options={}){
  const api=Object.fromEntries(Object.entries(impl).map(([key,fn])=>[key,(...args)=>{state.calls.push({key,args});return fn(...args)}]))
  const wx={showModal:o=>state.modals.push(o),showLoading:()=>state.loading++,hideLoading:()=>state.loading--,reLaunch:o=>state.navs.push(o),showToast(){},navigateTo(){}}
  const deps={'../../services/api':api,'../../utils/storage':{getUserInfo:()=>state.cache,saveUserInfo:v=>{state.cache=v;state.saves.push(v)},logout:()=>{state.cleared++;state.cache=null}},'../../utils/request':{getToken:()=>state.token},'../../utils/display':{applyDisplayToCurrentPage(){}}}
+ deps['../../utils/account-vault']={remember(){}}
  let def;vm.runInNewContext(fs.readFileSync(path.join(root,'pages/mine/mine.js'),'utf8'),{Page:x=>def=x,getApp:()=>app,wx,require:k=>{assert.ok(deps[k],k);return deps[k]}})
  const p={...def,data:JSON.parse(JSON.stringify(def.data)),setData:v=>Object.assign(p.data,v)};p.onShow();return{p,state,app}
 }

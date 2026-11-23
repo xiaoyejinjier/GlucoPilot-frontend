@@ -5,6 +5,7 @@ const { fetchMe, fetchAppConfig, logoutRemote } = require('./services/api')
 const { fontNameOf, themeIdOf } = require('./utils/mappers')
 const config = require('./utils/config')
 const messageNotifications = require('./utils/message-notifications')
+const accountVault = require('./utils/account-vault')
 const { tryAutoCloudPull } = require('./utils/device-cloud-sync')
 const i18n = require('./utils/i18n')
 if (typeof Page === 'function') Page = i18n.wrapPage(Page)
@@ -31,7 +32,7 @@ App({
 
   onLaunch() {
     // 冷启动由用户选择登录方式，不用上次调试留下的缓存直接跳过登录页。
-    this.resetLoginState()
+    this.resetLoginState({ preserveSavedAccount: true })
     this.logRuntimeConfig()
   },
 
@@ -60,7 +61,7 @@ App({
     const pages = getCurrentPages()
     const current = pages.length ? pages[pages.length - 1].route : (options && options.path) || ''
     if (!this.globalData.isLoggedIn || !getToken()) {
-      if (current && current !== 'pages/login/login') this.openLogin()
+      if (current && !['pages/login/login', 'pages/account-switch/account-switch'].includes(current)) this.openLogin()
       return
     }
     // 登录方式选择页不受后台恢复时的声明检查抢占。
@@ -76,7 +77,8 @@ App({
 
   onHide() { messageNotifications.stop() },
 
-  resetLoginState() {
+  resetLoginState(options) {
+    if (!options || !options.preserveSavedAccount) accountVault.invalidateToken(getToken())
     // During onLaunch the instance exists as this, but getApp() may not be ready yet.
     messageNotifications.reset(this)
     this._profilePromise = null
@@ -88,6 +90,11 @@ App({
     this.globalData.disclaimerRequired = false
     this.globalData.disclaimerCurrentVersion = ''
     this.globalData.navigationGuideToken = ''
+    this.globalData.pendingShotImage = ''
+    this.globalData.pendingGlucoseOcr = null
+    this.globalData.pendingLoginPhone = ''
+    this.globalData.accountSwitchFlow = false
+    this.globalData.recoveredFromCancellation = false
   },
 
   // 所有鉴权请求（含静默通知轮询）共用失效处理，避免旧终端卡在加载或继续显示账号缓存。
@@ -96,6 +103,7 @@ App({
     if (!expiredToken || (currentToken && currentToken !== expiredToken)) return false
     if (this._expiredSessionToken === expiredToken) return true
     this._expiredSessionToken = expiredToken
+    accountVault.invalidateToken(expiredToken)
     this.resetLoginState()
     clearAccountCache()
     this.openLogin()
@@ -135,6 +143,7 @@ App({
       if (remoteVersion) wx.setStorageSync('disclaimerCurrentVersion', remoteVersion)
 
       saveUserInfo(userInfo)
+      accountVault.remember(userInfo, token)
       this.globalData.userInfo = userInfo
       this.globalData.disclaimerCurrentVersion = currentVersion
       this.globalData.disclaimerRequired = !userInfo.disclaimerAgreed ||

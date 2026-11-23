@@ -279,6 +279,31 @@ test('医患交流独立于问诊单，5秒增量轮询且离页停止，发送�
  page.onHide();assert.equal(state.timers.size,0)
 })
 
+test('问诊交流同一分钟只显示一次时间，发送、增量轮询和历史分页均保持正确分组',async()=>{
+ let nextMinute=false
+ const row=(id,createdAt,mine=false)=>({id,createdAt,mine,content:'消息'+id,senderRole:mine?'PATIENT':'DOCTOR'})
+ const {page}=harness('consultation-chat',{
+  detail:async()=>({id:'8',detailsVisible:true,status:'IN_PROGRESS'}),
+  messages:async(id,q)=>({records:q.beforeId?
+   [row('1','2026-11-22T11:16:00'),row('2','2026-11-23T11:16:00')]:q.afterId?
+   (nextMinute?[row('6','2026-11-23T11:17:01')]:[]):
+   [row('3','2026-11-23T11:16:10'),row('4','2026-11-23T11:16:20',true)],canSend:true,hasMore:!q.beforeId&&!q.afterId}),
+  sendMessage:async()=>row('5','2026-11-23T11:16:45',true)
+ })
+ page.onLoad({id:'8'});page.onShow();await flush()
+ assert.deepEqual(Array.from(page.data.messages,r=>r.showTime),[true,false])
+ page.onInput({detail:{value:'同一分钟继续发送'}});await page.onSend();await flush()
+ assert.deepEqual(Array.from(page.data.messages,r=>r.showTime),[true,false,false])
+ nextMinute=true;await page.loadMessages('after')
+ assert.deepEqual(Array.from(page.data.messages,r=>r.showTime),[true,false,false,true])
+ await page.onOlder()
+ assert.deepEqual(Array.from(page.data.messages,r=>r.id),['1','2','3','4','5','6'])
+ assert.deepEqual(Array.from(page.data.messages,r=>r.showTime),[true,true,false,false,false,true])
+ await page.loadMessages('after')
+ assert.equal(page.data.messages.length,6)
+ assert.equal(page.data.messages.filter(r=>r.showTime).length,3)
+})
+
 test('问诊详情只提供独立聊天入口，不读取消息或启动交流轮询',async()=>{
  let reads=0
  const {page,state}=harness('consultation-detail',{detail:async()=>({id:'8',mine:true,detailsVisible:true,status:'IN_PROGRESS'}),messages:async()=>{reads++;return{records:[]}}})
