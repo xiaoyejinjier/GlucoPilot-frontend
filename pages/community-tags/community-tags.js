@@ -88,15 +88,22 @@ Page({
         if (row.code) byCode.set(row.code, row)
         byName.set(row.name.toLowerCase(), row)
       }
-      catalog.filter(t => t && t.enabled !== 0).forEach(t => push(t, isUser(t)))
-      mine.filter(t => t.enabled !== 0 && isUser(t)).forEach(t => {
-        if (!byCode.has(t.code) && !byName.has(String(t.name).toLowerCase())) push(t, true)
+      // 社区推荐→全部标签（browse）只展示官方话题；发文选标签（pick）仍含自建。
+      const allowCustom = this.data.mode === 'pick'
+      catalog.filter(t => t && t.enabled !== 0).forEach(t => {
+        if (!allowCustom && isUser(t)) return
+        push(t, isUser(t))
       })
-      tagHistory.list().forEach(name => {
-        const key = name.toLowerCase()
-        if (blocked.has(key) || byName.has(key)) return
-        push({ name, code:'' }, true)
-      })
+      if (allowCustom) {
+        mine.filter(t => t.enabled !== 0 && isUser(t)).forEach(t => {
+          if (!byCode.has(t.code) && !byName.has(String(t.name).toLowerCase())) push(t, true)
+        })
+        tagHistory.list().forEach(name => {
+          const key = name.toLowerCase()
+          if (blocked.has(key) || byName.has(key)) return
+          push({ name, code:'' }, true)
+        })
+      }
       const official = []
       const custom = []
       const seen = new Set()
@@ -114,7 +121,7 @@ Page({
       custom.sort((a, b) => a.name.localeCompare(b.name, 'zh'))
       // Same as homepage topic bar: non-USER official rows (incl. other).
       this._homeOfficial = official.slice()
-      this._rows = [...official, ...custom]
+      this._rows = allowCustom ? [...official, ...custom] : official.slice()
       this.setData({ loading:false, error:'' }); this.refreshSelection()
     } catch (error) {
       if (social.active(this, version) && run === this._loadRun) this.setData({ loading:false, error:error.message || '标签加载失败，点击重试', tags:[], frequentTags:[], catalogTags:[] })
@@ -204,7 +211,7 @@ Page({
     this.refreshSelection()
   },
   onSave() {
-    if (!social.active(this)) return
+    if (this.data.mode !== 'pick' || !social.active(this)) return
     const name = publication.normalizeTag(this.data.input), issue = publication.tagIssue(name)
     if (issue) return wx.showToast({ title:issue, icon:'none' })
     const key = `n:${name.toLowerCase()}`

@@ -1,4 +1,4 @@
-const { applyDisplayToCurrentPage } = require('../../utils/display')
+const { applyDisplayToCurrentPage, getDisplaySettings, getTheme } = require('../../utils/display')
 const { listDeviceDrafts, removeDeviceDraft, updateDeviceDraftSn, validateSerial } = require('../../utils/device-drafts')
 const {
   fetchMyDevices,
@@ -8,11 +8,25 @@ const {
   pullDeviceCloud,
   revokeDeviceCloudAuth,
   createSimDeviceAndSync,
-  fetchDeviceSyncLogs
+  fetchDeviceSyncLogs,
+  fetchDeviceSyncSamples
 } = require('../../services/api')
 const { buildRandomPayload } = require('../../services/device-sim-generator')
 const { tryAutoCloudPull } = require('../../utils/device-cloud-sync')
 const { getToken } = require('../../utils/request')
+const { summarizePoints, buildLineSeries } = require('../../utils/sync-sample-chart')
+
+function emptySyncSampleChart() {
+  return buildLineSeries([])
+}
+
+function brandColor() {
+  try {
+    return getTheme(getDisplaySettings().theme).brand || '#2770cf'
+  } catch (_) {
+    return '#2770cf'
+  }
+}
 
 const PROVIDERS = [
   { code: 'MOCK', name: '测试设备' },
@@ -119,7 +133,14 @@ Page({
     simCreating: false,
     syncLogsExpanded: false,
     syncLogsLoading: false,
-    syncLogs: []
+    syncLogs: [],
+    selectedSyncLogId: '',
+    syncSampleLoading: false,
+    syncSampleEmpty: false,
+    syncSampleError: '',
+    syncSampleStats: { count: 0, avgText: '—', minText: '—', maxText: '—' },
+    syncSampleChart: emptySyncSampleChart(),
+    syncSampleSyncedAt: ''
   },
 
   onShow() {
@@ -144,7 +165,14 @@ Page({
         simVisible: false,
         simCreating: false,
         syncLogsExpanded: false,
-        syncLogs: []
+        syncLogs: [],
+        selectedSyncLogId: '',
+        syncSampleLoading: false,
+        syncSampleEmpty: false,
+        syncSampleError: '',
+        syncSampleStats: { count: 0, avgText: '—', minText: '—', maxText: '—' },
+        syncSampleChart: emptySyncSampleChart(),
+        syncSampleSyncedAt: ''
       })
     }
     this._token = token
@@ -348,7 +376,14 @@ Page({
       detail: device,
       syncLogsExpanded: false,
       syncLogsLoading: false,
-      syncLogs: []
+      syncLogs: [],
+      selectedSyncLogId: '',
+      syncSampleLoading: false,
+      syncSampleEmpty: false,
+      syncSampleError: '',
+      syncSampleStats: { count: 0, avgText: '—', minText: '—', maxText: '—' },
+      syncSampleChart: emptySyncSampleChart(),
+      syncSampleSyncedAt: ''
     })
   },
 
@@ -357,14 +392,31 @@ Page({
       detailVisible: false,
       syncLogsExpanded: false,
       syncLogsLoading: false,
-      syncLogs: []
+      syncLogs: [],
+      selectedSyncLogId: '',
+      syncSampleLoading: false,
+      syncSampleEmpty: false,
+      syncSampleError: '',
+      syncSampleStats: { count: 0, avgText: '—', minText: '—', maxText: '—' },
+      syncSampleChart: emptySyncSampleChart(),
+      syncSampleSyncedAt: ''
     })
   },
 
   onToggleSyncLogs() {
     if (!this.current() || !this.data.detailVisible) return
     const next = !this.data.syncLogsExpanded
-    this.setData({ syncLogsExpanded: next })
+    this.setData({
+      syncLogsExpanded: next,
+      selectedSyncLogId: next ? this.data.selectedSyncLogId : '',
+      syncSampleEmpty: next ? this.data.syncSampleEmpty : false,
+      syncSampleError: next ? this.data.syncSampleError : '',
+      syncSampleStats: next
+        ? this.data.syncSampleStats
+        : { count: 0, avgText: '—', minText: '—', maxText: '—' },
+      syncSampleChart: next ? this.data.syncSampleChart : emptySyncSampleChart(),
+      syncSampleSyncedAt: next ? this.data.syncSampleSyncedAt : ''
+    })
     if (next && this.data.detail && this.data.detail.id) this.loadSyncLogs(this.data.detail.id)
   },
 
@@ -376,21 +428,80 @@ Page({
     try {
       const list = await fetchDeviceSyncLogs(deviceId, 10)
       if (!this.current(token, lifecycle)) return
-      this.setData({
-        syncLogsLoading: false,
-        syncLogs: (list || []).map((row) => ({
-          id: String(row.id),
-          provider: row.provider || '',
-          sampleCount: row.sampleCount == null ? 0 : Number(row.sampleCount),
-          createdCount: row.createdCount == null ? 0 : Number(row.createdCount),
-          remark: row.remark || '',
-          syncedAt: row.syncedAt ? String(row.syncedAt).replace('T', ' ').slice(0, 19) : '—'
-        }))
-      })
+      const rows = (list || []).map((row) => ({
+        id: String(row.id),
+        provider: row.provider || '',
+        sampleCount: row.sampleCount == null ? 0 : Number(row.sampleCount),
+        createdCount: row.createdCount == null ? 0 : Number(row.createdCount),
+        remark: row.remark || '',
+        syncedAt: row.syncedAt ? String(row.syncedAt).replace('T', ' ').slice(0, 19) : '—'
+      }))
+      this.setData({ syncLogsLoading: false, syncLogs: rows })
+      if (rows.length) {
+        const keep = rows.some((row) => row.id === this.data.selectedSyncLogId)
+        this.onSelectSyncLog({ currentTarget: { dataset: { id: keep ? this.data.selectedSyncLogId : rows[0].id } } })
+      } else {
+        this.setData({
+          selectedSyncLogId: '',
+          syncSampleEmpty: true,
+          syncSampleError: '',
+          syncSampleStats: { count: 0, avgText: '—', minText: '—', maxText: '—' },
+          syncSampleChart: emptySyncSampleChart(),
+          syncSampleSyncedAt: ''
+        })
+      }
     } catch (error) {
       if (this.current(token, lifecycle)) {
-        this.setData({ syncLogsLoading: false, syncLogs: [] })
+        this.setData({
+          syncLogsLoading: false,
+          syncLogs: [],
+          selectedSyncLogId: '',
+          syncSampleEmpty: false,
+          syncSampleError: '',
+          syncSampleChart: emptySyncSampleChart()
+        })
         wx.showToast({ title: error.message || '加载同步记录失败', icon: 'none' })
+      }
+    }
+  },
+
+  async onSelectSyncLog(event) {
+    if (!this.current() || !this.data.detailVisible || !this.data.detail || !this.data.detail.id) return
+    const logId = String((event && event.currentTarget && event.currentTarget.dataset && event.currentTarget.dataset.id) || '')
+    if (!logId) return
+    const token = this._token
+    const lifecycle = this._lifecycle
+    const run = (this._sampleRun = (this._sampleRun || 0) + 1)
+    this.setData({
+      selectedSyncLogId: logId,
+      syncSampleLoading: true,
+      syncSampleEmpty: false,
+      syncSampleError: '',
+      syncSampleSyncedAt: ''
+    })
+    try {
+      const data = await fetchDeviceSyncSamples(this.data.detail.id, logId)
+      if (!this.current(token, lifecycle) || run !== this._sampleRun) return
+      const points = data.points || []
+      const stats = summarizePoints(points)
+      this.setData({
+        syncSampleLoading: false,
+        syncSampleEmpty: stats.count === 0,
+        syncSampleError: '',
+        syncSampleStats: stats,
+        syncSampleChart: buildLineSeries(points, brandColor()),
+        syncSampleSyncedAt: data.syncedAt || ''
+      })
+    } catch (error) {
+      if (this.current(token, lifecycle) && run === this._sampleRun) {
+        this.setData({
+          syncSampleLoading: false,
+          syncSampleEmpty: false,
+          syncSampleError: error.message || '加载同步样本失败',
+          syncSampleStats: { count: 0, avgText: '—', minText: '—', maxText: '—' },
+          syncSampleChart: emptySyncSampleChart(),
+          syncSampleSyncedAt: ''
+        })
       }
     }
   },

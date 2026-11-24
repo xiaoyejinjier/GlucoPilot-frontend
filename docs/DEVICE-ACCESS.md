@@ -8,9 +8,9 @@
 ## 设备管理（已接服务端）
 
 - 列表：`GET /api/v1/devices`，仅返回当前用户已绑定档案。
-- 确认绑定：`POST /api/v1/devices/bind`，请求体 `{ deviceSn, provider, deviceName?, deviceCategory?, deviceModel? }`。唯一认设备靠 `deviceSn`；选适配器用 `provider`（MOCK / HUAWEI / HEALTH_CONNECT / APPLE_HEALTH / NIGHTSCOUT）。`deviceCategory`（CGM/BGM/PUMP/PEN/BAND/WATCH/RING/HUB/SCALE/BP/OXIMETER/OTHER）与 `deviceModel` 为产品分类，与 `provider` 分离；小程序可不填，管理端可后补。
+- 确认绑定：`POST /api/v1/devices/bind`，请求体 `{ deviceSn, provider, deviceName?, deviceCategory?, deviceModel? }`。唯一认设备靠 `deviceSn`；选适配器用 `provider`（MOCK / HUAWEI / HEALTH_CONNECT / APPLE_HEALTH / NIGHTSCOUT）。`deviceCategory`（CGM/BGM/PUMP/PEN/BAND/WATCH/RING/HUB/SCALE/BP/OXIMETER/OTHER）与 `deviceModel` 为产品分类，与 `provider` 分离；小程序可不填，未传时服务端可按 SN/名称关键词启发式回填，管理端亦可后补或覆盖。
 - 解绑：`POST /api/v1/devices/{id}/unbind`，清空 `user_id`，保留档案供管理端查看。
-- 同步流水：`GET /api/v1/devices/{id}/sync-logs?limit=10`；详情弹层可展开查看近 10 次（时间、厂商、样本数、新建条数）。功能上线前的历史同步不会回填。
+- 同步流水：`GET /api/v1/devices/{id}/sync-logs?limit=10`；详情弹层可展开查看近 10 次（时间、厂商、样本数、新建条数）。点选某次同步后请求 `GET /api/v1/devices/{id}/sync-logs/{logId}/samples`，展示均值/最低/最高与血糖折线。功能上线前的历史同步不会回填样本快照。
 - 离线徽标：已绑定且 `lastSyncAt` 为空或超过 48 小时显示「已离线」。
 
 ## 同步总线（自研数据流）
@@ -68,6 +68,6 @@
 - 华为设备「授权华为健康」可打开授权页；撤销后 `cloudLinked` 变为 false。
 - 登录后、进小程序或进入设备管理页（间隔 >15min）会静默尝试 `cloud-pull`，失败不打断主流程。
 - 解绑后设备从已绑定列表消失，可再「生成模拟数据」。
-- 同步数次后进详情展开「同步记录」，可见最多 10 条流水（新→旧）。
+- 同步数次后进详情展开「同步记录」，可见最多 10 条流水（新→旧）；默认选中最近一次并显示血糖统计与曲线，点其他流水可切换。
 - 「生成模拟数据」选任一厂商 → 新建设备并入库随机血糖。
 - 本地测试（添加页）：`node --test tools/tests/device-add.test.cjs tools/tests/device-discovery.test.cjs`。
