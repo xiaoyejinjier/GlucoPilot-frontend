@@ -66,11 +66,22 @@ function login(userInfo) {
   if (userInfo) saveUserInfo(userInfo)
 }
 
+/** 本次会话的登录渠道：wechat / phone / email，账号安全页用于展示“当前登录方式”。 */
+function saveLoginChannel(channel) {
+  if (channel) wx.setStorageSync('loginChannel', channel)
+  else wx.removeStorageSync('loginChannel')
+}
+
+function getLoginChannel() {
+  return wx.getStorageSync('loginChannel') || ''
+}
+
 function logout() {
   wx.removeStorageSync('isLoggedIn')
   wx.removeStorageSync('accessToken')
   wx.removeStorageSync('userInfo')
   wx.removeStorageSync('glucoseRecords')
+  wx.removeStorageSync('loginChannel')
 }
 
 /**
@@ -88,6 +99,7 @@ function clearAccountCache() {
   wx.removeStorageSync('displaySettings')
   wx.removeStorageSync('disclaimerAgreed')
   wx.removeStorageSync('disclaimerCurrentVersion')
+  wx.removeStorageSync('loginChannel')
 }
 
 module.exports = {
@@ -103,5 +115,7 @@ module.exports = {
   saveUserInfo,
   login,
   logout,
+  saveLoginChannel,
+  getLoginChannel,
   clearAccountCache
 }

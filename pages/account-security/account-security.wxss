@@ -49,11 +49,42 @@
 
 .sms-input {
   flex: 1;
+  width: 0;
+  min-width: 0;
 }
 
-.sms-btn {
-  flex-shrink: 0;
+/* 覆盖 button[size] 与 .btn-ghost 的基础样式：与输入框等高，文字水平垂直居中 */
+.sms-row > .sms-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: none;
+  width: 232rpx;
+  max-width: 46%;
+  height: 80rpx;
+  min-height: 80rpx;
   margin: 0;
+  padding: 0 16rpx;
+  border-radius: 16rpx;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.sms-btn-label {
+  display: block;
+  width: 100%;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.sms-row > .sms-btn[disabled] {
+  background: var(--surface-subtle);
+  color: var(--muted);
 }
 
 /* 注销入口：页面最下方的独立分组 */

@@ -19,7 +19,7 @@ function securityHarness(options={}){
   const deps={
     '../../services/api':api,
     '../../utils/display':{applyDisplayToCurrentPage(){}},
-    '../../utils/storage':{saveUserInfo(){}}
+    '../../utils/storage':{saveUserInfo(){},getLoginChannel:()=>'phone'}
   }
   let def
   vm.runInNewContext(fs.readFileSync(path.join(root,'pages/account-security/account-security.js'),'utf8'),{

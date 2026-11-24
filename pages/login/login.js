@@ -1,4 +1,4 @@
-const { login } = require('../../utils/storage')
+const { login, saveLoginChannel } = require('../../utils/storage')
 const { setToken } = require('../../utils/request')
 const { applyDisplayToCurrentPage, getDisplayStyle } = require('../../utils/display')
 const { wechatLogin, sendSmsCode, phoneLogin, sendEmailCode, emailLogin,
@@ -154,6 +154,7 @@ Page({
     this._accountSaveIntent = null
     app.globalData.accountSwitchFlow = false
     login()
+    saveLoginChannel(this._loginChannel || '')
     app.globalData.isLoggedIn = true
     // 按已同意的声明版本完成登录后的路由，邮箱登录同样走此流程。
     if (typeof app.goAfterLogin === 'function') return app.goAfterLogin({ accountSaveIntent })
@@ -257,6 +258,7 @@ Page({
     if (!this.requireAgreement()) return
     if (!this.checkConnectionSettings()) return
     const saveIntent = this._accountSaveIntent || null
+    this._loginChannel = 'wechat'
     wx.showLoading({ title: '登录中...', mask: true })
     wx.login({
       timeout: 10000,
@@ -365,6 +367,7 @@ Page({
       return
     }
     const saveIntent = this._accountSaveIntent || null
+    this._loginChannel = 'phone'
     wx.showLoading({ title: '登录中...', mask: true })
     phoneLogin(phone, smsCode)
       .then((data) => {
@@ -459,6 +462,7 @@ Page({
       return
     }
     const saveIntent = this._accountSaveIntent || null
+    this._loginChannel = 'email'
     wx.showLoading({ title: '登录中...', mask: true })
     emailLogin(email, emailCode)
       .then((data) => {

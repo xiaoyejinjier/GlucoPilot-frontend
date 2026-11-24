@@ -2,13 +2,16 @@ const {
   fetchMe, sendSmsCode, bindPhone, sendEmailCode, bindEmail, fetchCancellationStatus
 } = require('../../services/api')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
-const { saveUserInfo } = require('../../utils/storage')
+const { saveUserInfo, getLoginChannel } = require('../../utils/storage')
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// 登录时记录的渠道 → 展示文案（展示前经 WXS i18n 翻译）。
+const LOGIN_METHOD_LABELS = { wechat: '微信', phone: '手机号', email: '邮箱' }
 
 Page({
   data: {
     displayStyle: '',
+    loginMethod: '',
     phone: '未绑定',
     email: '未绑定',
     panel: false,
@@ -28,6 +31,7 @@ Page({
 
   onShow() {
     applyDisplayToCurrentPage()
+    this.setData({ loginMethod: LOGIN_METHOD_LABELS[getLoginChannel()] || '' })
     this.refresh()
     this.refreshCancellation()
   },

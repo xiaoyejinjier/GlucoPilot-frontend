@@ -22,6 +22,8 @@ function createFlow(options = {}) {
     getUserInfo: () => state.storage.get('userInfo') || null,
     saveUserInfo: (value) => state.storage.set('userInfo', value),
     login: () => state.storage.set('isLoggedIn', true),
+    saveLoginChannel: (channel) => { if (channel) state.storage.set('loginChannel', channel); else state.storage.delete('loginChannel') },
+    getLoginChannel: () => state.storage.get('loginChannel') || '',
     clearAccountCache() {
       for (const key of ['accessToken', 'userInfo', 'glucoseRecords', 'isLoggedIn']) state.storage.delete(key)
     }

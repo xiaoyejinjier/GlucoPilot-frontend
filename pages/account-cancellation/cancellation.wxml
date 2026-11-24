@@ -91,8 +91,8 @@
           <text class="section-hint">{{i18n.t(targetHint, locale)}}</text>
           <view class="sms-row">
             <input class="code-input" type="number" maxlength="6" placeholder="{{i18n.t('6 位验证码', locale)}}" value="{{verifyCode}}" bindinput="onCodeInput" />
-            <button class="btn-ghost sms-btn" size="mini" disabled="{{cooldownLeft > 0}}" bindtap="onSendCode">
-              {{cooldownLeft > 0 ? cooldownLeft + 's' : i18n.t("获取验证码", locale)}}
+            <button class="btn-ghost sms-btn ui-interactive" disabled="{{cooldownLeft > 0}}" bindtap="onSendCode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+              <text class="sms-btn-label">{{cooldownLeft > 0 ? cooldownLeft + 's' : i18n.t("获取验证码", locale)}}</text>
             </button>
           </view>
         </block>

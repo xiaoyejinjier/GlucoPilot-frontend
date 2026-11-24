@@ -1,5 +1,6 @@
 .slider-area {
   position: relative;
+  width: 100%;
   height: 88rpx;
   border-radius: 44rpx;
   background: var(--surface-subtle);

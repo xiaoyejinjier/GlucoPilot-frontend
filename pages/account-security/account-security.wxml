@@ -2,8 +2,8 @@
 <view class="page-no-tab" style="{{displayStyle}}">
   <view class="card menu-list">
     <view class="menu-item">
-      <text>{{i18n.t("登录方式", locale)}}</text>
-      <text class="menu-arrow">{{i18n.t("微信 / 手机号 / 邮箱", locale)}}</text>
+      <text>{{i18n.t("当前登录方式", locale)}}</text>
+      <text class="menu-arrow">{{loginMethod ? i18n.t(loginMethod, locale) : "—"}}</text>
     </view>
     <view class="menu-item ui-interactive" bindtap="onBindPhone" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
       <text>{{i18n.t("绑定手机号", locale)}}</text>
@@ -33,8 +33,8 @@
     <input class="phone-input" type="number" maxlength="11" placeholder="{{i18n.t('新手机号', locale)}}" value="{{newPhone}}" bindinput="onPhoneInput" />
     <view class="sms-row">
       <input class="phone-input sms-input" type="number" maxlength="6" placeholder="{{i18n.t('验证码', locale)}}" value="{{smsCode}}" bindinput="onSmsInput" />
-      <button class="btn-ghost sms-btn ui-interactive" size="mini" disabled="{{smsCooldown > 0}}" bindtap="onSendSms" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-        {{i18n.t((smsCooldown > 0 ? smsCooldown + 's' : '获取验证码'), locale)}}
+      <button class="btn-ghost sms-btn ui-interactive" disabled="{{smsCooldown > 0}}" bindtap="onSendSms" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+        <text class="sms-btn-label">{{i18n.t((smsCooldown > 0 ? smsCooldown + 's' : '获取验证码'), locale)}}</text>
       </button>
     </view>
     <button class="btn-primary btn-block ui-interactive" disabled="{{submitting}}" bindtap="onConfirmBind" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("确认绑定", locale)}}</button>
@@ -47,8 +47,8 @@
     <input class="phone-input" type="text" maxlength="128" placeholder="{{i18n.t('新邮箱', locale)}}" value="{{newEmail}}" bindinput="onEmailInput" />
     <view class="sms-row">
       <input class="phone-input sms-input" type="number" maxlength="6" placeholder="{{i18n.t('验证码', locale)}}" value="{{emailCode}}" bindinput="onEmailCodeInput" />
-      <button class="btn-ghost sms-btn ui-interactive" size="mini" disabled="{{emailCooldown > 0}}" bindtap="onSendEmailCode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
-        {{i18n.t((emailCooldown > 0 ? emailCooldown + 's' : '获取验证码'), locale)}}
+      <button class="btn-ghost sms-btn ui-interactive" disabled="{{emailCooldown > 0}}" bindtap="onSendEmailCode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">
+        <text class="sms-btn-label">{{i18n.t((emailCooldown > 0 ? emailCooldown + 's' : '获取验证码'), locale)}}</text>
       </button>
     </view>
     <button class="btn-primary btn-block ui-interactive" disabled="{{submitting}}" bindtap="onConfirmBindEmail" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("确认绑定", locale)}}</button>
