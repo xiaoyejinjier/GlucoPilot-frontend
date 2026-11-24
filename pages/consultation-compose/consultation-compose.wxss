@@ -1,2 +1,5 @@
 @import "../../styles/consultation.wxss";
 .short-input{height:160rpx}
+
+.topic-choice { display:flex; align-items:center; justify-content:space-between; gap:20rpx; padding:24rpx; border:1rpx solid #d9e5f5; border-radius:18rpx; background:#f6f9ff; }
+.topic-choice-name { color:#315d9d; font-size:28rpx; font-weight:600; }

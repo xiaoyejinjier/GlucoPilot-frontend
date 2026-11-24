@@ -51,7 +51,7 @@ Page({
     if (!this.data.ready || this.data.error) return
     if (!this.data.activated) { this.onWallet(); return }
     const version = this._communityVersion
-    wx.showModal({ title: '确认支付1元', content: '使用沙箱钱包余额支付，费用转入出单医生的沙箱钱包。',
+    wx.showModal({ title: '确认支付1元', content: '使用钱包余额支付，费用转入出具问诊单的医生钱包。',
       success: result => { if (result.confirm && social.active(this, version)) this.pay() } })
   },
   async pay() {

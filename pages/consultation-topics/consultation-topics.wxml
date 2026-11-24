@@ -1,0 +1,41 @@
+<wxs module="i18n" src="/utils/i18n.wxs" />
+<view class="topics-page" style="{{displayStyle}}">
+  <view class="topics-intro"><text class="topics-title">{{i18n.t('选择你关注的健康话题',locale)}}</text><text class="topics-note">{{i18n.t(mode === 'pick' ? '为这次求助选择一个最贴切的标签' : '点击标签筛选求助，编辑常用标签更快找到关注的问题',locale)}}</text></view>
+  <view class="topics-card">
+    <view class="topics-heading">
+      <text class="topics-section">{{i18n.t('常用标签',locale)}}</text>
+      <view class="topics-heading-actions">
+        <button size="mini" class="topics-reset {{editing ? '' : 'is-hidden'}}" bindtap="onReset" disabled="{{!editing || loading || !!error}}" aria-hidden="{{!editing}}">{{i18n.t('恢复默认',locale)}}</button>
+        <button size="mini" class="topics-edit" bindtap="onEdit" disabled="{{loading || !!error}}">{{i18n.t(editing ? '完成' : '编辑',locale)}}</button>
+      </view>
+    </view>
+    <text class="topics-note">{{i18n.t('点击标签查看求助，加减号管理常用',locale)}}</text>
+    <view class="topics-chips">
+      <view wx:if="{{mode === 'browse'}}" class="topics-chip {{!selected ? 'chosen' : ''}}" data-code="" bindtap="onTag">{{i18n.t('全部求助',locale)}}</view>
+      <view wx:for="{{frequent}}" wx:key="code" class="topics-chip {{selected === item.code ? 'chosen' : ''}}" data-code="{{item.code}}" bindtap="onTag">
+        <image class="topic-chip-icon" src="{{item.icon}}" mode="aspectFit" aria-hidden="true" />
+        <text>{{i18n.t(item.name,locale)}}</text>
+        <text wx:if="{{editing}}" class="chip-remove" data-code="{{item.code}}" catchtap="onToggleFavorite" aria-label="{{i18n.t('移出常用',locale)}}">−</text>
+      </view>
+    </view>
+    <view wx:if="{{!frequent.length && !loading && !error}}" class="topics-note">{{i18n.t('还没有常用标签，可以从下方添加',locale)}}</view>
+  </view>
+  <view class="topics-heading catalog-heading"><text class="topics-section">{{i18n.t('全部标签',locale)}}</text><text class="topics-total">{{catalog.length}}</text></view>
+  <view class="topics-search"><text class="search-symbol" aria-hidden="true"></text><input class="topics-search-input" value="{{query}}" placeholder="{{i18n.t('搜索血糖、饮食、运动等标签',locale)}}" bindinput="onSearch" maxlength="32" confirm-type="search" /></view>
+  <view wx:if="{{loading}}" class="topics-state">{{i18n.t('正在加载…',locale)}}</view>
+  <view wx:elif="{{error}}" class="topics-state" bindtap="load">{{i18n.t('标签加载失败，点击重试',locale)}}</view>
+  <block wx:else>
+    <view wx:for="{{groups}}" wx:for-item="group" wx:key="name" class="topics-card topic-group">
+      <text class="group-title">{{i18n.t(group.name,locale)}}</text>
+      <view class="topics-grid">
+        <view wx:for="{{group.items}}" wx:key="code" class="topic-tile {{selected === item.code ? 'chosen' : ''}}" data-code="{{item.code}}" bindtap="onTag" hover-class="ui-pressed">
+          <image class="topic-icon" src="{{item.icon}}" mode="aspectFit" aria-hidden="true" />
+          <text class="tile-name">{{i18n.t(item.name,locale)}}</text>
+          <view wx:if="{{editing}}" class="tile-action {{item.frequent ? 'added' : ''}}" data-code="{{item.code}}" catchtap="onToggleFavorite" aria-label="{{i18n.t(item.frequent ? '移出常用' : '加入常用',locale)}}">{{item.frequent ? '−' : '+'}}</view>
+          <view wx:elif="{{selected === item.code}}" class="tile-action added">✓</view>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{!groups.length}}" class="topics-state">{{i18n.t('没有找到相关标签',locale)}}</view>
+  </block>
+</view>

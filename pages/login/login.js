@@ -9,7 +9,15 @@ const app = getApp()
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const LAST_LOGIN_PHONE_KEY = 'lastLoginPhone'
+const LAST_LOGIN_EMAIL_KEY = 'lastLoginEmail'
+const LOGIN_AGREEMENT_KEY = 'loginAgreementAcceptance'
+// 登录入口的本机选择单独保存，不替代登录后的账号声明版本校验。
+const LOGIN_AGREEMENT_VERSION = 'v1'
 const PHONE_RE = /^1\d{10}$/
+function reusableEmail(value) {
+  return typeof value === 'string' && value.length <= 128 && EMAIL_RE.test(value)
+    && !/[*＊…•]/.test(value)
+}
 
 Page({
   data: {
@@ -24,6 +32,9 @@ Page({
     smsCooldown: 0,
     emailPanel: false,
     email: '',
+    lastLoginEmail: '',
+    usingLastEmail: false,
+    emailFocus: false,
     emailCode: '',
     emailCooldown: 0,
     hasSavedAccounts: false,
@@ -35,12 +46,15 @@ Page({
   },
 
   onLoad() {
+    this.restoreAgreementChoice()
     this.setData({ displayStyle: getDisplayStyle() })
     this.updateLoginLayout()
   },
 
   onShow() {
     this._loginVisible = true
+    if (!this._agreementLoaded) this.restoreAgreementChoice()
+    this._accountSaveIntent = app.globalData.accountSaveIntent || null
     applyDisplayToCurrentPage()
     this.updateLoginLayout()
     this.setData({ hasSavedAccounts: !!app.globalData.accountSwitchFlow && accountVault.list().length > 0 })
@@ -58,7 +72,25 @@ Page({
   },
 
   onAgreementChange(event) {
-    this.setData({ agreementChecked: (event.detail.value || []).includes('agreed') })
+    this.saveAgreementChoice((event.detail.value || []).includes('agreed'))
+  },
+
+  restoreAgreementChoice() {
+    let agreed = false
+    try {
+      const saved = wx.getStorageSync(LOGIN_AGREEMENT_KEY)
+      agreed = !!saved && saved.version === LOGIN_AGREEMENT_VERSION && saved.accepted === true
+    } catch (_) { /* 无法读取本地选择时，仍由用户主动同意。 */ }
+    this._agreementLoaded = true
+    this.setData({ agreementChecked: agreed })
+  },
+
+  saveAgreementChoice(accepted) {
+    this._agreementLoaded = true
+    this.setData({ agreementChecked: accepted })
+    try {
+      wx.setStorageSync(LOGIN_AGREEMENT_KEY, { version: LOGIN_AGREEMENT_VERSION, accepted })
+    } catch (_) { /* 存储失败不妨碍本次主动选择，下次重新确认即可。 */ }
   },
 
   requireAgreement() {
@@ -76,7 +108,7 @@ Page({
       success: result => {
         if (epoch !== (this._agreementEpoch || 0) || this._loginVisible === false) return
         this._agreementPrompt = false
-        if (result.confirm) this.setData({ agreementChecked: true })
+        if (result.confirm) this.saveAgreementChoice(true)
       },
       fail: () => { if (epoch === (this._agreementEpoch || 0)) this._agreementPrompt = false }
     })
@@ -115,12 +147,16 @@ Page({
     return false
   },
 
-  finishLogin() {
+  finishLogin(data, accountSaveIntent = this._accountSaveIntent || null) {
+    if (this._loginVisible === false) return
+    if (accountSaveIntent !== (app.globalData.accountSaveIntent || null)) return
+    app.globalData.accountSaveIntent = null
+    this._accountSaveIntent = null
     app.globalData.accountSwitchFlow = false
     login()
     app.globalData.isLoggedIn = true
     // 按已同意的声明版本完成登录后的路由，邮箱登录同样走此流程。
-    if (typeof app.goAfterLogin === 'function') return app.goAfterLogin()
+    if (typeof app.goAfterLogin === 'function') return app.goAfterLogin({ accountSaveIntent })
     wx.reLaunch({ url: '/pages/disclaimer/disclaimer?forced=1' })
   },
 
@@ -220,6 +256,7 @@ Page({
   onWechatLogin() {
     if (!this.requireAgreement()) return
     if (!this.checkConnectionSettings()) return
+    const saveIntent = this._accountSaveIntent || null
     wx.showLoading({ title: '登录中...', mask: true })
     wx.login({
       timeout: 10000,
@@ -232,7 +269,7 @@ Page({
         wechatLogin(res.code)
           .then((data) => {
             wx.hideLoading()
-            this.finishLogin(data)
+            this.finishLogin(data, saveIntent)
           })
           .catch((err) => this.handleLoginFailure(err))
       },
@@ -327,6 +364,7 @@ Page({
       wx.showToast({ title: '请输入验证码', icon: 'none' })
       return
     }
+    const saveIntent = this._accountSaveIntent || null
     wx.showLoading({ title: '登录中...', mask: true })
     phoneLogin(phone, smsCode)
       .then((data) => {
@@ -334,14 +372,24 @@ Page({
         // 仅成功登录后记住本设备上次号码，不缓存验证码或自动发送短信。
         try { wx.setStorageSync(LAST_LOGIN_PHONE_KEY, phone) } catch (_) {}
         this.setData({ phonePanel: false, lastLoginPhone: phone, smsCode: '' })
-        this.finishLogin(data)
+        this.finishLogin(data, saveIntent)
       })
       .catch((err) => this.handleLoginFailure(err))
   },
 
   onEmailLogin() {
     if (!this.requireAgreement()) return
-    this.setData({ emailPanel: true, phonePanel: false })
+    if (this.data.emailPanel) return
+    let lastLoginEmail = ''
+    try {
+      const saved = wx.getStorageSync(LAST_LOGIN_EMAIL_KEY)
+      const previous = reusableEmail(saved) ? null : wx.getStorageSync('userInfo')
+      const candidate = previous ? previous.email : saved
+      if (reusableEmail(candidate)) lastLoginEmail = candidate
+    } catch (_) { /* 缓存不可用时仍可手动输入邮箱。 */ }
+    this.setData({ emailPanel: true, phonePanel: false, lastLoginEmail,
+      email: lastLoginEmail || this.data.email, usingLastEmail: !!lastLoginEmail,
+      emailCode: '', emailFocus: false })
   },
 
   onCloseEmailPanel() {
@@ -349,7 +397,16 @@ Page({
   },
 
   onEmailInput(e) {
-    this.setData({ email: e.detail.value.trim() })
+    const email = e.detail.value.trim()
+    this.setData({ email, usingLastEmail: !!this.data.lastLoginEmail && email === this.data.lastLoginEmail,
+      ...(email !== this.data.email ? { emailCode: '' } : {}) })
+  },
+
+  onSwitchEmail() {
+    if (!this.data.lastLoginEmail) return
+    const useLast = !this.data.usingLastEmail
+    this.setData({ email: useLast ? this.data.lastLoginEmail : '', usingLastEmail: useLast,
+      emailCode: '', emailFocus: !useLast })
   },
 
   onEmailCodeInput(e) {
@@ -401,12 +458,16 @@ Page({
       wx.showToast({ title: '请输入 6 位验证码', icon: 'none' })
       return
     }
+    const saveIntent = this._accountSaveIntent || null
     wx.showLoading({ title: '登录中...', mask: true })
     emailLogin(email, emailCode)
       .then((data) => {
         wx.hideLoading()
-        this.setData({ emailPanel: false })
-        this.finishLogin(data)
+        if (this._loginVisible === false || saveIntent !== (app.globalData.accountSaveIntent || null)) return
+        // 只记录成功登录的邮箱，不保存验证码，也不自动发送下一次验证码。
+        try { wx.setStorageSync(LAST_LOGIN_EMAIL_KEY, email) } catch (_) {}
+        this.setData({ emailPanel: false, lastLoginEmail: email, emailCode: '' })
+        this.finishLogin(data, saveIntent)
       })
       .catch((err) => this.handleLoginFailure(err))
   }

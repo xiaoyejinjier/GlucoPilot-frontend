@@ -1,7 +1,8 @@
 @import "../../styles/consultation.wxss";
-.consultation-inbox-entry { display:flex; align-items:center; justify-content:space-between; gap:20rpx; padding:24rpx; margin:22rpx 0; border:1rpx solid #c9daf3; border-radius:22rpx; background:#eaf2ff; }
-.consultation-inbox-title { display:block; color:#294e83; font-size:28rpx; font-weight:600; }
-.consultation-inbox-note { display:block; margin-top:8rpx; color:#7187a5; font-size:23rpx; }
+.consult-hero-topline { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:16rpx; }
+.consult-hero-doctor { flex:none; padding:6rpx 16rpx; border:1rpx solid rgba(208,224,246,.3); border-radius:24rpx; background:rgba(255,255,255,.06); color:#d0e0f6; font-size:22rpx; line-height:1.5; }
+.consultation-inbox-entry { display:flex; align-items:center; justify-content:space-between; gap:20rpx; padding:18rpx 24rpx; margin:16rpx 0 22rpx; border:1rpx solid #c9daf3; border-radius:20rpx; background:#eaf2ff; }
+.consultation-inbox-title { display:block; color:#294e83; font-size:26rpx; font-weight:600; }
 .consultation-inbox-end { flex:none; display:flex; align-items:center; gap:16rpx; color:#416a9f; }
 .consultation-inbox-count { min-width:34rpx; padding:2rpx 9rpx; border-radius:20rpx; background:#dc6658; color:#fff; font-size:22rpx; text-align:center; }
 
@@ -39,3 +40,12 @@
 .consult-status-button { flex:1; min-width:0; margin:0; padding:14rpx 22rpx; border:1rpx solid #d5e2f5; border-radius:20rpx; background:#fff; color:#526b90; font-size:26rpx; line-height:1.5; }
 .consult-status-button::after { border:0; }
 .consult-status-button.selected { background:#285b9c; border-color:#285b9c; color:#fff; font-weight:600; }
+
+.topic-filter-bar { display:flex; align-items:center; gap:12rpx; margin-bottom:20rpx; }
+.topic-filter-scroll { flex:1; min-width:0; width:0; margin:0; }
+.topic-filter-scroll .consult-topic-chip { display:inline-flex; align-items:center; gap:8rpx; vertical-align:middle; }
+.consult-topic-icon { flex:none; display:block; width:32rpx; height:32rpx; border-radius:10rpx; }
+.topic-manage { display:flex; align-items:center; justify-content:center; flex:0 0 68rpx; width:68rpx; height:68rpx; margin:0; padding:0; background:#fff; border:1rpx solid #d9e5f5; border-radius:18rpx; }
+.topic-manage::after { border:0; }
+.topic-grid-icon { display:grid; grid-template-columns:repeat(2,10rpx); gap:5rpx; }
+.topic-grid-icon view { width:10rpx; height:10rpx; border:2rpx solid #5477a8; border-radius:3rpx; }

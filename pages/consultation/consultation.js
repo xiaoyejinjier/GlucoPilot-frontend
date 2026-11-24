@@ -1,11 +1,12 @@
 const api = require('../../services/consultation')
 const social = require('../../utils/community')
-const { TOPICS, decorate } = require('../../utils/consultation')
+const { decorate } = require('../../utils/consultation')
+const topicSettings = require('../../utils/consultation-topics')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const HIDE_MINE_KEY = 'consultationHideMine'
 
 Page({
-  data: { displayStyle: '', topics: TOPICS, topic: '', records: [], loading: false, error: '',
+  data: { displayStyle: '', topics: [{code: '', name: '全部求助'}], catalog: [], topic: '', topicAnchor: '', records: [], loading: false, error: '',
     capabilities: api.PREVIEW_CAPABILITIES, pageNum: 0, hasMore: false, hideMine: false,
     doctorApproved: false, unclaimedOnly: false },
   onShow() {
@@ -14,7 +15,7 @@ Page({
     social.begin(this)
     const app = getApp()
     if (app.globalData) this.setData({informationCounts:app.globalData.informationCounts || {}})
-    if (previous !== this._communityToken) this.setData({ doctorApproved: false, unclaimedOnly: false, records: [] })
+    if (previous !== this._communityToken) this.setData({ doctorApproved: false, unclaimedOnly: false, records: [], topic: '', topicAnchor: '', catalog: [], topics: [{code:'',name:'全部求助'}] })
     try { this.setData({ hideMine: wx.getStorageSync(HIDE_MINE_KEY) === true }) } catch (_) {}
     applyDisplayToCurrentPage()
     const tab = typeof this.getTabBar === 'function' && this.getTabBar()
@@ -31,13 +32,25 @@ Page({
     if (reset) this.setData({ records: [], pageNum: 0, hasMore: false })
     this.setData({ loading: true, error: '' })
     try {
-      const [capabilities, doctor] = await Promise.all([
+      const [capabilities, doctor, rawTopics] = await Promise.all([
         api.capabilities(), api.doctor().catch(error => {
           if (error.statusCode === 404 || error.statusCode === 501) return null
           throw error
-        })
+        }), reset ? api.topics() : Promise.resolve(this.data.catalog)
       ])
       if (!social.active(this, version) || run !== this._run) return
+      const catalog = topicSettings.normalize(rawTopics)
+      const topic = catalog.some(item => item.code === this.data.topic) ? this.data.topic : ''
+      const frequent = topicSettings.read(catalog)
+      // 从全部标签选中未收藏分类时，也把当前筛选显示在栏中。
+      if (topic && !frequent.some(item => item.code === topic)) frequent.push(catalog.find(item => item.code === topic))
+      this.setData({catalog, topic, topics: [{code:'',name:'全部求助'}, ...frequent], topicAnchor: ''}, () => {
+        // 等标签渲染后定位选中项，同一标签再次返回也能重新滚入可视区域。
+        wx.nextTick(() => {
+          if (social.active(this, version) && run === this._run)
+            this.setData({topicAnchor: `consult-topic-${topic || 'all'}`})
+        })
+      })
       const doctorApproved = !!doctor && doctor.status === 'APPROVED'
       const unclaimedOnly = doctorApproved && this.data.unclaimedOnly
       this.setData({ doctorApproved, unclaimedOnly, capabilities })
@@ -55,8 +68,16 @@ Page({
   },
   onTopic(event) {
     const topic = event.currentTarget.dataset.code
-    if (!TOPICS.some(item => item.code === topic) || topic === this.data.topic) return
+    if (!this.data.topics.some(item => item.code === topic) || topic === this.data.topic) return
     this.setData({ topic }); this.load(true)
+  },
+  onManageTopics() {
+    if (!social.active(this)) return
+    const token = this._communityToken
+    wx.navigateTo({url: `/pages/consultation-topics/consultation-topics?selected=${encodeURIComponent(this.data.topic)}`,
+      events: { selectTopic: item => {
+        if (social.sameAccount(this, token)) this.setData({topic: item.code})
+      } }})
   },
   onToggleHideMine() {
     if (!social.active(this)) return
@@ -75,7 +96,6 @@ Page({
   onDoctor() { wx.navigateTo({ url: '/pages/consultation-doctor/consultation-doctor' }) },
   onCompose() { wx.navigateTo({ url: '/pages/consultation-compose/consultation-compose' }) },
   onRecords() { wx.navigateTo({ url: '/pages/consultation-records/consultation-records' }) },
-  onPreview() { wx.navigateTo({ url: '/pages/consultation-detail/consultation-detail?preview=1' }) },
   onOpen(event) {
     const item = this.data.records.find(row => row.id === String(event.currentTarget.dataset.id))
     if (item) wx.navigateTo({ url: `/pages/consultation-detail/consultation-detail?id=${encodeURIComponent(item.id)}` })

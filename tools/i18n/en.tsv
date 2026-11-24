@@ -2156,3 +2156,109 @@ SN：	SN:\s
 账号注销中	Account deletion in progress
 恢复账号并登录	Restore account and sign in
 继续注销并退出	Continue deletion and exit
+空腹血糖	Fasting glucose
+餐后血糖	Post-meal glucose
+低血糖	Low blood glucose
+高血糖	High blood glucose
+夜间血糖	Nighttime glucose
+黎明现象	Dawn phenomenon
+血糖监测	Glucose monitoring
+动态血糖	Continuous glucose monitoring
+血糖仪使用	Glucose meter use
+食物选择	Food choices
+碳水搭配	Carbohydrate pairing
+食物GI	Food GI
+餐食份量	Meal portions
+外出就餐	Eating out
+胰岛素使用	Insulin use
+用药时间	Medication timing
+糖化血红蛋白	HbA1c
+复诊准备	Follow-up preparation
+并发症筛查	Complication screening
+运动控糖	Exercise and glucose
+体重管理	Weight management
+睡眠作息	Sleep habits
+情绪压力	Stress and emotions
+生病期间控糖	Sick-day glucose management
+血糖管理	Glucose management
+饮食管理	Diet management
+用药与复查	Medication and check-ups
+生活管理	Lifestyle
+健康管理	Health management
+求助标签	Help topics
+选择你关注的健康话题	Choose health topics you follow
+为这次求助选择一个最贴切的标签	Choose the best topic for this request
+点击标签筛选求助，编辑常用标签更快找到关注的问题	Filter requests by topic and edit your favorites for quicker access
+常用标签	Favorite topics
+点击减号移除，下方加号添加，修改自动保存	Use minus to remove and plus to add. Changes save automatically.
+把常用的话题放在广场上方	Keep your favorite topics at the top of the square
+还没有常用标签，可以从下方添加	No favorite topics yet. Add some below.
+恢复默认	Restore defaults
+搜索血糖、饮食、运动等标签	Search glucose, diet, exercise and more
+没有找到相关标签	No matching topics
+请选择问题分类	Choose a topic
+选择标签	Choose a topic
+请选择有效的问题分类，或重新加载标签	Choose an available topic or reload topics
+记录血糖和饮食、查看健康统计；在“提醒与回复”查看血糖提醒、医生回复和新消息。	Record glucose and meals and view health statistics. Open Alerts and replies for glucose alerts, doctor replies and new messages.
+发布求助、按标签筛选，在“问诊消息”与医生交流，在“我的问诊”查看问诊单。	Post a request and filter by topic. Chat with your doctor in Consultation messages and view reports in My consultations.
+浏览健康文章，选择兴趣标签，参与评论、点赞、收藏，也可与糖友私信交流。	Browse health articles, choose topics, comment, like and save posts, or chat privately with other members.
+管理资料、健康档案、设备和钱包，查看订单或切换账号；医生可申请提现。	Manage your profile, health records, devices and wallet. View orders or switch accounts. Doctors can request withdrawals.
+打字或语音提问，查询健康记录与营养信息；长期记忆可在“我的”里查看和删除。	Ask by text or voice and look up health records and nutrition. View or delete long-term memories in Me.
+充值暂不可用	Top-ups are temporarily unavailable
+问诊费用使用钱包余额支付，付款成功后可查看问诊单。	Consultations use your wallet balance. View the report after successful payment.
+支付结果确认后自动更新余额，未更新时可手动查询。	Your balance updates when payment is confirmed. You can also check the result manually.
+当前为测试环境，不涉及真实资金。	This is a test environment. No real funds are involved.
+钱包余额	Wallet balance
+可用于问诊支付和管理问诊收入	Use for consultation payments and earnings
+前往支付宝付款	Pay with Alipay
+可自动使用上次收款账号或已成功充值的付款账号，也可手动填写支付宝用户ID。	Use your previous receiving account or a verified top-up payer account, or enter an Alipay user ID.
+请先在上方填写支付宝用户ID	Enter an Alipay user ID above first
+确认提现	Confirm withdrawal
+继续付款	Continue payment
+账号与支付密码请在支付宝收银台输入。	Enter your account and payment password on the Alipay checkout page.
+支付宝流水	Alipay transaction reference
+充值服务暂不可用，请稍后重试。本次未创建订单或扣款。	Top-ups are temporarily unavailable. Please try again later. No order or charge was made.
+补充收款账号	Add receiving account
+确认收款账号	Confirm receiving account
+开通免费，不会充值或扣款。开通后可充值、支付问诊费用和接收问诊收入。	Activation is free and makes no charge. Use your wallet for top-ups, consultation payments and earnings.
+支付宝收款账号	Alipay receiving account
+支付宝	Alipay
+支付宝收银台	Alipay checkout
+支付宝付款	Alipay payment
+请填写支付宝用户ID	Enter an Alipay user ID
+钱包余额支付	Pay with wallet balance
+审核通过后第5个工作日发起转账，节假日和调休以工作日历为准。	Transfers start on the fifth business day after approval, based on the configured work calendar.
+正在打开支付宝…	Opening Alipay…
+充值已到账	Top-up credited
+提现服务暂不可用，请稍后重试	Withdrawals are temporarily unavailable. Please try again later.
+收款账号ID	Receiving account ID
+点击下方按钮前往支付宝完成付款。	Tap below to complete your payment with Alipay.
+模拟流水	Simulated payout reference
+钱包余额（元）	Wallet balance (CNY)
+已到账	Received
+转账确认成功后更新到账状态；处理中金额将在确认结果前保持冻结。	Receipt is shown after the transfer is confirmed. Funds stay frozen until the result is verified.
+修改收款账号	Change receiving account
+钱包余额可用于查看问诊单，医生问诊收入也会计入钱包。	Use your wallet balance to view consultation reports. Doctor earnings are also credited to the wallet.
+充值成功后自动计入钱包余额，可在充值记录中查看。	Successful top-ups are credited to your wallet. View them in Top-up history.
+使用钱包余额支付，费用转入出具问诊单的医生钱包。	Pay with your wallet balance. The fee is credited to the issuing doctor’s wallet.
+将前往支付宝完成充值，付款成功后更新钱包余额。	Continue to Alipay to pay. Your wallet balance updates after payment is confirmed.
+确认充值	Confirm top-up
+请填写有效的支付宝用户ID	Enter a valid Alipay user ID
+收款账号已更新	Receiving account updated
+添加常用标签	Add a favorite topic
+该标签还不在常用标签中，是否添加后查看相关求助？	This topic is not in your favorites. Add it and view related requests?
+添加查看	Add & view
+标签已更新，请重新选择	Topics have changed. Please choose again.
+点击标签查看求助，加减号管理常用	Tap a topic to view requests. Use plus or minus to manage favorites.
+移出常用	Remove from favorites
+加入常用	Add to favorites
+选择已添加的账号继续使用	Choose an added account to continue
+通过“添加账号”保存的账号会显示在这里	Accounts saved through Add account will appear here
+仅主动添加的账号会保存在本机，普通登录不会自动加入	Only accounts you explicitly add are saved on this device. Regular logins are not added automatically.
+已填入上次登录的邮箱	Your last login email has been filled in
+可以使用上次登录的邮箱	You can use your last login email
+换个邮箱	Use another email
+使用上次邮箱	Use last email
+按升糖负荷评估	Assess by glycemic load
+依据规则	Rules applied
+重点关注	Key concerns

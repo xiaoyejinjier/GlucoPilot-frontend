@@ -3,13 +3,13 @@
   <view class="consult-payment-head">
     <text class="consult-muted">{{i18n.t('问诊单查看服务',locale)}}</text>
     <text class="consult-price">¥{{price}}</text>
-    <text class="consult-pill">{{i18n.t('仅使用沙箱测试余额',locale)}}</text>
+    <text class="consult-pill">{{i18n.t('钱包余额支付',locale)}}</text>
   </view>
   <view class="consult-card">
     <view class="consult-heading"><text class="consult-title">{{i18n.t('确认服务信息',locale)}}</text></view>
     <view class="consult-row"><text>{{i18n.t('出单医生',locale)}}</text><text>{{doctorName || '—'}}</text></view>
     <view class="consult-row"><text>{{i18n.t('费用归属',locale)}}</text><text>{{i18n.t('出具问诊单的医生',locale)}}</text></view>
-    <view class="consult-row"><text>{{i18n.t('支付方式',locale)}}</text><text>{{i18n.t('沙箱钱包余额',locale)}}</text></view>
+    <view class="consult-row"><text>{{i18n.t('支付方式',locale)}}</text><text>{{i18n.t('钱包余额',locale)}}</text></view>
     <view class="consult-row" bindtap="onWallet"><text>{{i18n.t('可用余额',locale)}}</text><text>{{activated ? '¥' + balance : i18n.t('前往开通钱包',locale)}} ›</text></view>
     <view wx:if="{{orderNo}}" class="consult-body">{{i18n.t('订单编号',locale)}}：{{orderNo}}</view>
   </view>

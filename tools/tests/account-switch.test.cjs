@@ -22,8 +22,8 @@ function profile(id) { return { communityKey: id, nickname: id, phone: '13800000
 
 test('账号仅保存显示资料和会话，公开列表不含令牌/完整手机号/健康资料；身份以审核结果为准', () => {
   const h = vaultRuntime()
-  h.vault.remember(profile('u1'), 'token-one', 'APPROVED')
-  h.vault.remember(profile('u2'), 'token-two', 'PENDING')
+  h.vault.remember(profile('u1'), 'token-one', 'APPROVED', { explicit: true })
+  h.vault.remember(profile('u2'), 'token-two', 'PENDING', { explicit: true })
   const rows = h.vault.list('token-one')
   assert.equal(rows.find(r => r.id === 'u1').roleLabel, '医生账号')
   assert.equal(rows.find(r => r.id === 'u2').roleLabel, '普通账号')
@@ -40,7 +40,7 @@ test('账号仅保存显示资料和会话，公开列表不含令牌/完整手�
 
 test('会话按服务器隔离、限制五个账号，注销只使对应令牌失效', () => {
   const h = vaultRuntime()
-  for (let id = 1; id <= 7; id++) h.vault.remember(profile('u' + id), 'token-' + id, null)
+  for (let id = 1; id <= 7; id++) h.vault.remember(profile('u' + id), 'token-' + id, null, { explicit: true })
   assert.equal(h.vault.list().length, 5)
   const target = h.vault.list()[0].id, token = h.vault.session(target).token
   h.vault.invalidateToken(token)
@@ -48,7 +48,7 @@ test('会话按服务器隔离、限制五个账号，注销只使对应令牌�
   assert.equal(h.vault.list().filter(r => r.requiresLogin).length, 1)
   h.config.baseUrl = 'https://two.example.test/api/v1'
   assert.equal(h.vault.list().length, 0)
-  h.vault.remember(profile('u1'), 'second-server')
+  h.vault.remember(profile('u1'), 'second-server', undefined, { explicit: true })
   h.config.baseUrl = 'https://one.example.test/api/v1/'
   assert.equal(h.vault.list().length, 5)
   assert.ok(!h.vault.list().some(r => h.vault.session(r.id).token === 'second-server'))
@@ -60,7 +60,7 @@ test('本地存储失败不影响登录，损坏缓存和无身份资料不生�
   h.vault.remember({ communityKey: 'u0' }, 'token')
   assert.equal(h.vault.list().length, 0)
   h.wx.setStorageSync = () => { throw Error('storage full') }
-  assert.doesNotThrow(() => h.vault.remember(profile('u1'), 'token'))
+  assert.doesNotThrow(() => h.vault.remember(profile('u1'), 'token', undefined, { explicit: true }))
   assert.equal(h.vault.list().length, 0)
 })
 
@@ -82,8 +82,8 @@ function pageRuntime(inspect) {
   const h = vaultRuntime()
   let token = 'old', definition
   const events = []
-  h.vault.remember(profile('u1'), 'old', null)
-  h.vault.remember(profile('u2'), 'new', 'APPROVED')
+  h.vault.remember(profile('u1'), 'old', null, { explicit: true })
+  h.vault.remember(profile('u2'), 'new', 'APPROVED', { explicit: true })
   const app = { globalData: { isLoggedIn: true, userInfo: profile('u1') },
     resetLoginState(options) { events.push(['reset', options]); token = ''; this.globalData.isLoggedIn = false; this.globalData.userInfo = null },
     async goAfterLogin() { events.push(['afterLogin', token]) } }
@@ -169,4 +169,40 @@ test('旧账号的云同步响应不写入新账号节流状态', async () => {
   token = 'new'; pending.resolve({ imported: 1 })
   assert.equal(await action, null)
   assert.equal(writes.length, 0)
+})
+
+
+test('普通登录资料刷新不新增账号，也不能悄悄恢复已失效的保存会话',()=>{
+ const h=vaultRuntime()
+ h.vault.remember(profile('u1'),'guest-session','APPROVED')
+ assert.equal(h.vault.list().length,0)
+ h.vault.remember(profile('u1'),'explicit-session',null,{explicit:true})
+ h.vault.remember({...profile('u1'),nickname:'新昵称'},'explicit-session','APPROVED')
+ assert.equal(h.vault.session('u1').nickname,'新昵称');assert.equal(h.vault.session('u1').role,'DOCTOR')
+ h.vault.invalidateToken('explicit-session')
+ h.vault.remember(profile('u1'),'regular-new-login','APPROVED')
+ assert.equal(h.vault.session('u1').token,'')
+ h.vault.remember(profile('u1'),'explicit-reauth','APPROVED',{explicit:true})
+ assert.equal(h.vault.session('u1').token,'explicit-reauth')
+})
+
+test('普通登录账号进入切换列表不会自动收录，添加操作才建立保存意图',async()=>{
+ const h=pageRuntime()
+ h.request.setToken('temporary-guest');h.app.globalData.userInfo=profile('u3')
+ await h.page.onShow()
+ assert.equal(h.vault.session('u3'),null)
+ assert.equal(h.page.data.accounts.some(row=>row.id==='u3'),false)
+ h.page.onAddAccount()
+ assert.equal(h.app.globalData.accountSaveIntent.source,'ACCOUNT_SWITCH')
+ assert.equal(h.app.globalData.accountSaveIntent.kind,'ADD')
+ assert.equal(h.app.globalData.accountSaveIntent.scope,h.vault.scope())
+ assert.equal(h.vault.session('u3'),null)
+})
+
+test('列表重新验证绑定原账号身份，不将重新验证误当成新增账号',async()=>{
+ const h=pageRuntime()
+ h.vault.invalidateToken('new')
+ await select(h.page)
+ assert.equal(h.app.globalData.accountSaveIntent.kind,'REAUTH')
+ assert.equal(h.app.globalData.accountSaveIntent.expectedId,'u2')
 })

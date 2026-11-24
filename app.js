@@ -20,6 +20,8 @@ App({
     disclaimerCurrentVersion: '',
     navigationGuideToken: '',
     unreadCount: 0,
+    /** 仅切换列表的添加/重新验证流程设置，不持久化为普通登录偏好。 */
+    accountSaveIntent: null,
     /** 只读调试信息：真机当前实际请求的 API 地址。 */
     apiBaseUrl: config.baseUrl,
     /** 拍照页传给确认页的临时图，避免 URL 传路径导致黑屏 */
@@ -92,6 +94,7 @@ App({
     this.globalData.pendingGlucoseOcr = null
     this.globalData.pendingLoginPhone = ''
     this.globalData.accountSwitchFlow = false
+    this.globalData.accountSaveIntent = null
   },
 
   // 所有鉴权请求（含静默通知轮询）共用失效处理，避免旧终端卡在加载或继续显示账号缓存。
@@ -186,12 +189,19 @@ App({
   },
 
   /** 登录完成后的唯一去向：禁用拦截优先，其次免责声明，否则进入记录页。 */
-  goAfterLogin() {
+  goAfterLogin(options) {
     const token = getToken()
+    const saveIntent = options && options.accountSaveIntent
     return this.syncProfile()
       .then((state) => {
         if (getToken() !== token || !this.globalData.isLoggedIn) return null
         const status = state.userInfo && state.userInfo.accountStatus
+        if (saveIntent && saveIntent.source === 'ACCOUNT_SWITCH' && saveIntent.scope === accountVault.scope()
+            && Number(status) === 1 && (saveIntent.kind === 'ADD'
+              || (saveIntent.kind === 'REAUTH' && saveIntent.expectedId === state.userInfo.communityKey
+                && accountVault.session(saveIntent.expectedId)))) {
+          accountVault.remember(state.userInfo, token, undefined, { explicit: true })
+        }
         if (status === 0) return this.interceptDisabledLogin()
         if (state.needsDisclaimer) {
           this.openRequiredDisclaimer()

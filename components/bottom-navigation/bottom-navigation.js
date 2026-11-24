@@ -28,11 +28,11 @@ Component({
     focusStyle: '',
     arrowStyle: '',
     guideSteps: [
-      { target: '#nav-item-0', title: '记录', description: '在这里记录血糖、饮食，查看每日记录和统计。' },
-      { target: '#nav-item-1', title: '问诊', description: '发布健康求助，查看医生回复与问诊单。设备管理已移至我的。' },
-      { target: '#nav-item-2', title: '社区', description: '在这里浏览健康资讯和社区内容。' },
-      { target: '#nav-item-3', title: '我的', description: '在这里管理个人资料、健康档案和设置。' },
-      { target: '#nav-assistant', title: '小语', description: '和小语打字或语音交流，帮你记录、分析和答疑。' }
+      { target: '#nav-item-0', title: '记录', description: '记录血糖和饮食、查看健康统计；在“提醒与回复”查看血糖提醒、医生回复和新消息。' },
+      { target: '#nav-item-1', title: '问诊', description: '发布求助、按标签筛选，在“问诊消息”与医生交流，在“我的问诊”查看问诊单。' },
+      { target: '#nav-item-2', title: '社区', description: '浏览健康文章，选择兴趣标签，参与评论、点赞、收藏，也可与糖友私信交流。' },
+      { target: '#nav-item-3', title: '我的', description: '管理资料、健康档案、设备和钱包，查看订单或切换账号；医生可申请提现。' },
+      { target: '#nav-assistant', title: '小语', description: '打字或语音提问，查询健康记录与营养信息；长期记忆可在“我的”里查看和删除。' }
     ],
     assistant: { pagePath: '/pages/voice/voice', text: '小语' },
     items: [

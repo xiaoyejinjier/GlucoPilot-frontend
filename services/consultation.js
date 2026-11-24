@@ -26,6 +26,7 @@ async function orders(params = {}) {
 }
 module.exports = {
   PREVIEW_CAPABILITIES, capabilities, list, orders,
+  topics: () => get('/consultations/topics', null, { auth: true }),
   doctor: () => get('/consultation-doctors/me', null, { auth: true }),
   applyDoctor: payload => put('/consultation-doctors/me', payload, { auth: true }),
   images: id => get(`/consultations/${encodeURIComponent(id)}/images`, null, { auth: true }),

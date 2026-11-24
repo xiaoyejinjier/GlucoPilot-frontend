@@ -11,8 +11,11 @@ function createFlow(options = {}) {
     storage: new Map(Object.entries(options.storage || {})),
     route: options.route || 'pages/login/login',
     profile: { disclaimerAgreed: false, disclaimerVersion: '', ...options.profile },
-    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: [], sms:[], invalidated: [], confirms: [], exitCalls: 0
+    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: [], sms:[], emails:[], invalidated: [], confirms: [], exitCalls: 0
   }
+  // 既有登录流程测试默认从已同意状态开始；首次使用用例显式设置agreementChecked:false。
+  if(options.agreementChecked!==false&&!state.storage.has('loginAgreementAcceptance'))
+    state.storage.set('loginAgreementAcceptance',{version:'v1',accepted:true})
   const token = () => state.storage.get('accessToken') || ''
   const request = { getToken: token, setToken(value) { if (value) state.storage.set('accessToken', value); else state.storage.delete('accessToken') } }
   const storage = {
@@ -42,13 +45,15 @@ function createFlow(options = {}) {
       state.storage.set('isLoggedIn', true)
       return { accessToken: 'recovered-token', accountStatus: options.confirmAccountStatus === undefined ? 1 : options.confirmAccountStatus }
     },
-    isRecoverConfirm(err) { return !!err && err.code === 40901 && !!(err.body && err.body.data) }
+    isRecoverConfirm(err) { return !!err && err.code === 40901 && !!(err.body && err.body.data) },
+    async emailLogin(email, code) { state.logins.push(['email', email, code]); if(options.emailLoginError)throw options.emailLoginError; if(options.emailLoginPromise)await options.emailLoginPromise; request.setToken('new-token'); return { accessToken: token() } },
+    async sendEmailCode(...args) { state.emails.push(args) }
   }
   const wx = {
     getWindowInfo: () => options.windowInfo || { statusBarHeight: 0 },
     getMenuButtonBoundingClientRect: () => options.capsule || { bottom: 0 },
-    getStorageSync: (key) => state.storage.get(key),
-    setStorageSync: (key, value) => state.storage.set(key, value),
+    getStorageSync: (key) => { if(options.preferenceStorageError&&['lastLoginEmail','loginAgreementAcceptance'].includes(key))throw Error('Storage unavailable'); return state.storage.get(key) },
+    setStorageSync: (key, value) => { if(options.preferenceStorageError&&['lastLoginEmail','loginAgreementAcceptance'].includes(key))throw Error('Storage unavailable'); return state.storage.set(key, value) },
     showLoading() {}, hideLoading() {},
     showToast: (value) => state.toasts.push(value),
     showModal: (value) => state.modals.push(value),
@@ -59,8 +64,15 @@ function createFlow(options = {}) {
     navigateBack() { state.routes.push('back') },
     exitMiniProgram() { state.exitCalls++ }
   }
+  let accountVault = { remember() {}, invalidateToken(token) { if(token)state.invalidated.push(token) }, list: () => [] }
+  const vaultConfig = { baseUrl: 'https://accounts.example.test/api/v1' }
+  if (options.realVault) {
+    const module = { exports:{} }
+    vm.runInNewContext(fs.readFileSync(path.join(root,'utils/account-vault.js'),'utf8'), {module,wx,require:()=>vaultConfig})
+    accountVault = module.exports
+  }
   const dependencies = {
-    './utils/account-vault': { remember() {}, invalidateToken(token) { if(token)state.invalidated.push(token) }, list: () => [] },
+    './utils/account-vault': accountVault,
     './utils/device-cloud-sync': { tryAutoCloudPull: async () => null },
     './utils/i18n': { install() {} },
     './utils/message-notifications': { start(){},stop(){},reset(){} },
@@ -78,7 +90,7 @@ function createFlow(options = {}) {
   function page(name) {
     let definition
     const pageDependencies = {
-      '../../utils/account-vault': { list: () => options.savedAccounts || [] },
+      '../../utils/account-vault': options.realVault ? accountVault : { list: () => options.savedAccounts || [] },
       '../../utils/display': display, '../../utils/storage': storage, '../../utils/request': request,
       '../../services/api': services, '../../utils/constants': { DISCLAIMER_CONTENT: ['声明正文'] },
       '../../utils/config': config
@@ -100,7 +112,7 @@ function createFlow(options = {}) {
         return query
       } }
   }
-  return { app, state, page, request }
+  return { app, state, page, request, vault:accountVault, vaultConfig }
 }
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
@@ -199,6 +211,78 @@ test('默认号码可清空改填或一键恢复，切换号码会清除验证�
  page.onPhoneInput({detail:{value:'13900000003'}});assert.equal(page.data.smsCode,'')
  page.onSwitchPhone();assert.equal(page.data.phone,'13800000001');assert.equal(page.data.usingLastPhone,true)
  assert.equal(flow.state.storage.get('lastLoginPhone'),'13800000001');assert.equal(flow.state.sms.length,0)
+})
+
+test('首次协议不勾选，主动同意后下次登录默认勾选，退出及冷启动保留本机选择',async()=>{
+ const flow=createFlow({agreementChecked:false}),page=flow.page('login')
+ page.onLoad();page.onShow();assert.equal(page.data.agreementChecked,false)
+ page.onEmailLogin();flow.state.modals.at(-1).success({confirm:true})
+ assert.equal(flow.state.storage.get('loginAgreementAcceptance').accepted,true)
+ flow.app.resetLoginState();flow.app.onLaunch()
+ const next=flow.page('login');next.onLoad();next.onShow()
+ assert.equal(next.data.agreementChecked,true)
+ next.onEmailLogin();assert.equal(next.data.emailPanel,true);assert.equal(flow.state.modals.length,1)
+ assert.equal(flow.state.emails.length,0)
+ // 入口默认勾选不替代后端按当前账号和声明版本要求的正式确认。
+ flow.app.globalData.isLoggedIn=true;flow.request.setToken('new-token')
+ await flow.app.goAfterLogin();await flush()
+ assert.ok(flow.state.routes.includes('/pages/disclaimer/disclaimer?forced=1'))
+})
+
+test('手动取消勾选会记住取消，拒绝不改为同意；旧版本或损坏记录也不默认同意',()=>{
+ const flow=createFlow({agreementChecked:false}),page=flow.page('login')
+ page.onLoad();page.onAgreementChange({detail:{value:['agreed']}})
+ const next=flow.page('login');next.onLoad();assert.equal(next.data.agreementChecked,true)
+ next.onAgreementChange({detail:{value:[]}})
+ const again=flow.page('login');again.onLoad();assert.equal(again.data.agreementChecked,false)
+ again.onWechatLogin();flow.state.modals.at(-1).success({confirm:false})
+ assert.equal(flow.state.storage.get('loginAgreementAcceptance').accepted,false)
+ for(const saved of [true,'true',{version:'old',accepted:true},{version:'v1',accepted:'true'}]){
+  const invalid=createFlow({agreementChecked:false,storage:{loginAgreementAcceptance:saved}}).page('login')
+  invalid.onLoad();assert.equal(invalid.data.agreementChecked,false)
+ }
+})
+
+test('邮箱登录成功才记住邮箱，重进回填并支持换邮箱及恢复，不自动发送验证码',async()=>{
+ const flow=createFlow(),first=flow.page('login');flow.app.goAfterLogin=()=>{}
+ first.onLoad();first.onEmailLogin();first.onEmailInput({detail:{value:'last@example.test'}})
+ first.onEmailCodeInput({detail:{value:'123456'}});first.onConfirmEmailLogin();await flush()
+ assert.equal(flow.state.storage.get('lastLoginEmail'),'last@example.test');assert.equal(first.data.emailCode,'')
+ const next=flow.page('login');next.onLoad();next.onShow();next.onEmailLogin()
+ assert.equal(next.data.email,'last@example.test');assert.equal(next.data.usingLastEmail,true)
+ assert.equal(flow.state.emails.length,0)
+ next.onEmailCodeInput({detail:{value:'123456'}});next.onSwitchEmail()
+ assert.equal(next.data.email,'');assert.equal(next.data.emailCode,'');assert.equal(next.data.emailFocus,true)
+ next.onEmailInput({detail:{value:'new@example.test'}});next.onEmailCodeInput({detail:{value:'654321'}})
+ next.onEmailInput({detail:{value:'another@example.test'}});assert.equal(next.data.emailCode,'')
+ next.onSwitchEmail();assert.equal(next.data.email,'last@example.test')
+ next.onSendEmailCode();await flush();assert.deepEqual(flow.state.emails,[['last@example.test','login']])
+})
+
+test('邮箱失败不覆盖成功历史，旧资料完整邮箱可回填，脱敏或损坏记录不用于发码',async()=>{
+ const flow=createFlow({storage:{lastLoginEmail:'last@example.test'},emailLoginError:Error('验证码错误')})
+ const page=flow.page('login');page.onEmailLogin();page.onEmailInput({detail:{value:'wrong@example.test'}})
+ page.onEmailCodeInput({detail:{value:'000000'}});page.onConfirmEmailLogin();await flush()
+ assert.equal(flow.state.storage.get('lastLoginEmail'),'last@example.test')
+ const prior=createFlow({storage:{userInfo:{email:'prior@example.test'}}}).page('login')
+ prior.onEmailLogin();assert.equal(prior.data.email,'prior@example.test')
+ for(const saved of ['u***@example.test','not-email',{},'a'.repeat(130)+'@example.test']){
+  const invalid=createFlow({storage:{lastLoginEmail:saved,userInfo:{email:'u***@example.test'}}}).page('login')
+  invalid.onEmailLogin();assert.equal(invalid.data.email,'');assert.equal(invalid.data.lastLoginEmail,'')
+ }
+})
+
+test('本机偏好存储异常不影响本次同意和手动邮箱登录，离开后迟到登录不修改历史邮箱',async()=>{
+ const flow=createFlow({agreementChecked:false,preferenceStorageError:true}),page=flow.page('login')
+ flow.app.goAfterLogin=()=>{}
+ page.onLoad();assert.equal(page.data.agreementChecked,false)
+ page.onAgreementChange({detail:{value:['agreed']}});page.onEmailLogin()
+ page.onEmailInput({detail:{value:'manual@example.test'}});page.onEmailCodeInput({detail:{value:'123456'}})
+ page.onConfirmEmailLogin();await flush();assert.equal(flow.state.logins.length,1)
+ let release;const late=createFlow({storage:{lastLoginEmail:'last@example.test'},emailLoginPromise:new Promise(r=>release=r)})
+ const hidden=late.page('login');hidden.onShow();hidden.onEmailLogin();hidden.onEmailInput({detail:{value:'late@example.test'}})
+ hidden.onEmailCodeInput({detail:{value:'123456'}});hidden.onConfirmEmailLogin();hidden.onHide();release();await flush()
+ assert.equal(late.state.storage.get('lastLoginEmail'),'last@example.test')
 })
 
 test('错误验证码登录失败不覆盖历史号码，已有资料可兼容回填但不使用脱敏或损坏号码',async()=>{
@@ -659,4 +743,70 @@ test('封禁账号直接登录进入封禁提示页，不再弹原生注销选�
   await flow.app.goAfterLogin()
   assert.equal(flow.state.modals.length, 0)
   assert.equal(flow.state.routes.at(-1), '/pages/account-disabled/account-disabled')
+})
+
+
+test('退出后普通手机号登录及资料刷新不会把临时使用者加入切换列表',async()=>{
+ const h=createFlow({realVault:true,profile:{communityKey:'u3',accountStatus:1,disclaimerAgreed:true,disclaimerVersion:'v1'}})
+ h.app.onLaunch();const page=h.page('login');page.onShow()
+ page.setData({phone:'13800000003',smsCode:'123456'});page.onConfirmPhoneLogin();await flush()
+ assert.equal(h.request.getToken(),'new-token');assert.equal(h.app.globalData.isLoggedIn,true)
+ assert.equal(h.vault.list().length,0)
+ await h.app.syncProfile();assert.equal(h.vault.list().length,0)
+ h.app.exitLoginQuietly();const next=h.page('login');next.onShow()
+ next.onWechatLogin();await flush();assert.equal(h.vault.list().length,0)
+})
+
+test('切换添加的意图只在成功验证资料后保存，使用一次且退出清除后续意图',async()=>{
+ const h=createFlow({realVault:true,profile:{communityKey:'u2',accountStatus:1,disclaimerAgreed:true,disclaimerVersion:'v1'}})
+ h.app.globalData.accountSwitchFlow=true
+ h.app.globalData.accountSaveIntent={source:'ACCOUNT_SWITCH',scope:h.vault.scope(),kind:'ADD',expectedId:''}
+ const page=h.page('login');page.onShow();page.onWechatLogin();await flush()
+ assert.equal(h.vault.list().length,1);assert.equal(h.vault.session('u2').token,'new-token')
+ assert.equal(h.app.globalData.accountSaveIntent,null);assert.equal(h.app.globalData.accountSwitchFlow,false)
+ h.app.exitLoginQuietly();assert.equal(h.vault.session('u2').token,'');assert.equal(h.app.globalData.accountSaveIntent,null)
+ h.state.profile={...h.state.profile,communityKey:'u3'}
+ const guest=h.page('login');guest.onShow();guest.onWechatLogin();await flush()
+ assert.equal(h.vault.list().length,1);assert.equal(h.vault.session('u3'),null)
+})
+
+test('列表重新登录只恢复原保存身份，错误身份或服务器变化不保存',async()=>{
+ for(const reason of ['match','identity','server']){
+  const h=createFlow({realVault:true,profile:{communityKey:reason==='identity'?'u3':'u2',accountStatus:1,disclaimerAgreed:true,disclaimerVersion:'v1'}})
+  h.vault.remember({communityKey:'u2'},'old',undefined,{explicit:true});h.vault.invalidateToken('old')
+  h.app.globalData.accountSaveIntent={source:'ACCOUNT_SWITCH',scope:h.vault.scope(),kind:'REAUTH',expectedId:'u2'}
+  const page=h.page('login');page.onShow()
+  if(reason==='server')h.vaultConfig.baseUrl='https://other.example.test/api/v1'
+  page.onWechatLogin();await flush()
+  if(reason==='match')assert.equal(h.vault.session('u2').token,'new-token')
+  else {assert.equal(h.vault.session('u3'),null);assert.equal(h.vault.list().some(row=>!row.requiresLogin),false)}
+ }
+})
+
+
+test('普通邮箱登录或仅打开切换导航都不会授权保存账号',async()=>{
+ const h=createFlow({realVault:true,profile:{communityKey:'u4',accountStatus:1,disclaimerAgreed:true,disclaimerVersion:'v1'}})
+ h.app.globalData.accountSwitchFlow=true
+ const page=h.page('login');page.onShow();page.setData({email:'test@example.test',emailCode:'123456'})
+ page.onConfirmEmailLogin();await flush()
+ assert.equal(h.app.globalData.isLoggedIn,true);assert.equal(h.vault.list().length,0)
+})
+
+test('资料校验失败不保存，退出重置后可重新普通登录，不沿用旧添加意图',async()=>{
+ const options={realVault:true,profileError:Error('profile unavailable'),profile:{communityKey:'u2',accountStatus:1,disclaimerAgreed:true,disclaimerVersion:'v1'}}
+ const h=createFlow(options)
+ h.app.globalData.accountSaveIntent={source:'ACCOUNT_SWITCH',scope:h.vault.scope(),kind:'ADD',expectedId:''}
+ const page=h.page('login');page.onShow();page.onWechatLogin();await flush()
+ assert.equal(h.vault.list().length,0);assert.equal(h.app.globalData.accountSaveIntent,null)
+ options.profileError=null;page.onWechatLogin();await flush()
+ assert.equal(h.app.globalData.isLoggedIn,true);assert.equal(h.vault.list().length,0)
+})
+
+test('旧登录响应不能借用之后新建的添加账号意图',async()=>{
+ const h=createFlow({realVault:true,profile:{communityKey:'u2',accountStatus:1,disclaimerAgreed:true,disclaimerVersion:'v1'}})
+ h.app.globalData.accountSaveIntent={source:'ACCOUNT_SWITCH',scope:h.vault.scope(),kind:'ADD',expectedId:''}
+ const page=h.page('login');page.onShow();page.onWechatLogin()
+ const newer={source:'ACCOUNT_SWITCH',scope:h.vault.scope(),kind:'ADD',expectedId:''}
+ h.app.globalData.accountSaveIntent=newer;page.onShow();await flush()
+ assert.equal(h.vault.list().length,0);assert.equal(h.app.globalData.accountSaveIntent,newer)
 })

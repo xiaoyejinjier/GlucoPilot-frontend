@@ -21,20 +21,24 @@ test('我的问诊区分待接诊、已接诊和已有问诊单，交流直达�
 
 function harness(name, overrides = {}) {
   let definition
-  const state = { token:'user-one', publishes:[], orders:[], modals:[], navs:[], selected:[], patches:[], keyboardHides:0, scrolls:[],timers:new Map(),uploads:[], storage:new Map(),reads:[],notificationRefreshes:0,keyboardHandlers:new Set() }
+  const state = { token:'user-one', publishes:[], orders:[], modals:[], navs:[], backs:[], selected:[], patches:[], keyboardHides:0, scrolls:[],timers:new Map(),uploads:[], storage:new Map(),reads:[],notificationRefreshes:0,keyboardHandlers:new Set() }
   const request = { getToken:()=>state.token }
   const social = { exports:{} }
   const wx = { getStorageSync:key=>state.storage.get(key), setStorageSync:(key,value)=>state.storage.set(key,value), showToast(){}, showModal:value=>state.modals.push(value),
     getWindowInfo:()=>({windowHeight:700}), onKeyboardHeightChange:fn=>state.keyboardHandlers.add(fn),offKeyboardHeightChange:fn=>state.keyboardHandlers.delete(fn),
-    navigateTo:value=>state.navs.push(value), redirectTo:value=>state.navs.push(value), stopPullDownRefresh(){}, hideKeyboard(){state.keyboardHides++}, nextTick:callback=>Promise.resolve().then(callback), pageScrollTo:value=>state.scrolls.push(value),chooseMedia:args=>args.success({tempFiles:[{tempFilePath:'private-photo.jpg'}]}) }
+    navigateTo:value=>state.navs.push(value), navigateBack:value=>state.backs.push(value), redirectTo:value=>state.navs.push(value), stopPullDownRefresh(){}, hideKeyboard(){state.keyboardHides++}, nextTick:callback=>Promise.resolve().then(callback), pageScrollTo:value=>state.scrolls.push(value),chooseMedia:args=>args.success({tempFiles:[{tempFilePath:'private-photo.jpg'}]}) }
   vm.runInNewContext(fs.readFileSync(path.join(root,'utils/community.js'),'utf8'), {
     module:social,require:()=>request,wx,getApp:()=>({})
   })
-  const api = { PREVIEW_CAPABILITIES:previewCaps, capabilities:async()=>previewCaps,doctor:async()=>null,
+  const api = { topics:async()=>helpers.TOPICS.filter(item=>item.code), PREVIEW_CAPABILITIES:previewCaps, capabilities:async()=>previewCaps,doctor:async()=>null,
     list:async()=>({records:[],pages:0}),orders:async()=>({records:[],pages:0}),images:async()=>[],messages:async()=>({records:[],canSend:true,hasMore:false}),
     readMessages:async(...args)=>state.reads.push(args),conversations:async()=>({records:[],pages:0}),
     publish:async body=>state.publishes.push(body), createOrder:async body=>state.orders.push(body), ...overrides }
-  const deps = { '../../services/consultation':api,'../../utils/consultation':helpers,
+  const topicModule = {exports:{}}
+  vm.runInNewContext(fs.readFileSync(path.join(root,'utils/consultation-topics.js'),'utf8'), {
+    module:topicModule,wx,require:key=> key==='./config' ? {baseUrl:'test-environment'} : key==='./tag-images' ? require('../../utils/tag-images') : {getUserInfo:()=>({communityKey:state.token==='user-one'?'u1':'u2'})}
+  })
+  const deps = { '../../utils/consultation-topics':topicModule.exports, '../../services/consultation':api,'../../utils/consultation':helpers,
     '../../services/wallet': { summary: async()=>({ activated: true, balanceCents: 1000 }), ...overrides.wallet },
     '../../utils/community':social.exports,'../../utils/request':request,
     '../../utils/message-notifications':{refresh:()=>{state.notificationRefreshes++;return Promise.resolve()}},
@@ -55,7 +59,7 @@ function harness(name, overrides = {}) {
       }
       if (callback) callback()
     } }
-  return {page,state,api,wx}
+  return {page,state,api,wx,topics:topicModule.exports}
 }
 
 test('发布求助必填校验失败自动定位底部提示，不调用发布接口',async()=>{
@@ -544,4 +548,89 @@ test('医生申请仅提交本人资料，旧账号迟到的付款结果不会�
   assert.equal(d.page.data.form.realName,'测试医生')
   d.page.onHide();d.state.token='user-two';d.page.onShow();await flush()
   assert.equal(d.page.data.form.realName,'')
+})
+
+
+test('广场可选择新标签并与未接诊、隐藏本人组合，停用后刷新回到全部',async()=>{
+ let enabled=true;const queries=[]
+ const h=harness('consultation',{topics:async()=>[...helpers.TOPICS.filter(x=>x.code),...(enabled?[{code:'POST_MEAL',name:'餐后血糖',groupName:'血糖管理'}]:[])],doctor:async()=>({status:'APPROVED'}),list:async p=>{queries.push(p);return{records:[{id:'10',topic:'POST_MEAL',topicName:'餐后血糖'}],pages:2}}})
+ h.page.onShow();await flush()
+ h.page.onManageTopics();assert.match(h.state.navs.at(-1).url,/consultation-topics/)
+ h.page.onHide();h.state.navs.at(-1).events.selectTopic({code:'POST_MEAL',name:'餐后血糖'})
+ h.page.onShow();await flush()
+ assert.equal(queries.at(-1).topic,'POST_MEAL');assert.equal(h.page.data.records[0].topicLabel,'餐后血糖')
+ await h.page.onToggleHideMine();await h.page.onUnclaimedFilter({currentTarget:{dataset:{filter:'unclaimed'}}})
+ await h.page.onReachBottom();assert.equal(queries.at(-1).pageNum,2);assert.equal(queries.at(-1).topic,'POST_MEAL');assert.equal(queries.at(-1).hideMine,true);assert.equal(queries.at(-1).unclaimedOnly,true)
+ enabled=false;await h.page.load(true);assert.equal(queries.at(-1).topic,'')
+})
+
+test('发布共用动态分类，选择后保留表单；标签接口失败阻止提交并允许重试',async()=>{
+ let fail=false
+ const h=harness('consultation-compose',{capabilities:async()=>({submissionEnabled:true}),topics:async()=>{if(fail)throw new Error('offline');return[{code:'POST_MEAL',name:'餐后血糖'}]}})
+ h.page.onShow();await flush()
+ h.page.setData({'form.title':'餐后血糖问题','form.symptoms':'想请医生帮忙解答最近餐后血糖波动。'})
+ h.page.onChooseTopic();h.page.onHide();h.state.navs.at(-1).events.selectTopic({code:'POST_MEAL',name:'餐后血糖'})
+ h.page.onShow();await flush();assert.equal(h.page.data.form.title,'餐后血糖问题');assert.equal(h.page.data.topicLabel,'餐后血糖')
+ fail=true;await h.page.loadTopics();await h.page.onSubmit();assert.equal(h.state.publishes.length,0)
+ fail=false;await h.page.loadTopics();await h.page.onSubmit();assert.equal(h.state.publishes[0].topic,'POST_MEAL')
+})
+
+test('标签页支持搜索、增减常用、空选择保存与恢复，点击分类单选返回',async()=>{
+ const catalog=[{code:'GLUCOSE',name:'血糖波动',groupName:'血糖管理'},{code:'EXERCISE',name:'运动控糖',groupName:'生活管理'}]
+ const h=harness('consultation-topics',{topics:async()=>catalog});const emitted=[]
+ h.page.getOpenerEventChannel=()=>({emit:(...args)=>emitted.push(args)});h.wx.navigateBack=()=>{}
+ h.page.onLoad({mode:'pick'});h.page.onShow();await flush()
+ h.page.onEdit();h.page.onToggleFavorite({currentTarget:{dataset:{code:'GLUCOSE'}}});assert.equal(h.page.data.frequent.length,0)
+ h.page.onHide();h.page.onShow();await flush();assert.equal(h.page.data.frequent.length,0)
+ h.page.onToggleFavorite({currentTarget:{dataset:{code:'EXERCISE'}}});assert.equal(h.page.data.frequent[0].code,'EXERCISE')
+ h.page.onSearch({detail:{value:'运动'}});assert.equal(h.page.data.groups.length,1);assert.equal(h.page.data.groups[0].name,'生活管理')
+ h.page.onReset();assert.equal(h.page.data.frequent[0].code,'GLUCOSE')
+ h.page.onEdit();h.page.onTag({currentTarget:{dataset:{code:'EXERCISE'}}});assert.equal(emitted[0][0],'selectTopic');assert.equal(emitted[0][1].code,'EXERCISE')
+ h.page.onHide();h.state.token='user-two';h.page.onShow();await flush();assert.equal(h.page.data.selected,'');assert.equal(h.page.data.query,'')
+})
+
+
+test('常用标签直接定位查看，未常用标签取消不添加、确认后添加且只返回一次',async()=>{
+ const catalog=[{code:'GLUCOSE',name:'血糖波动'},{code:'EXERCISE',name:'运动控糖'}]
+ const h=harness('consultation-topics',{topics:async()=>catalog}),emitted=[]
+ h.page.getOpenerEventChannel=()=>({emit:(...args)=>emitted.push(args)})
+ h.page.onLoad({});h.page.onShow();await flush()
+ const choose=code=>h.page.onTag({currentTarget:{dataset:{code}}})
+ choose('EXERCISE');choose('EXERCISE');assert.equal(h.state.modals.length,1);assert.equal(emitted.length,0)
+ h.state.modals[0].success({confirm:false});assert.equal(h.topics.read(h.page.data.catalog).some(t=>t.code==='EXERCISE'),false)
+ choose('EXERCISE');const confirm=h.state.modals.at(-1);confirm.success({confirm:true});confirm.success({confirm:true})
+ assert.equal(h.topics.read(h.page.data.catalog).some(t=>t.code==='EXERCISE'),true)
+ assert.equal(emitted.length,1);assert.equal(emitted[0][1].code,'EXERCISE');assert.equal(h.state.backs.length,1)
+ // 再次进入时已是常用，编辑模式点击标签本身也能直接查看。
+ h.page.onHide();h.page.onShow();await flush();h.page.onEdit();choose('EXERCISE')
+ assert.equal(h.state.modals.length,2);assert.equal(h.state.backs.length,2)
+ assert.equal(h.topics.read(h.page.data.catalog).some(t=>t.code==='EXERCISE'),true)
+})
+
+test('加减角标独立管理常用，不触发跳转；添加确认失败或换账号不保存',async()=>{
+ const catalog=[{code:'GLUCOSE',name:'血糖波动'},{code:'EXERCISE',name:'运动控糖'}]
+ const h=harness('consultation-topics',{topics:async()=>catalog}),emitted=[]
+ h.page.getOpenerEventChannel=()=>({emit:(...args)=>emitted.push(args)})
+ h.page.onLoad({});h.page.onShow();await flush();h.page.onEdit()
+ h.page.onToggleFavorite({currentTarget:{dataset:{code:'EXERCISE'}}});assert.equal(h.state.backs.length,0);assert.equal(h.state.modals.length,0)
+ h.page.onToggleFavorite({currentTarget:{dataset:{code:'EXERCISE'}}});assert.equal(h.page.data.frequent.some(t=>t.code==='EXERCISE'),false)
+ h.page.onTag({currentTarget:{dataset:{code:'EXERCISE'}}})
+ const save=h.wx.setStorageSync;h.wx.setStorageSync=()=>{throw new Error('full')}
+ h.state.modals.at(-1).success({confirm:true});assert.equal(emitted.length,0);assert.equal(h.state.backs.length,0)
+ h.wx.setStorageSync=save;h.page.onTag({currentTarget:{dataset:{code:'EXERCISE'}}});const old=h.state.modals.at(-1)
+ h.page.onHide();h.state.token='user-two';h.page.onShow();await flush();old.success({confirm:true})
+ assert.equal(h.topics.read(h.page.data.catalog).some(t=>t.code==='EXERCISE'),false);assert.equal(emitted.length,0)
+})
+
+test('广场返回后滚动到选中标签，同一标签再次返回也定位，离页不应用迟到滚动',async()=>{
+ const catalog=[...helpers.TOPICS.filter(t=>t.code),{code:'SICK_DAY',name:'生病期间控糖'}]
+ const h=harness('consultation',{topics:async()=>catalog})
+ h.page.onShow();await flush();assert.equal(h.page.data.topicAnchor,'consult-topic-all')
+ h.page.onManageTopics();const child=h.state.navs.at(-1)
+ h.page.onHide();child.events.selectTopic({code:'SICK_DAY',name:'生病期间控糖'})
+ h.page.onShow();await flush();assert.equal(h.page.data.topicAnchor,'consult-topic-SICK_DAY')
+ const first=h.state.patches.length;h.page.onHide();h.page.onShow();await flush()
+ assert.ok(h.state.patches.slice(first).some(p=>p.topicAnchor===''));assert.equal(h.page.data.topicAnchor,'consult-topic-SICK_DAY')
+ let tick;h.wx.nextTick=fn=>{tick=fn};const loading=h.page.load(true);await flush();assert.equal(h.page.data.topicAnchor,'')
+ h.page.onHide();tick();await loading;assert.equal(h.page.data.topicAnchor,'')
 })

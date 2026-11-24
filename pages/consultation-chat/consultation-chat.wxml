@@ -1,7 +1,7 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="consult-chat-page" style="{{displayStyle}}; bottom:{{keyboardOffset}}px; {{composerHeight ? 'padding-bottom:' + composerHeight + 'px;' : ''}}">
   <view class="consult-chat-context" bindtap="onDetails" aria-role="button">
-    <view class="consult-chat-context-copy"><text class="consult-chat-title">{{item.title}}</text><text class="consult-chat-note">{{i18n.t('仅患者本人和接诊医生可见',locale)}}</text></view>
+    <view class="consult-chat-context-copy"><text class="consult-chat-title">{{i18n.content(contentTranslations, 'CONSULTATION_PREVIEW', item.id, 'title', item.title, locale)}}</text><text class="consult-chat-note">{{i18n.t('仅患者本人和接诊医生可见',locale)}}</text></view>
     <text class="consult-chat-details">{{i18n.t('问诊详情',locale)}} ›</text>
   </view>
   <view class="consult-chat-scroll-shell">

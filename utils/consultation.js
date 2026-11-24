@@ -14,7 +14,7 @@ function money(cents) {
 }
 function topicName(code) { return (TOPICS.find(item => item.code === code) || {}).name || '健康咨询' }
 function decorate(item) {
-  return { ...item, id: String(item.id || ''), topicLabel: topicName(item.topic),
+  return { ...item, id: String(item.id || ''), topicLabel: item.topicName || topicName(item.topic),
     statusLabel: STATUS[item.status] || '处理中', timeLabel: String(item.createdAt || '').replace('T', ' ').slice(0, 16) }
 }
 function attemptId() { return `consult_${Date.now()}_${Math.random().toString(36).slice(2, 12)}` }
