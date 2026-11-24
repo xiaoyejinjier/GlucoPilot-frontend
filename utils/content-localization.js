@@ -5,6 +5,7 @@ const HAN=/[一-龥]/
 const PROFILE=/^[ub][1-9]\d{0,18}$/
 const ARTICLE=/^[1-9]\d{0,18}$/
 function keyOf(kind,id){return kind+':'+id}
+function priority(item){return ['ARTICLE_BODY','CONSULTATION_DETAIL','CONSULTATION_REPORT'].includes(item.kind)?0:['ARTICLE_PREVIEW','CONSULTATION_PREVIEW'].includes(item.kind)?1:2}
 function profileKey(value){return value&&(value.key||value.communityKey||(value.userId?'u'+value.userId:''))||''}
 function collect(data,route){
   const found=new Map()
@@ -23,6 +24,24 @@ function collect(data,route){
   if(data.mode!=='drafts')for(const value of data.articles||[])article(value)
   if(route==='pages/community/community'&&(data.mode==='collections'||data.mode==='likes'))for(const value of data.list||[])article(value)
   if(route==='pages/information/information')for(const value of data.list||[])if(value.rowType==='ARTICLE')article(value)
+  const consultationRoutes=['pages/consultation/consultation','pages/consultation-records/consultation-records',
+    'pages/consultation-doctor/consultation-doctor','pages/consultation-conversations/consultation-conversations',
+    'pages/consultation-detail/consultation-detail','pages/consultation-chat/consultation-chat']
+  if(consultationRoutes.includes(route)&&!data.previewMode){
+    if(!(route==='pages/consultation-records/consultation-records'&&data.tab==='orders')){
+      for(const value of data.records||[])add('CONSULTATION_PREVIEW',value.consultationId||value.id,{title:value.title||''})
+    }
+    const value=data.item
+    if(value){
+      add('CONSULTATION_PREVIEW',value.id,{title:value.title||''})
+      if(route==='pages/consultation-detail/consultation-detail'&&value.detailsVisible===true){
+        add('CONSULTATION_DETAIL',value.id,{symptoms:value.symptoms||'',glucoseNote:value.glucoseNote||'',medicationNote:value.medicationNote||''})
+        const report=data.report
+        if(report&&report.access==='UNLOCKED')add('CONSULTATION_REPORT',value.id,{
+          assessment:report.assessment||'',medicationAdvice:report.medicationAdvice||'',followUpAdvice:report.followUpAdvice||''})
+      }
+    }
+  }
   const seen=new Set()
   function names(value,depth){
     if(!value||typeof value!=='object'||depth>8||seen.has(value))return
@@ -93,7 +112,7 @@ async function run(page){
   const state=page._contentLocalization;if(!state||state.busy||!current(page,state,state.version))return
   const version=state.version,wanted=collect(page.data,page.route||'')
   const jobs=[...wanted].filter(([key,item])=>{const known=state.results.get(key);return!known||known.signature!==item.signature||known.entry.status==='PENDING'})
-    .sort(([a],[b])=>Number(state.results.has(a))-Number(state.results.has(b))).slice(0,20)
+    .sort(([a,first],[b,second])=>priority(first)-priority(second)||Number(state.results.has(a))-Number(state.results.has(b))).slice(0,20)
   if(!jobs.length){display(page,state,wanted);return}
   state.busy=true;display(page,state,wanted)
   const retry=jobs.some(([key])=>state.retryKeys&&state.retryKeys.has(key))
@@ -124,7 +143,8 @@ async function run(page){
       const latest=collect(page.data,page.route||'');display(page,state,latest)
       const hasUnrequested=[...latest].some(([key,item])=>!state.results.has(key)||state.results.get(key).signature!==item.signature)
       const pending=[...latest].some(([key])=>state.results.get(key)?.entry.status==='PENDING')
-      if(hasUnrequested||pending)state.timer=setTimeout(()=>{state.timer=null;run(page)},hasUnrequested?100:2000)
+      const pollDelay=['pages/news-detail/news-detail','pages/consultation-detail/consultation-detail'].includes(page.route)?800:2000
+      if(hasUnrequested||pending)state.timer=setTimeout(()=>{state.timer=null;run(page)},hasUnrequested?100:pollDelay)
     }
   }
 }

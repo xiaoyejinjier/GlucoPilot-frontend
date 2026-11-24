@@ -1,4 +1,6 @@
 @import '../wallet/wallet.wxss';
+.wallet-balance .wallet-between { align-items:flex-start; flex-wrap:wrap; }
+.withdraw-amount { margin-top:24rpx; }
 .withdraw-recipient{margin-top:24rpx;padding:24rpx;border-radius:22rpx;background:#eef5ff;border:1rpx solid #d8e6fa}
 .withdraw-recipient-title{font-size:26rpx;font-weight:600;color:#294f82}.withdraw-recipient-id{display:block;margin-top:18rpx;font-size:34rpx;font-weight:600;color:#254a7b;letter-spacing:2rpx}
 .withdraw-recipient-change{font-size:24rpx;color:#2a61ba;padding:10rpx 0 10rpx 18rpx;flex-shrink:0}

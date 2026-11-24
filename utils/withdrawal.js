@@ -1,5 +1,5 @@
 function statusLabel(row) {
-  if (row.status === 'COMPLETED') return row.provider === 'ALIPAY_SANDBOX_TRANSFER' ? '已到账沙箱钱包' : '已模拟发放'
+  if (row.status === 'COMPLETED') return row.provider === 'ALIPAY_SANDBOX_TRANSFER' ? '已到账' : '已模拟发放'
   if (row.status === 'REJECTED') return row.transferState === 'FAILED' ? '转账失败，已退回' : '已拒绝'
   if (row.status === 'APPROVED') {
     if (!row.payeeUserId) return '待补充收款账号'
@@ -10,4 +10,9 @@ function statusLabel(row) {
   return '待审核'
 }
 function validPayee(value) { return /^2088\d{12,28}$/.test(String(value || '').trim()) }
-module.exports = { statusLabel, validPayee }
+function canEditRecipient(row) {
+  return !!row && ['PENDING', 'APPROVED'].includes(row.status)
+    && !row.transferStartedAt && !row.payoutReference
+    && (!row.transferState || row.transferState === 'NOT_STARTED')
+}
+module.exports = { statusLabel, validPayee, canEditRecipient }

@@ -75,12 +75,25 @@
       <view wx:for="{{medicationGroups}}" wx:for-item="group" wx:key="label" class="medication-group">
         <text class="medication-group-title">{{i18n.t(group.label, locale)}}</text>
         <view class="medication-options">
-          <view wx:for="{{group.options}}" wx:key="name" class="medication-option {{item.selected ? 'selected' : ''}} ui-interactive" data-name="{{item.name}}" bindtap="onMedicationTap" aria-role="button" aria-label="{{i18n.t(item.name, locale)}}" hover-class="ui-pressed"><text wx:if="{{item.selected}}">✓ </text>{{i18n.t(item.name, locale)}}</view>
-          <view wx:if="{{group.key === 'insulin'}}" class="medication-option {{otherInsulinEnabled ? 'selected' : ''}} ui-interactive" bindtap="onOtherInsulin" aria-role="button" hover-class="ui-pressed"><text wx:if="{{otherInsulinEnabled}}">✓ </text>{{i18n.t('其他胰岛素', locale)}}</view>
+          <view wx:for="{{group.options}}" wx:key="name" class="medication-option {{item.selected ? 'selected' : ''}} ui-interactive" data-name="{{item.name}}" bindtap="onMedicationTap" aria-role="button" aria-label="{{i18n.t(item.name, locale)}}" hover-class="ui-pressed">
+            <text class="medication-check {{item.selected ? 'checked' : ''}}" aria-hidden="true">✓</text>
+            <text class="medication-name">{{i18n.t(item.name, locale)}}</text>
+          </view>
+        </view>
+        <view wx:if="{{group.key === 'insulin'}}" class="medication-options medication-other-row">
+          <view class="medication-option {{otherInsulinEnabled ? 'selected' : ''}} ui-interactive" bindtap="onOtherInsulin" aria-role="button" hover-class="ui-pressed">
+            <text class="medication-check {{otherInsulinEnabled ? 'checked' : ''}}" aria-hidden="true">✓</text>
+            <text class="medication-name">{{i18n.t('其他胰岛素', locale)}}</text>
+          </view>
         </view>
         <textarea wx:if="{{group.key === 'insulin' && otherInsulinEnabled}}" class="other-medication" value="{{otherInsulin}}" bindinput="onOtherInsulinInput" maxlength="256" placeholder="{{i18n.t('填写正在使用的其他胰岛素名称', locale)}}" auto-height disabled="{{saving}}" />
       </view>
-      <view class="medication-options"><view class="medication-option {{otherMedicationEnabled ? 'selected' : ''}} ui-interactive" bindtap="onOtherMedication" aria-role="button" hover-class="ui-pressed"><text wx:if="{{otherMedicationEnabled}}">✓ </text>{{i18n.t('其他用药', locale)}}</view></view>
+      <view class="medication-options medication-other-row">
+        <view class="medication-option {{otherMedicationEnabled ? 'selected' : ''}} ui-interactive" bindtap="onOtherMedication" aria-role="button" hover-class="ui-pressed">
+          <text class="medication-check {{otherMedicationEnabled ? 'checked' : ''}}" aria-hidden="true">✓</text>
+          <text class="medication-name">{{i18n.t('其他用药', locale)}}</text>
+        </view>
+      </view>
       <textarea wx:if="{{otherMedicationEnabled}}" class="other-medication" value="{{otherMedication}}" bindinput="onOtherMedicationInput" maxlength="256" placeholder="{{i18n.t('填写其他药物名称或保留原用药记录', locale)}}" auto-height disabled="{{saving}}" />
     </view>
     <view class="exercise-field">

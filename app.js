@@ -22,6 +22,8 @@ App({
     unreadCount: 0,
     /** 登录响应带回：本次登录已撤销注销申请，进入主导航前需提示一次。 */
     recoveredFromCancellation: false,
+    /** 仅切换列表的添加/重新验证流程设置，不持久化为普通登录偏好。 */
+    accountSaveIntent: null,
     /** 只读调试信息：真机当前实际请求的 API 地址。 */
     apiBaseUrl: config.baseUrl,
     /** 拍照页传给确认页的临时图，避免 URL 传路径导致黑屏 */
@@ -94,6 +96,7 @@ App({
     this.globalData.pendingGlucoseOcr = null
     this.globalData.pendingLoginPhone = ''
     this.globalData.accountSwitchFlow = false
+    this.globalData.accountSaveIntent = null
     this.globalData.recoveredFromCancellation = false
   },
 
@@ -189,14 +192,21 @@ App({
   },
 
   /** 登录完成后的唯一去向：恢复提示/禁用拦截优先，其次免责声明，否则进入记录页。 */
-  goAfterLogin() {
+  goAfterLogin(options) {
     const token = getToken()
+    const saveIntent = options && options.accountSaveIntent
     const recovered = !!this.globalData.recoveredFromCancellation
     this.globalData.recoveredFromCancellation = false
     return this.syncProfile()
       .then((state) => {
         if (getToken() !== token || !this.globalData.isLoggedIn) return null
         const status = state.userInfo && state.userInfo.accountStatus
+        if (saveIntent && saveIntent.source === 'ACCOUNT_SWITCH' && saveIntent.scope === accountVault.scope()
+            && Number(status) === 1 && (saveIntent.kind === 'ADD'
+              || (saveIntent.kind === 'REAUTH' && saveIntent.expectedId === state.userInfo.communityKey
+                && accountVault.session(saveIntent.expectedId)))) {
+          accountVault.remember(state.userInfo, token, undefined, { explicit: true })
+        }
         const proceed = () => {
           if (status === 0) return this.interceptDisabledLogin()
           if (state.needsDisclaimer) {

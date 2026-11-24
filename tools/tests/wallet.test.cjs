@@ -95,7 +95,7 @@ test('医生提现按分提交，失败保留请求编号，金额校验且普�
  page.onShow();await flush();assert.equal(page.data.available,'1.01')
  page.onPayee({detail:{value:'2088000000000002'}})
  page.onAmount({detail:{value:'1.001'}});page.onApply();assert.equal(state.modals.length,0)
- page.onAmount({detail:{value:'1.01'}});page.onApply();assert.equal(calls.length,0);assert.match(state.modals[0].content,/沙箱|模拟/)
+ page.onAmount({detail:{value:'1.01'}});page.onApply();assert.equal(calls.length,0);assert.match(state.modals[0].content,/冻结对应问诊收入/);assert.match(state.modals[0].content,/第5个工作日/)
  state.modals[0].success({confirm:true});await flush();assert.equal(calls[0].amountCents,101);assert.equal(page.data.amount,'1.01')
  fail=false;await page.submit(101);assert.equal(calls[0].clientRequestId,calls[1].clientRequestId);assert.equal(page.data.amount,'')
  page.onHide();state.token='two';page.onShow();await flush();assert.equal(page.data.amount,'')
@@ -193,7 +193,7 @@ test('提现刷新等待后端查单，随后同步审批、到账状态和冻�
   const refreshing=page.onPullDownRefresh();await flush()
   assert.equal(refreshes,1);assert.equal(page.data.loading,true);assert.equal(state.refreshStops,0)
   resolve();await refreshing
-  assert.equal(page.data.records[0].statusLabel,'已到账沙箱钱包')
+  assert.equal(page.data.records[0].statusLabel,'已到账')
   assert.equal(page.data.frozen,'0.00');assert.equal(state.refreshStops,1)
 })
 
@@ -211,20 +211,86 @@ test('刷新失败明确提示，旧账号查单完成后不能刷新新账号�
   assert.equal(page.data.records[0].orderNo,'NEW_ACCOUNT')
 })
 
-test('绑定旧提现收款UID需要确认，转账开始后入口不再提交修改', async () => {
-  const calls=[]
+test('修改提现账号使用可编辑弹窗和当前记录账号，不依赖新申请账号', async () => {
+  const calls=[];let payee='2088000000000002'
   const {page,state}=harness('doctor-withdrawals',{
     withdrawalSummary:async()=>({eligible:true,transferEnabled:true,availableCents:0,frozenCents:1000}),
-    withdrawals:async()=>({records:[{orderNo:'WD1',status:'APPROVED',amountCents:1000,transferStartedAt:null}],pages:1}),
-    withdrawalRecipient:async(no,body)=>calls.push({no,body})
+    withdrawals:async()=>({records:[{orderNo:'WD1',status:'APPROVED',amountCents:1000,payeeUserId:payee,transferState:'NOT_STARTED',transferStartedAt:null}],pages:1}),
+    withdrawalRecipient:async(no,body)=>{calls.push({no,body});payee=body.payeeUserId}
   })
-  page.onShow();await flush();assert.equal(page.data.records[0].statusLabel,'待补充收款账号')
-  page.onBindPayee({currentTarget:{dataset:{order:'WD1'}}});assert.equal(state.modals.length,0)
-  page.onPayee({detail:{value:'2088000000000002'}})
-  page.onBindPayee({currentTarget:{dataset:{order:'WD1'}}});assert.equal(calls.length,0)
-  await state.modals[0].success({confirm:true});assert.equal(calls[0].body.payeeUserId,'2088000000000002')
-  page.data.records[0].transferStartedAt='2026-11-18T10:00:00'
-  page.onBindPayee({currentTarget:{dataset:{order:'WD1'}}});assert.equal(state.modals.length,1)
+  page.onShow();await flush();assert.equal(page.data.records[0].canEditRecipient,true)
+  // 上方新申请账号与当前提现不同，弹窗也必须带入当前记录的账号。
+  page.onPayee({detail:{value:'2088000000000009'}})
+  const event={currentTarget:{dataset:{order:'WD1'}}}
+  page.onBindPayee(event);page.onBindPayee(event);assert.equal(state.modals.length,1)
+  const dialog=state.modals[0];assert.equal(dialog.editable,true);assert.equal(dialog.title,'修改收款账号');assert.equal(dialog.content,payee)
+  await dialog.success({confirm:true,content:' 2088000000000003 '})
+  assert.equal(calls.length,1);assert.equal(calls[0].no,'WD1');assert.equal(calls[0].body.payeeUserId,'2088000000000003')
+  assert.equal(page.data.records[0].payeeUserId,'2088000000000003');assert.equal(page.data.payeeUserId,'2088000000000009')
+  await dialog.success({confirm:true,content:'2088000000000004'});assert.equal(calls.length,1)
+})
+
+test('未绑定提现可直接输入账号，取消或非法UID不提交，原账号不变不重复保存',async()=>{
+ let payee='';const calls=[]
+ const h=harness('doctor-withdrawals',{
+  withdrawalSummary:async()=>({eligible:true,transferEnabled:true,availableCents:0,frozenCents:100}),
+  withdrawals:async()=>({records:[{orderNo:'WD2',status:'PENDING',amountCents:100,payeeUserId:payee}],pages:1}),
+  withdrawalRecipient:async(no,body)=>{calls.push({no,body});payee=body.payeeUserId}
+ })
+ h.page.onShow();await flush();const click=()=>h.page.onBindPayee({currentTarget:{dataset:{order:'WD2'}}})
+ click();assert.equal(h.state.modals.at(-1).content,'');assert.equal(h.state.modals.at(-1).title,'补充收款账号')
+ await h.state.modals.at(-1).success({cancel:true});assert.equal(calls.length,0)
+ click();await h.state.modals.at(-1).success({confirm:true,content:'12345678901'});assert.equal(calls.length,0);assert.match(h.state.toasts.at(-1).title,/有效/)
+ click();await h.state.modals.at(-1).success({confirm:true,content:'2088000000000002'});assert.equal(calls.length,1)
+ click();await h.state.modals.at(-1).success({confirm:true,content:'2088000000000002'});assert.equal(calls.length,1)
+})
+
+test('已发放、已结束及转账中或待核实记录都不能修改收款账号',async()=>{
+ const rows=[
+  {status:'COMPLETED'}, {status:'REJECTED'}, {status:'CLOSED'},
+  {status:'APPROVED',transferStartedAt:'2026-11-24T10:00:00'},
+  ...['PROCESSING','WAITING','UNKNOWN','SUCCESS','FAILED'].map(transferState=>({status:'APPROVED',transferState})),
+  {status:'APPROVED',payoutReference:'payout-ref'}
+ ].map((row,i)=>({orderNo:'WD'+i,amountCents:100,...row}))
+ const h=harness('doctor-withdrawals',{
+  withdrawalSummary:async()=>({eligible:true,transferEnabled:true,availableCents:0,frozenCents:0}),
+  withdrawals:async()=>({records:rows,pages:1})
+ })
+ h.page.onShow();await flush()
+ for(const row of h.page.data.records){assert.equal(row.canEditRecipient,false);h.page.onBindPayee({currentTarget:{dataset:{order:row.orderNo}}})}
+ assert.equal(h.state.modals.length,0)
+})
+
+test('编辑期间开始发放会拒绝保存，远端冲突后刷新并隐藏修改按钮',async()=>{
+ let status='APPROVED';let calls=0
+ const h=harness('doctor-withdrawals',{
+  withdrawalSummary:async()=>({eligible:true,transferEnabled:true,availableCents:0,frozenCents:100}),
+  withdrawals:async()=>({records:[{orderNo:'WD3',status,amountCents:100,payeeUserId:'2088000000000002'}],pages:1}),
+  withdrawalRecipient:async()=>{calls++;status='COMPLETED';throw Object.assign(new Error('提现订单已更新'),{code:40900})}
+ })
+ h.page.onShow();await flush();const click=()=>h.page.onBindPayee({currentTarget:{dataset:{order:'WD3'}}})
+ click();h.page.data.records[0].status='COMPLETED'
+ await h.state.modals.at(-1).success({confirm:true,content:'2088000000000003'});assert.equal(calls,0)
+ h.page.data.records[0].status='APPROVED';click()
+ await h.state.modals.at(-1).success({confirm:true,content:'2088000000000003'})
+ assert.equal(calls,1);assert.equal(h.page.data.records[0].status,'COMPLETED');assert.equal(h.page.data.records[0].canEditRecipient,false)
+ click();assert.equal(h.state.modals.length,2)
+})
+
+test('失败后保留本页收款账号草稿，换账号或离页后的弹窗不能提交',async()=>{
+ const calls=[]
+ const h=harness('doctor-withdrawals',{
+  withdrawalSummary:async()=>({eligible:true,transferEnabled:true,availableCents:0,frozenCents:100}),
+  withdrawals:async()=>({records:[{orderNo:'WD4',status:'APPROVED',amountCents:100,payeeUserId:'2088000000000002'}],pages:1}),
+  withdrawalRecipient:async(no,body)=>{calls.push({no,body});throw new Error('offline')}
+ })
+ h.page.onShow();await flush();const click=()=>h.page.onBindPayee({currentTarget:{dataset:{order:'WD4'}}})
+ click();await h.state.modals.at(-1).success({confirm:true,content:'2088000000000003'});assert.equal(calls.length,1);assert.equal(h.page.data.posting,false)
+ click();assert.equal(h.state.modals.at(-1).content,'2088000000000003')
+ const stale=h.state.modals.at(-1);h.page.onHide();h.state.token='two';h.page.onShow();await flush()
+ await stale.success({confirm:true,content:'2088000000000004'});assert.equal(calls.length,1)
+ click();assert.equal(h.state.modals.at(-1).content,'2088000000000002')
+ const hidden=h.state.modals.at(-1);h.page.onHide();await hidden.success({confirm:true,content:'2088000000000005'});assert.equal(calls.length,1)
 })
 
 test('未知转账和历史本地模拟状态不会显示为支付宝到账',()=>{

@@ -27,4 +27,4 @@
   color: #8495af;
   font-size: 38rpx;
 }
-.sandbox-label{padding:16rpx 20rpx;margin-bottom:24rpx;border-radius:18rpx;background:#e1ecfc;color:#426da4;font-size:25rpx;text-align:center}.sandbox-card{text-align:center;padding:42rpx 28rpx}.sandbox-state{min-height:180rpx;display:flex;align-items:center;justify-content:center;gap:16rpx;color:#8094b1;font-size:26rpx}.sandbox-success{width:150rpx;height:150rpx;line-height:150rpx;background:#e3efff;border-radius:50%;color:#457bc2;font-size:85rpx;margin:40rpx auto}.sandbox-card .wallet-primary{margin-top:32rpx}.wallet-note>text+text{margin-top:16rpx}
+.sandbox-card{text-align:center;padding:42rpx 28rpx}.sandbox-state{min-height:180rpx;display:flex;align-items:center;justify-content:center;gap:16rpx;color:#8094b1;font-size:26rpx}.sandbox-success{width:150rpx;height:150rpx;line-height:150rpx;background:#e3efff;border-radius:50%;color:#457bc2;font-size:85rpx;margin:40rpx auto}.sandbox-card .wallet-primary{margin-top:32rpx}.wallet-note>text+text{margin-top:16rpx}

@@ -1,5 +1,6 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="consult-page doctor-workspace" style="{{displayStyle}}">
+  <view wx:if="{{locale === 'en' && (contentTranslationLoading || contentTranslationError)}}" class="content-translation-notice" bindtap="retryContentTranslations" aria-role="button"><text>{{i18n.t(contentTranslationLoading ? '正在准备英文内容…' : '暂时无法翻译，正在显示原文，点击重试', locale)}}</text></view>
   <view class="consult-hero"><text class="consult-hero-title">{{i18n.t('医生工作台',locale)}}</text><text class="consult-hero-note">{{i18n.t('完成身份审核后，可接诊并出具问诊单。',locale)}}</text></view>
   <view wx:if="{{loading}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
   <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('重试',locale)}}</view>
@@ -31,7 +32,7 @@
     <view class="doctor-cases-section">
       <view class="consult-heading doctor-cases-heading"><view class="doctor-section-mark"></view><text class="consult-title">{{i18n.t('我接诊的求助',locale)}}</text></view>
       <view wx:for="{{records}}" wx:key="id" class="consult-card doctor-case-card" data-id="{{item.id}}" bindtap="onOpen" hover-class="ui-pressed">
-        <view class="doctor-case-heading"><text class="consult-list-title">{{item.title}}</text><text class="doctor-case-arrow" aria-hidden="true">›</text></view>
+        <view class="doctor-case-heading"><text class="consult-list-title">{{i18n.content(contentTranslations, 'CONSULTATION_PREVIEW', item.id, 'title', item.title, locale)}}</text><text class="doctor-case-arrow" aria-hidden="true">›</text></view>
         <view class="consult-list-meta"><text class="doctor-case-status {{item.status === 'IN_PROGRESS' ? 'is-active' : ''}}">{{i18n.t(item.statusLabel,locale)}}</text><text class="doctor-case-time">{{item.timeLabel}}</text></view>
       </view>
       <view wx:if="{{!records.length && !loading}}" class="consult-state">{{i18n.t('暂无接诊记录',locale)}}</view>

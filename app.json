@@ -58,7 +58,8 @@
     "pages/display-settings/display-settings",
     "pages/feedback-list/feedback-list",
     "pages/sandbox-payment/sandbox-payment",
-    "pages/sandbox-cashier/sandbox-cashier"
+    "pages/sandbox-cashier/sandbox-cashier",
+    "pages/consultation-topics/consultation-topics"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

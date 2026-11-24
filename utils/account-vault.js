@@ -23,17 +23,20 @@ function write(rows) {
   try { wx.setStorageSync(STORAGE_KEY, data); return true }
   catch (_) { try { wx.removeStorageSync(STORAGE_KEY) } catch (_) {} return false }
 }
-function remember(info, token, doctorStatus) {
+function remember(info, token, doctorStatus, options) {
   const id = String(info && info.communityKey || '')
   if (!ID_RE.test(id) || typeof token !== 'string' || !token || !scope()) return
   const rows = entries(), old = rows.find(row => row.id === id)
+  // 普通资料刷新只更新已保存的同一会话；新增账号或保存新令牌必须来自主动添加/重新验证。
+  if (!(options && options.explicit) && (!old || old.token !== token)) return
   const role = doctorStatus === undefined ? (old && old.role || 'UNKNOWN')
     : doctorStatus === 'APPROVED' ? 'DOCTOR' : 'USER'
   const phone = /^1\d{10}$/.test(String(info.phone || '')) ? String(info.phone) : ''
   const row = { id, token, role, nickname: String(info.nickname || '').slice(0, 64),
     avatarText: String(info.avatarText || info.nickname || '友').slice(0, 2),
     phone, phoneMasked: phone ? phone.slice(0, 3) + '****' + phone.slice(-4) : String(info.phoneMasked || ''),
-    lastUsedAt: old && old.token === token ? old.lastUsedAt : Date.now() }
+    lastUsedAt: old && old.token === token ? old.lastUsedAt : Date.now(),
+    saveSource: options && options.explicit ? 'ACCOUNT_SWITCH' : old && old.saveSource || 'LEGACY' }
   const next = [row].concat(rows.filter(value => value.id !== id)).sort((a, b) => b.lastUsedAt - a.lastUsedAt)
   write(next)
 }

@@ -4,7 +4,12 @@
   <view class="consult-notice">{{i18n.t('建议描述持续时间、最近变化及希望了解的问题，请勿填写身份证号或联系方式。',locale)}}</view>
   <view class="consult-card">
     <view class="consult-field"><text class="consult-field-title"><text class="consult-required">*</text>{{i18n.t('问题标题',locale)}}</text><input class="consult-input" value="{{form.title}}" data-field="title" bindinput="onInput" maxlength="80" placeholder="{{i18n.t('例如：想了解最近餐后血糖的变化',locale)}}" /></view>
-    <view class="consult-field"><text class="consult-field-title">{{i18n.t('问题分类',locale)}}</text><view class="consult-chip-row"><text wx:for="{{topics}}" wx:key="code" class="consult-chip {{form.topic === item.code ? 'selected' : ''}}" data-code="{{item.code}}" bindtap="onTopic">{{i18n.t(item.name,locale)}}</text></view></view>
+    <view class="consult-field">
+      <text class="consult-field-title">{{i18n.t('问题分类',locale)}}</text>
+      <view class="topic-choice" bindtap="onChooseTopic" aria-role="button"><text class="topic-choice-name">{{i18n.t(topicLabel || '请选择问题分类',locale)}}</text><text class="consult-link">{{i18n.t('选择标签',locale)}} ›</text></view>
+      <text wx:if="{{topicLoading}}" class="consult-field-note">{{i18n.t('正在加载…',locale)}}</text>
+      <text wx:if="{{topicError}}" class="consult-error" bindtap="loadTopics">{{i18n.t('标签加载失败，点击重试',locale)}}</text>
+    </view>
     <view class="consult-field"><text class="consult-field-title"><text class="consult-required">*</text>{{i18n.t('详细描述',locale)}}</text><textarea class="consult-textarea" value="{{form.symptoms}}" data-field="symptoms" bindinput="onInput" maxlength="3000" cursor-spacing="100" placeholder="{{i18n.t('描述你的困扰、出现多久，以及想请医生解答什么。',locale)}}" /><text class="consult-field-note">{{form.symptoms.length}} / 3000</text></view>
     <view class="consult-field"><text class="consult-field-title">{{i18n.t('相关血糖情况（选填）',locale)}}</text><textarea class="consult-textarea short-input" value="{{form.glucoseNote}}" data-field="glucoseNote" bindinput="onInput" maxlength="300" cursor-spacing="100" placeholder="{{i18n.t('可填写测量时间、餐前或餐后及血糖数值',locale)}}" /></view>
     <view class="consult-field"><text class="consult-field-title">{{i18n.t('当前用药与过敏情况（选填）',locale)}}</text><textarea class="consult-textarea short-input" value="{{form.medicationNote}}" data-field="medicationNote" bindinput="onInput" maxlength="1000" cursor-spacing="100" placeholder="{{i18n.t('填写你正在使用的药品及已知过敏情况',locale)}}" /></view>

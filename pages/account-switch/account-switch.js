@@ -27,7 +27,6 @@ Page({
     const epoch = this._epoch
     this.setData({ loading: true, error: '' })
     const sessions = vault.list().map(row => vault.session(row.id)).filter(row => row && row.token)
-    if (this._token && !sessions.some(row => row.token === this._token)) sessions.push({ token: this._token })
     let failed = false
     await Promise.all(sessions.map(async session => {
       try {
@@ -52,7 +51,7 @@ Page({
     const session = vault.session(id)
     if (!session) return
     if (session.token && session.token === getToken()) return
-    if (!session.token) return this.startLogin(session.phone)
+    if (!session.token) return this.startLogin(session.phone, false, id)
     const epoch = this._epoch
     this._busy = true
     this.setData({ switching: true, switchingId: id, error: '' })
@@ -80,7 +79,7 @@ Page({
         vault.invalidateToken(session.token)
         this.renderAccounts()
         wx.showToast({ title: '该账号需要重新验证登录', icon: 'none' })
-        this.startLogin(session.phone, true)
+        this.startLogin(session.phone, true, id)
       } else {
         this.setData({ error: error.message || '切换失败，请重试' })
       }
@@ -90,7 +89,7 @@ Page({
     }
   },
   onAddAccount() { if (!this._busy) this.startLogin('') },
-  startLogin(phone, fromSwitch = false) {
+  startLogin(phone, fromSwitch = false, expectedId = '') {
     if (!this.active(this._epoch) || (!fromSwitch && this._busy)) return
     const app = getApp()
     app.resetLoginState({ preserveSavedAccount: true })
@@ -98,6 +97,8 @@ Page({
     wx.removeStorageSync('lastCloudPullAt')
     app.globalData.pendingLoginPhone = /^1\d{10}$/.test(String(phone || '')) ? String(phone) : ''
     app.globalData.accountSwitchFlow = true
+    app.globalData.accountSaveIntent = { source: 'ACCOUNT_SWITCH', scope: vault.scope(),
+      kind: expectedId ? 'REAUTH' : 'ADD', expectedId }
     this._epoch++
     wx.reLaunch({ url: '/pages/login/login' })
   }

@@ -42,7 +42,7 @@ Page({
   onActivate() {
     if (!social.active(this) || !this.data.ready || this.data.activated || this.data.activating) return
     const version = this._communityVersion
-    wx.showModal({ title: '开通我的钱包', content: '开通免费，不会充值或扣款。开通后可用于沙箱充值、问诊支付和接收问诊收入。', confirmText: '确认开通',
+    wx.showModal({ title: '开通我的钱包', content: '开通免费，不会充值或扣款。开通后可充值、支付问诊费用和接收问诊收入。', confirmText: '确认开通',
       success: result => { if (result.confirm && social.active(this, version)) this.activateWallet() } })
   },
   async activateWallet() {
@@ -71,11 +71,11 @@ Page({
       wx.showToast({ title: '请输入1～1000元，最多两位小数', icon: 'none' }); return
     }
     if (!this.data.rechargeEnabled) {
-      wx.showModal({ title: '支付宝沙箱尚未配置', content: '请先完成后端沙箱应用配置。本次未创建订单或扣款。', showCancel: false }); return
+      wx.showModal({ title: '充值暂不可用', content: '充值服务暂不可用，请稍后重试。本次未创建订单或扣款。', showCancel: false }); return
     }
     if (this.data.creating) return
     const version = this._communityVersion
-    wx.showModal({ title: '确认沙箱充值', content: '仅使用支付宝沙箱测试资金，不会充值真实钱包。',
+    wx.showModal({ title: '确认充值', content: '将前往支付宝完成充值，付款成功后更新钱包余额。',
       success: result => { if (result.confirm && social.active(this, version)) this.createRecharge() } })
   },
   async createRecharge() {

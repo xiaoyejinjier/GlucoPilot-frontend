@@ -39,7 +39,8 @@
   <view class="phone-panel" wx:if="{{emailPanel}}">
     <text class="phone-title">{{i18n.t("邮箱登录", locale)}}</text>
     <text class="phone-subtitle">{{i18n.t('验证码登录，安全便捷', locale)}}</text>
-    <input class="phone-input" type="text" maxlength="128" placeholder="{{i18n.t('邮箱', locale)}}" value="{{email}}" bindinput="onEmailInput" />
+    <view wx:if="{{lastLoginEmail}}" class="last-phone-row"><text class="last-phone-hint">{{i18n.t(usingLastEmail ? '已填入上次登录的邮箱' : '可以使用上次登录的邮箱',locale)}}</text><view class="last-phone-action" bindtap="onSwitchEmail" aria-role="button" hover-class="ui-pressed">{{i18n.t(usingLastEmail ? '换个邮箱' : '使用上次邮箱',locale)}}</view></view>
+    <input class="phone-input" type="text" maxlength="128" placeholder="{{i18n.t('邮箱', locale)}}" value="{{email}}" focus="{{emailFocus}}" bindinput="onEmailInput" />
     <view class="sms-row">
       <input class="phone-input sms-input" type="number" maxlength="6" placeholder="{{i18n.t('验证码', locale)}}" value="{{emailCode}}" bindinput="onEmailCodeInput" />
       <button class="btn-ghost sms-btn ui-interactive" disabled="{{emailCooldown > 0}}" bindtap="onSendEmailCode" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">

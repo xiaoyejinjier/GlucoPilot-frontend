@@ -1,7 +1,11 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="consult-page consult-tab-page" style="{{displayStyle}}">
+  <view wx:if="{{locale === 'en' && (contentTranslationLoading || contentTranslationError)}}" class="content-translation-notice" bindtap="retryContentTranslations" aria-role="button"><text>{{i18n.t(contentTranslationLoading ? '正在准备英文内容…' : '暂时无法翻译，正在显示原文，点击重试', locale)}}</text></view>
   <view class="consult-hero">
-    <text class="consult-kicker">{{i18n.t('糖友问诊',locale)}}</text>
+    <view class="consult-hero-topline">
+      <text class="consult-kicker">{{i18n.t('糖友问诊',locale)}}</text>
+      <view class="consult-hero-doctor" bindtap="onDoctor" aria-role="button" hover-class="ui-pressed">{{i18n.t('医生工作台',locale)}} ›</view>
+    </view>
     <text class="consult-hero-title">{{i18n.t('有疑问，向医生问一问',locale)}}</text>
     <text class="consult-hero-note">{{i18n.t('说清你的困扰，等待医生回应。问诊单出具后，可按需查看完整建议。',locale)}}</text>
     <view class="consult-hero-actions">
@@ -9,15 +13,9 @@
       <button class="consult-button hero-secondary" bindtap="onRecords" hover-class="ui-pressed">{{i18n.t('我的问诊',locale)}} ›</button>
     </view>
   </view>
-  <view class="consult-row" bindtap="onDoctor"><text class="consult-link">{{i18n.t('医生工作台',locale)}} ›</text></view>
   <view class="consultation-inbox-entry" bindtap="onConversations" aria-role="button" hover-class="ui-pressed">
-    <view><text class="consultation-inbox-title">{{i18n.t('问诊消息',locale)}}</text><text class="consultation-inbox-note">{{i18n.t('与接诊医生或患者的交流都在这里',locale)}}</text></view>
+    <text class="consultation-inbox-title">{{i18n.t('问诊消息',locale)}}</text>
     <view class="consultation-inbox-end"><text wx:if="{{informationCounts.consultations > 0}}" class="consultation-inbox-count">{{informationCounts.consultations > 99 ? '99+' : informationCounts.consultations}}</text><text>›</text></view>
-  </view>
-  <view class="consult-card">
-    <view class="consult-heading"><text class="consult-title">{{i18n.t('从求助到问诊单',locale)}}</text><text class="consult-pill">{{i18n.t('1元查看问诊单',locale)}}</text></view>
-    <view class="consult-steps"><view class="consult-step"><view class="consult-step-number">1</view><text>{{i18n.t('描述健康问题',locale)}}</text></view><view class="consult-step"><view class="consult-step-number">2</view><text>{{i18n.t('等待医生回复',locale)}}</text></view><view class="consult-step"><view class="consult-step-number">3</view><text>{{i18n.t('按需付费查看',locale)}}</text></view></view>
-    <view class="consult-row" bindtap="onPreview" hover-class="ui-pressed"><text class="consult-muted">{{i18n.t('问诊单包含哪些内容？',locale)}}</text><text class="consult-link">{{i18n.t('查看预览',locale)}} ↗</text></view>
   </view>
   <view wx:if="{{!capabilities.submissionEnabled}}" class="consult-notice">{{i18n.t('问诊服务正在筹备，开放后可发布求助并由医生接诊。',locale)}}</view>
   <view class="consult-heading square-heading">
@@ -29,7 +27,15 @@
       </view>
     </view>
   </view>
-  <scroll-view class="consult-topic-scroll" scroll-x show-scrollbar="{{false}}"><text wx:for="{{topics}}" wx:key="code" class="consult-chip {{topic === item.code ? 'selected' : ''}}" data-code="{{item.code}}" bindtap="onTopic">{{i18n.t(item.name,locale)}}</text></scroll-view>
+  <view class="topic-filter-bar">
+    <scroll-view class="consult-topic-scroll topic-filter-scroll" scroll-x show-scrollbar="{{false}}" scroll-into-view="{{topicAnchor}}" scroll-with-animation="{{true}}">
+      <view wx:for="{{topics}}" wx:key="code" id="consult-topic-{{item.code || 'all'}}" class="consult-chip consult-topic-chip {{topic === item.code ? 'selected' : ''}}" data-code="{{item.code}}" bindtap="onTopic">
+        <image wx:if="{{item.icon}}" class="consult-topic-icon" src="{{item.icon}}" mode="aspectFit" aria-hidden="true" />
+        <text>{{i18n.t(item.name,locale)}}</text>
+      </view>
+    </scroll-view>
+    <button class="topic-manage" bindtap="onManageTopics" hover-class="ui-pressed" aria-label="{{i18n.t('全部标签',locale)}}"><view class="topic-grid-icon"><view/><view/><view/><view/></view></button>
+  </view>
   <view wx:if="{{doctorApproved}}" class="consult-status-filters">
     <button class="consult-status-button {{!unclaimedOnly ? 'selected' : ''}} ui-interactive" data-filter="all" bindtap="onUnclaimedFilter" aria-pressed="{{!unclaimedOnly}}" hover-class="ui-pressed">{{i18n.t('全部求助',locale)}}</button>
     <button class="consult-status-button {{unclaimedOnly ? 'selected' : ''}} ui-interactive" data-filter="unclaimed" bindtap="onUnclaimedFilter" aria-pressed="{{unclaimedOnly}}" hover-class="ui-pressed">{{i18n.t('未接诊',locale)}}</button>
@@ -43,7 +49,7 @@
   </view>
   <view wx:for="{{records}}" wx:key="id" class="consult-card" data-id="{{item.id}}" bindtap="onOpen" hover-class="ui-pressed">
     <view class="consult-heading"><text class="consult-pill">{{i18n.t(item.topicLabel,locale)}}</text><text class="consult-muted">{{i18n.t(item.statusLabel,locale)}}</text></view>
-    <text class="consult-list-title">{{item.title}}</text>
+    <text class="consult-list-title">{{i18n.content(contentTranslations, 'CONSULTATION_PREVIEW', item.id, 'title', item.title, locale)}}</text>
     <view class="consult-list-meta"><text>{{item.patientName}}</text><text>{{item.timeLabel}}</text></view>
   </view>
   <text class="consult-fine-print">{{i18n.t('问诊用于健康咨询，处方须由具备资质的医生按规范开具。',locale)}}</text>

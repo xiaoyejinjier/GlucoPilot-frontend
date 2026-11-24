@@ -1,4 +1,9 @@
 @import "../../styles/wallet.wxss";
+.wallet-shortcuts { gap:16rpx; }
+.wallet-shortcuts > view { position:relative; min-width:0; flex-direction:column; justify-content:center; padding:24rpx 12rpx; gap:12rpx; text-align:center; }
+.wallet-shortcuts > view > text:nth-child(2) { min-width:0; font-size:24rpx; line-height:1.5; overflow-wrap:anywhere; }
+.wallet-shortcuts > view > text:last-child { position:absolute; top:12rpx; right:14rpx; }
+.wallet-shortcuts .wallet-shortcut-icon { display:flex; align-items:center; justify-content:center; width:48rpx; height:48rpx; padding:0; }
 .wallet-card .wallet-primary {
   display: block;
   width: 100%;

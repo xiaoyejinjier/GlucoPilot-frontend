@@ -1,23 +1,49 @@
 const api = require('../../services/consultation')
 const social = require('../../utils/community')
-const { TOPICS, attemptId, preview } = require('../../utils/consultation')
+const { attemptId, preview } = require('../../utils/consultation')
+const topicSettings = require('../../utils/consultation-topics')
 const { getToken } = require('../../utils/request')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { uploadMediaFile, BIZ_TYPE, MAX_IMAGE_BYTES } = require('../../utils/media')
 
 function emptyForm() { return { title: '', topic: 'GLUCOSE', symptoms: '', glucoseNote: '', medicationNote: '', anonymous: true } }
 Page({
-  data: { displayStyle: '', topics: TOPICS.filter(item => item.code), form: emptyForm(),
+  data: { displayStyle: '', topics: [], topicLabel: '血糖波动', topicLoading: true, topicError: '', form: emptyForm(),
     capabilities: api.PREVIEW_CAPABILITIES, saving: false, error: '', images: [], uploading: false },
   onShow() {
     if (!getApp().checkLogin()) return
     if (this._token && this._token !== getToken()) { this._requestId = ''; this._uploadRun=(this._uploadRun||0)+1; this.setData({ form: emptyForm(), error: '', images:[], uploading:false }) }
     this.setData({ saving: false })
     this._token = getToken(); social.begin(this); applyDisplayToCurrentPage()
+    this.loadTopics()
     const version = this._communityVersion
     api.capabilities().then(capabilities => {
       if (social.active(this, version)) this.setData({ capabilities })
     }).catch(() => {})
+  },
+  async loadTopics() {
+    const version = this._communityVersion, run = this._topicRun = (this._topicRun || 0) + 1
+    this.setData({topicLoading:true, topicError:''})
+    try {
+      const topics = topicSettings.normalize(await api.topics())
+      if (!social.active(this, version) || run !== this._topicRun) return
+      const selected = topics.find(item => item.code === this.data.form.topic)
+      this.setData({topics, topicLabel: selected ? selected.name : '', topicLoading:false})
+    } catch (error) {
+      if (!social.active(this, version) || run !== this._topicRun) return
+      this.setData({topicLoading:false, topicError:error.message || '标签加载失败，点击重试'})
+      social.failure(this, error, version)
+    }
+  },
+  onChooseTopic() {
+    if (!social.active(this) || this.data.saving) return
+    const token = getToken()
+    wx.navigateTo({url:`/pages/consultation-topics/consultation-topics?mode=pick&selected=${encodeURIComponent(this.data.form.topic)}`,
+      events:{selectTopic:item=>{
+        if (this._disposed || getToken() !== token) return
+        this._requestId = ''
+        this.setData({'form.topic':item.code, topicLabel:item.name})
+      }}})
   },
   onHide() { social.end(this) },
   onUnload() { this._disposed=true;this.onHide() },
@@ -50,7 +76,7 @@ Page({
   onTopic(event) {
     if (this.data.saving) return
     const topic = event.currentTarget.dataset.code
-    if (this.data.topics.some(item => item.code === topic)) { this._requestId = ''; this.setData({ 'form.topic': topic }) }
+    if (this.data.topics.some(item => item.code === topic)) { this._requestId = ''; this.setData({ 'form.topic': topic, topicLabel: this.data.topics.find(item => item.code === topic).name }) }
   },
   onAnonymous(event) { if (!this.data.saving) { this._requestId = ''; this.setData({ 'form.anonymous': !!event.detail.value }) } },
   showSubmissionError(error) {
@@ -68,11 +94,15 @@ Page({
   validate() {
     if (this.data.form.title.trim().length < 4) { this.showSubmissionError('请用至少4个字概括你的问题'); return false }
     if (this.data.form.symptoms.trim().length < 10) { this.showSubmissionError('请补充至少10个字的问题描述'); return false }
+    if (this.data.topicLoading || this.data.topicError || !this.data.topics.some(item => item.code === this.data.form.topic)) {
+      this.showSubmissionError('请选择有效的问题分类，或重新加载标签'); return false
+    }
     return true
   },
   onPreview() {
     if (!social.active(this) || !this.validate()) return
     const token = getToken(), item = preview(this.data.form)
+    item.topicName = this.data.topicLabel
     item.imagePreviews=this.data.images
     wx.navigateTo({ url: '/pages/consultation-detail/consultation-detail?preview=1', success: result => {
       if (getToken() === token) result.eventChannel.emit('consultationPreview', item)

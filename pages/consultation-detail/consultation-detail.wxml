@@ -1,5 +1,6 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
 <view class="consult-page {{showPaymentFooter ? 'consult-with-footer' : ''}}" style="{{displayStyle}}">
+  <view wx:if="{{locale === 'en' && (contentTranslationLoading || contentTranslationError)}}" class="content-translation-notice" bindtap="retryContentTranslations" aria-role="button"><text>{{i18n.t(contentTranslationLoading ? '正在准备英文内容…' : '暂时无法翻译，正在显示原文，点击重试', locale)}}</text></view>
   <view wx:if="{{previewMode}}" class="consult-notice">{{i18n.t('页面预览，求助尚未发布，医生接诊与出单服务待开放。',locale)}}</view>
   <view wx:if="{{loading}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
   <view wx:elif="{{error}}" class="consult-card consult-empty"><text class="consult-empty-note">{{i18n.t(error,locale)}}</text><button class="consult-button" bindtap="onRetry">{{i18n.t('重试',locale)}}</button></view>
@@ -12,11 +13,11 @@
     </view>
     <view class="consult-card patient-card">
       <view class="consult-heading"><text class="consult-pill">{{i18n.t(item.topicLabel,locale)}}</text><text class="consult-muted">{{i18n.t(item.statusLabel,locale)}}</text></view>
-      <text class="consult-list-title">{{previewMode && !item.symptoms ? i18n.t('问诊单预览',locale) : item.title}}</text>
+      <text class="consult-list-title">{{previewMode && !item.symptoms ? i18n.t('问诊单预览',locale) : i18n.content(contentTranslations, 'CONSULTATION_PREVIEW', item.id, 'title', item.title, locale)}}</text>
       <text wx:if="{{doctorView}}" class="patient-section-label">{{i18n.t('患者描述',locale)}}</text>
-      <text class="consult-body">{{item.symptoms || i18n.t('健康详情仅向本人及接诊医生开放。',locale)}}</text>
-      <view wx:if="{{item.glucoseNote}}" class="patient-note"><text class="patient-section-label">{{i18n.t('相关血糖情况',locale)}}</text><text class="consult-body">{{item.glucoseNote}}</text></view>
-      <view wx:if="{{item.medicationNote}}" class="patient-note"><text class="patient-section-label">{{i18n.t('用药与过敏情况',locale)}}</text><text class="consult-body">{{item.medicationNote}}</text></view>
+      <text class="consult-body">{{item.symptoms ? i18n.content(contentTranslations, 'CONSULTATION_DETAIL', item.id, 'symptoms', item.symptoms, locale) : i18n.t('健康详情仅向本人及接诊医生开放。',locale)}}</text>
+      <view wx:if="{{item.glucoseNote}}" class="patient-note"><text class="patient-section-label">{{i18n.t('相关血糖情况',locale)}}</text><text class="consult-body">{{i18n.content(contentTranslations, 'CONSULTATION_DETAIL', item.id, 'glucoseNote', item.glucoseNote, locale)}}</text></view>
+      <view wx:if="{{item.medicationNote}}" class="patient-note"><text class="patient-section-label">{{i18n.t('用药与过敏情况',locale)}}</text><text class="consult-body">{{i18n.content(contentTranslations, 'CONSULTATION_DETAIL', item.id, 'medicationNote', item.medicationNote, locale)}}</text></view>
       <view wx:if="{{photos.length}}" class="patient-note"><text class="patient-section-label">{{i18n.t('补充图片',locale)}}</text><view class="consult-photo-grid"><image wx:for="{{photos}}" wx:key="mediaId" class="consult-photo-cell" src="{{item.url}}" mode="aspectFill" data-url="{{item.url}}" bindtap="onPreviewPhoto" /></view></view>
       <view wx:if="{{photosError}}" class="consult-error" bindtap="loadPhotos">{{i18n.t(photosError,locale)}} · {{i18n.t('点击重试',locale)}}</view>
     </view>
@@ -26,9 +27,9 @@
       <view wx:if="{{!previewMode && !report.ready}}" class="report-waiting"><view class="report-waiting-mark" aria-hidden="true"></view><text class="report-waiting-title">{{i18n.t('等待医生出具问诊单',locale)}}</text><text class="consult-body">{{i18n.t('医生出具问诊单后，可在这里查看。',locale)}}</text></view>
       <view wx:elif="{{!unlocked}}" class="consult-lock"><view class="consult-lock-symbol" aria-hidden="true"></view><text class="consult-empty-note">{{i18n.t('医生出具后，支付1元可查看完整问诊单',locale)}}</text><view class="consult-unlock-items"><text>{{i18n.t('医生评估',locale)}}</text><text>{{i18n.t('用药建议',locale)}}</text><text>{{i18n.t('复查与就医建议',locale)}}</text></view><view class="consult-lock-line"></view><view class="consult-lock-line"></view><view class="consult-lock-line short"></view></view>
       <block wx:else>
-        <view class="report-section"><text class="patient-section-label">{{i18n.t('医生评估',locale)}}</text><text class="consult-body">{{report.assessment}}</text></view>
-        <view class="report-section"><text class="patient-section-label">{{i18n.t('用药建议',locale)}}</text><text class="consult-body">{{report.medicationAdvice}}</text></view>
-        <view class="report-section"><text class="patient-section-label">{{i18n.t('复查与就医建议',locale)}}</text><text class="consult-body">{{report.followUpAdvice}}</text></view>
+        <view class="report-section"><text class="patient-section-label">{{i18n.t('医生评估',locale)}}</text><text class="consult-body">{{i18n.content(contentTranslations, 'CONSULTATION_REPORT', item.id, 'assessment', report.assessment, locale)}}</text></view>
+        <view class="report-section"><text class="patient-section-label">{{i18n.t('用药建议',locale)}}</text><text class="consult-body">{{i18n.content(contentTranslations, 'CONSULTATION_REPORT', item.id, 'medicationAdvice', report.medicationAdvice, locale)}}</text></view>
+        <view class="report-section"><text class="patient-section-label">{{i18n.t('复查与就医建议',locale)}}</text><text class="consult-body">{{i18n.content(contentTranslations, 'CONSULTATION_REPORT', item.id, 'followUpAdvice', report.followUpAdvice, locale)}}</text></view>
       </block>
     </view>
 

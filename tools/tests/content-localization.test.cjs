@@ -38,6 +38,24 @@ test('PENDING显示准备状态并定时复查，READY后停止，普通交互�
   await env.tick();assert.equal(page.data.contentTranslationLoading,false);assert.equal(env.calls.length,2)
   page.setData({counter:1});await env.tick();assert.equal(env.calls.length,2);env.content.stop(page)
 })
+test('正文优先于大量昵称排队，详情每800毫秒读取结果且就绪后停止',async()=>{
+  const names=Array.from({length:25},(_,i)=>({key:'u'+(i+20),nickname:'小林'}))
+  const env=harness((items,_retry,n)=>items.map(item=>n===1?{...item,status:'PENDING'}:item.kind==='ARTICLE_BODY'
+    ?{...item,status:'READY',source:{body:'中文正文'},translated:{body:'Article body'}}:ready([item])[0]))
+  const page=env.page({posts:[],news:{id:'10',title:'中文标题',summary:'中文摘要',contentBody:'中文正文'},names},'pages/news-detail/news-detail')
+  await env.tick()
+  assert.equal(env.calls[0].items[0].kind,'ARTICLE_BODY')
+  assert.equal(env.calls[0].items[1].kind,'ARTICLE_PREVIEW')
+  // 先提交剩余未请求项，再进入详情页的更快状态轮询。
+  await env.tick()
+  assert.equal(page.data.contentTranslationLoading,true)
+  assert.equal([...env.timers.values()][0].delay,800)
+  await env.tick()
+  assert.equal(page.data.contentTranslations['ARTICLE_BODY:10'].translated.body,'Article body')
+  assert.equal(page.data.contentTranslationLoading,false)
+  assert.equal(env.timers.size,0)
+  env.content.stop(page)
+})
 test('切回中文或换账号后，迟到译文不能覆盖当前页面',async()=>{
   let resolve;const env=harness(()=>new Promise(done=>resolve=done)),page=env.page()
   await env.tick();page.setData({locale:'zh-CN'});resolve(ready(env.calls[0].items));await flush()
@@ -92,6 +110,47 @@ test('我的点赞列表沿用英文文章翻译',()=>{
   const env=harness(ready)
   const items=env.content.collect({mode:'likes',list:[{id:'10',title:'科学控糖',summary:'健康生活'}]},'pages/community/community')
   assert.equal(items.get('ARTICLE_PREVIEW:10').source.title,'科学控糖')
+})
+test('问诊列表、医生工作台和会话入口按问诊ID翻译标题，订单服务名使用静态翻译',()=>{
+  const env=harness()
+  for(const name of ['consultation','consultation-doctor','consultation-conversations','consultation-records']){
+    const found=env.content.collect({records:[{id:'21',title:'求助标题'}]},`pages/${name}/${name}`)
+    assert.equal(found.get('CONSULTATION_PREVIEW:21').source.title,'求助标题')
+  }
+  const conversations=env.content.collect({records:[{consultationId:'21',title:'求助标题'}]},'pages/consultation-conversations/consultation-conversations')
+  assert.equal(conversations.get('CONSULTATION_PREVIEW:21').id,'21')
+  const orders=env.content.collect({tab:'orders',records:[{id:'CO_ORDER',consultationId:'21',title:'问诊单查看服务'}]},'pages/consultation-records/consultation-records')
+  assert.equal(orders.size,0)
+})
+test('问诊未解锁或非参与者只请求标题，预览和医生未保存的表单不翻译',()=>{
+  const env=harness(),route='pages/consultation-detail/consultation-detail'
+  const item={id:'21',title:'求助标题',symptoms:'症状描述',glucoseNote:'血糖 5.2 mmol/L',medicationNote:'用药情况'}
+  const report={access:'LOCKED',assessment:'不能读的内容',medicationAdvice:'不能读的建议'}
+  let found=env.content.collect({item,report,form:{assessment:'未保存的医生输入'}},route)
+  assert.deepEqual([...found.keys()],['CONSULTATION_PREVIEW:21'])
+  found=env.content.collect({item:{...item,detailsVisible:true},report},route)
+  assert.equal(found.has('CONSULTATION_DETAIL:21'),true);assert.equal(found.has('CONSULTATION_REPORT:21'),false)
+  assert.equal(env.content.collect({item,report,previewMode:true},route).size,0)
+  assert.equal(env.content.collect({form:item},'pages/consultation-compose/consultation-compose').size,0)
+  const chat=env.content.collect({item,messages:[{id:'99',content:'聊天原文'}],input:'尚未发送'},'pages/consultation-chat/consultation-chat')
+  assert.deepEqual([...chat.keys()],['CONSULTATION_PREVIEW:21'])
+})
+test('已解锁问诊单和健康描述使用独立英文显示表，不覆盖医生表单或原稿',async()=>{
+  const item={id:'21',title:'求助标题',detailsVisible:true,symptoms:'症状描述',glucoseNote:'血糖 5.2 mmol/L',medicationNote:'用药 10 mg'}
+  const report={access:'UNLOCKED',assessment:'医生评估',medicationAdvice:'用药建议',followUpAdvice:'复查建议'}
+  const sources={CONSULTATION_PREVIEW:{title:item.title},CONSULTATION_DETAIL:{symptoms:item.symptoms,glucoseNote:item.glucoseNote,medicationNote:item.medicationNote},
+    CONSULTATION_REPORT:{assessment:report.assessment,medicationAdvice:report.medicationAdvice,followUpAdvice:report.followUpAdvice}}
+  const env=harness(items=>items.map(value=>({...value,status:'READY',source:sources[value.kind],translated:Object.fromEntries(Object.keys(sources[value.kind]).map(key=>[key,'English '+key]))})))
+  const page=env.page({posts:[],item,report,form:{assessment:'医生正在输入'}},'pages/consultation-detail/consultation-detail')
+  await env.tick()
+  assert.equal(env.calls[0].items[0].kind,'CONSULTATION_DETAIL')
+  assert.equal(page.data.item.symptoms,'症状描述');assert.equal(page.data.report.assessment,'医生评估');assert.equal(page.data.form.assessment,'医生正在输入')
+  assert.equal(catalog.content(page.data.contentTranslations,'CONSULTATION_REPORT','21','assessment',report.assessment,'en'),'English assessment')
+  assert.equal(catalog.content(page.data.contentTranslations,'CONSULTATION_REPORT','21','assessment',report.assessment,'zh-CN'),'医生评估')
+  assert.equal(page.data.contentTranslationLoading,false)
+  page.setData({report:{access:'LOCKED'}});await env.tick()
+  assert.equal(page.data.contentTranslations['CONSULTATION_REPORT:21'],undefined)
+  env.content.stop(page)
 })
 
 test('中文模式不请求翻译，草稿编辑和非发布文章也不提交翻译',async()=>{
