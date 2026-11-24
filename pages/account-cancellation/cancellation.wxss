@@ -103,6 +103,33 @@
   line-height: 1.5;
 }
 
+/* 预检未通过项：靠说明卡展示阻断原因 */
+.block-check-card {
+  margin: 20rpx 12rpx;
+  padding: 28rpx;
+  border: 1rpx solid var(--danger-line, #f5c2c0);
+  background: #fdecea;
+}
+
+.block-check-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  margin-top: 8rpx;
+}
+
+.block-check-title {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--danger);
+}
+
+.block-check-detail {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .opt-row,
 .reason-row {
   display: flex;

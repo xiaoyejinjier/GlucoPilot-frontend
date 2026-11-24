@@ -2153,6 +2153,33 @@ SN：	SN:\s
 拒绝	Decline
 请先勾选并同意《用户协议》《隐私政策》《免责声明》，才能继续使用。	Please check the box to accept the Terms, Privacy Policy and Disclaimer before continuing.
 请阅读并同意《用户协议》《隐私政策》《免责声明》后继续。	Please read and accept the Terms, Privacy Policy and Disclaimer to continue.
+以下条件未满足，暂无法申请注销	The following conditions are not met, so deletion cannot be requested yet
+账号处于正常状态	Account is in normal status
+资产已结清	Assets are settled
+无进行中的注销申请	No deletion request in progress
+已过重新提交间隔	Reapply interval has passed
+无进行中的接诊	No consultation in progress
+账号状态正常，可办理注销	Account status is normal; deletion is available
+当前账号已被封禁	This account is banned
+账号注销处理中	Account deletion is being processed
+账号已注销	Account has been deleted
+账号处于注销可恢复状态	Account is in the recoverable deletion state
+当前账号状态不可注销	The current account status cannot be deleted
+无未提现余额或未结清订单	No unwithdrawn balance or unsettled orders
+存在未提现余额或未结清订单	There is unwithdrawn balance or unsettled orders
+当前没有待处理的注销申请	There is no pending deletion request
+已有进行中的注销申请	A deletion request is already in progress
+距上次恢复不足 24 小时	Less than 24 hours since last recovery
+距上次恢复已超过 24 小时	More than 24 hours since last recovery
+有进行中的接诊，请先完成或等待问诊结束	There is a consultation in progress; finish it or wait until it ends
+资产未结清	Assets not settled
+去钱包提现	Go to wallet to withdraw
+存在未结清资产，请先提现或结清后再申请。	There are unsettled assets; withdraw or settle them before requesting deletion.
+钱包存在未提现余额，请先提现后再申请注销	Your wallet has unwithdrawn balance; withdraw it before requesting deletion
+存在未提现的问诊收入，请先提现后再申请注销	You have unwithdrawn consultation income; withdraw it before requesting deletion
+有正在处理的提现申请，请等待处理完成后再申请注销	A withdrawal is being processed; wait until it completes before requesting deletion
+有未完成的充值订单，请等待订单关闭后再申请注销	You have an unfinished recharge order; wait until it closes before requesting deletion
+存在未结清资产，请先提现或结清后再申请注销	There are unsettled assets; withdraw or settle them before requesting deletion
 同意并继续	Agree and continue
 暂不同意	Not now
 账号注销中	Account deletion in progress

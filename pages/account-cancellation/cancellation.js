@@ -61,7 +61,9 @@ Page({
     sliderVisible: false,
     sliderHint: '按住滑块，拖动到最右侧',
     checking: false,
-    submitting: false
+    submitting: false,
+    // 预检未通过项（intro 页提前展示阻断原因），由 loadChecks 刷新
+    blockChecks: []
   },
 
   onLoad(options) {
@@ -142,6 +144,7 @@ Page({
         }
         this.setData(patch)
         this.refreshHint()
+        this.loadChecks()
       })
       .catch((err) => {
         // 拿不到状态时不展示注销按钮，避免误导提交。
@@ -151,6 +154,16 @@ Page({
   },
 
   /** ---------- 状态 A：申请流 ---------- */
+
+  /** 拉取预检结果，仅保留未通过项在说明页展示；失败不打断主流程。 */
+  loadChecks() {
+    fetchCancellationPrecheck()
+      .then((view) => {
+        const list = view && Array.isArray(view.checks) ? view.checks : []
+        this.setData({ blockChecks: list.filter((c) => c && c.passed === false) })
+      })
+      .catch(() => null)
+  },
 
   onSelectReason(e) {
     const code = Number(e.currentTarget.dataset.code)
@@ -365,9 +378,27 @@ Page({
       return
     }
     if (code === 'ASSET_PENDING') {
+      const reason = (view && view.blockReasonCode) || ''
+      const content = (view && view.blockMessage) || '存在未结清资产，请先提现或结清后再申请。'
+      // 余额/收入/在途提现类可引导去钱包；充值订单与进行中接诊无直达操作，仅提示
+      const canWithdraw = reason === 'BALANCE'
+        || reason === 'INCOME_PENDING'
+        || reason === 'WITHDRAWAL_IN_FLIGHT'
+      if (canWithdraw) {
+        wx.showModal({
+          title: '资产未结清',
+          content,
+          cancelText: '我知道了',
+          confirmText: '去钱包提现',
+          success: (res) => {
+            if (res.confirm) wx.navigateTo({ url: '/pages/wallet/wallet' })
+          }
+        })
+        return
+      }
       wx.showModal({
         title: '资产未结清',
-        content: view.blockMessage || '存在未结清资产，请先提现或结清后再申请。',
+        content,
         showCancel: false,
         confirmText: '我知道了'
       })

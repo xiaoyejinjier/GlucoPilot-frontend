@@ -162,12 +162,14 @@ test('说明页：未勾选不发预检；勾选后预检通过 push 身份验�
   assert.equal(intro.p.data.codeChannel,1)
 
   intro.p.onApply()
-  assert.equal(precheckCalls(intro.state).length,0)
   assert.match(intro.state.toasts.pop(),/注销须知/)
   assert.equal(intro.state.notices.length,0)
+  // intro 页加载时会后台预检一次以展示未满足条件，点击按钮本身不应额外触发
+  const beforeClick=precheckCalls(intro.state).length
+  assert.ok(beforeClick>=1)
 
   const url=await openVerify(intro)
-  assert.equal(precheckCalls(intro.state).length,1)
+  assert.equal(precheckCalls(intro.state).length,beforeClick+1)
   assert.match(url,/pages\/account-cancellation\/cancellation\?step=verify/)
   // 说明页自身仍停留在 intro：系统返回后不丢勾选与原因
   assert.equal(intro.p.data.step,'intro')

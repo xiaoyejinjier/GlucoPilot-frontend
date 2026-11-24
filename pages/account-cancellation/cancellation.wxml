@@ -52,6 +52,15 @@
       </view>
     </view>
 
+    <!-- 预检未通过项：在点击申请前即展示阻断原因，避免用户在验证阶段才被拦下 -->
+    <view wx:if="{{blockChecks.length}}" class="card section-card block-check-card">
+      <text class="section-label">{{i18n.t("以下条件未满足，暂无法申请注销", locale)}}</text>
+      <view wx:for="{{blockChecks}}" wx:key="code" class="block-check-item">
+        <text class="block-check-title">{{i18n.t(item.title, locale)}}</text>
+        <text class="block-check-detail">{{i18n.t(item.detail, locale)}}</text>
+      </view>
+    </view>
+
     <view class="card section-card reason-card">
       <text class="section-label">{{i18n.t("注销原因（选填）", locale)}}</text>
       <view class="reason-row">
