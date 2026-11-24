@@ -1,6 +1,8 @@
 const { login } = require('../../utils/storage')
+const { setToken } = require('../../utils/request')
 const { applyDisplayToCurrentPage, getDisplayStyle } = require('../../utils/display')
-const { wechatLogin, sendSmsCode, phoneLogin, sendEmailCode, emailLogin } = require('../../services/api')
+const { wechatLogin, sendSmsCode, phoneLogin, sendEmailCode, emailLogin,
+  confirmCancelRecovery, isRecoverConfirm } = require('../../services/api')
 const config = require('../../utils/config')
 const accountVault = require('../../utils/account-vault')
 const app = getApp()
@@ -25,7 +27,11 @@ Page({
     emailCode: '',
     emailCooldown: 0,
     hasSavedAccounts: false,
-    agreementChecked: false
+    agreementChecked: false,
+    recoverModalVisible: false,
+    recoverPayload: null,
+    recoverContent: '',
+    recoverSubmitting: false
   },
 
   onLoad() {
@@ -118,6 +124,99 @@ Page({
     wx.reLaunch({ url: '/pages/disclaimer/disclaimer?forced=1' })
   },
 
+  /** 三处登录失败统一入口：冷静期拦截弹二次确认，其余走普通 toast。 */
+  handleLoginFailure(err) {
+    wx.hideLoading()
+    if (this._loginVisible === false) return
+    if (isRecoverConfirm(err)) {
+      this.openCancelRecoverModal(err.body.data)
+      return
+    }
+    wx.showToast({ title: err.message || '登录失败', icon: 'none' })
+  },
+
+  openCancelRecoverModal(payload) {
+    const days = Math.max(1, Number(payload.remainingDays) || 1)
+    const deadline = payload.cancelDeadlineAt ? this.formatDateTime(payload.cancelDeadlineAt) : ''
+    let content = `你的账号正处于注销冷静期（剩余 ${days} 天）`
+    if (deadline) content += `，将于 ${deadline} 到期`
+    content += '。是否撤销注销并登录？'
+    if (payload.willStayDisabled) {
+      content += '\n\n该账号此前已被禁用，恢复登录后仍将保持禁用状态。'
+    }
+    this.setData({
+      recoverModalVisible: true,
+      recoverPayload: payload,
+      recoverContent: content,
+      recoverSubmitting: false
+    })
+  },
+
+  onRecoverConfirm() {
+    if (this.data.recoverSubmitting) return
+    const payload = this.data.recoverPayload
+    if (!payload || !payload.recoverTicket) return this.closeCancelRecoverModal()
+
+    this.setData({ recoverSubmitting: true })
+    wx.showLoading({ title: '恢复中...', mask: true })
+    confirmCancelRecovery(payload.recoverTicket)
+      .then((data) => {
+        wx.hideLoading()
+        this.setData({ recoverModalVisible: false, recoverPayload: null, recoverSubmitting: false })
+        if (data.accountStatus === 0) {
+          wx.showToast({ title: '账号已恢复，但当前处于禁用状态', icon: 'none', duration: 3000 })
+        }
+        this.finishLogin()
+      })
+      .catch((err) => {
+        wx.hideLoading()
+        this.setData({ recoverSubmitting: false })
+        if (err && (err.code === 40001 || err.code === 40100 || err.code === 40900 || err.code === 40901)) {
+          // 票据过期 / 已过反悔期 / 状态已被改变：确认已无意义，关闭并要求重新登录。
+          this.closeCancelRecoverModal()
+          wx.showToast({ title: err.message || '恢复确认已失效，请重新登录', icon: 'none' })
+          return
+        }
+        wx.showToast({ title: err.message || '恢复失败，请重试', icon: 'none' })
+      })
+  },
+
+  onRecoverAbandon() {
+    if (this.data.recoverSubmitting) return
+    this.setData({ recoverModalVisible: false, recoverPayload: null })
+    // 后端不调用任何接口，账号状态保持"注销中"。
+    this.clearLocalSession()
+    if (typeof wx.exitMiniProgram === 'function') {
+      wx.exitMiniProgram({ fail: () => wx.reLaunch({ url: '/pages/login/login' }) })
+    } else {
+      wx.reLaunch({ url: '/pages/login/login' })
+    }
+  },
+
+  clearLocalSession() {
+    try {
+      setToken('')
+      wx.setStorageSync('isLoggedIn', false)
+    } catch (_) { /* 本地缓存不可用时忽略 */ }
+    app.globalData.isLoggedIn = false
+  },
+
+  closeCancelRecoverModal() {
+    this.setData({ recoverModalVisible: false, recoverPayload: null, recoverSubmitting: false })
+  },
+
+  onRecoverMaskTap() { /* 遮罩不可关闭：必须二选一。 */ },
+
+  formatDateTime(timestamp) {
+    const date = new Date(Number(timestamp))
+    if (Number.isNaN(date.getTime())) return ''
+    const pad = n => (n < 10 ? `0${n}` : `${n}`)
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+      + `${pad(date.getHours())}:${pad(date.getMinutes())}`
+  },
+
+  noop() {},
+
   onWechatLogin() {
     if (!this.requireAgreement()) return
     if (!this.checkConnectionSettings()) return
@@ -135,10 +234,7 @@ Page({
             wx.hideLoading()
             this.finishLogin(data)
           })
-          .catch((err) => {
-            wx.hideLoading()
-            wx.showToast({ title: err.message || '登录失败', icon: 'none' })
-          })
+          .catch((err) => this.handleLoginFailure(err))
       },
       fail: (err) => {
         wx.hideLoading()
@@ -240,10 +336,7 @@ Page({
         this.setData({ phonePanel: false, lastLoginPhone: phone, smsCode: '' })
         this.finishLogin(data)
       })
-      .catch((err) => {
-        wx.hideLoading()
-        wx.showToast({ title: err.message || '登录失败', icon: 'none' })
-      })
+      .catch((err) => this.handleLoginFailure(err))
   },
 
   onEmailLogin() {
@@ -315,9 +408,6 @@ Page({
         this.setData({ emailPanel: false })
         this.finishLogin(data)
       })
-      .catch((err) => {
-        wx.hideLoading()
-        wx.showToast({ title: err.message || '登录失败', icon: 'none' })
-      })
+      .catch((err) => this.handleLoginFailure(err))
   }
 })

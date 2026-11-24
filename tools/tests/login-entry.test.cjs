@@ -11,7 +11,7 @@ function createFlow(options = {}) {
     storage: new Map(Object.entries(options.storage || {})),
     route: options.route || 'pages/login/login',
     profile: { disclaimerAgreed: false, disclaimerVersion: '', ...options.profile },
-    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: [], sms:[], invalidated: []
+    routes: [], toasts: [], timers: [], measurements: [], profiles: 0, configs: 0, agreements: 0, logins: [], modals: [], sms:[], invalidated: [], confirms: [], exitCalls: 0
   }
   const token = () => state.storage.get('accessToken') || ''
   const request = { getToken: token, setToken(value) { if (value) state.storage.set('accessToken', value); else state.storage.delete('accessToken') } }
@@ -34,7 +34,15 @@ function createFlow(options = {}) {
     },
     async wechatLogin(code) { state.logins.push(['wechat', code]); request.setToken('new-token'); return { accessToken: token() } },
     async phoneLogin(phone, code) { state.logins.push(['phone', phone, code]); if(options.phoneLoginError)throw options.phoneLoginError; request.setToken('new-token'); return { accessToken: token() } },
-    async sendSmsCode(...args) { state.sms.push(args) }
+    async sendSmsCode(...args) { state.sms.push(args) },
+    async confirmCancelRecovery(ticket) {
+      state.confirms.push(ticket)
+      if (options.confirmError) throw options.confirmError
+      request.setToken('recovered-token')
+      state.storage.set('isLoggedIn', true)
+      return { accessToken: 'recovered-token', accountStatus: options.confirmAccountStatus === undefined ? 1 : options.confirmAccountStatus }
+    },
+    isRecoverConfirm(err) { return !!err && err.code === 40901 && !!(err.body && err.body.data) }
   }
   const wx = {
     getWindowInfo: () => options.windowInfo || { statusBarHeight: 0 },
@@ -48,7 +56,8 @@ function createFlow(options = {}) {
     reLaunch(value) { state.routes.push(value.url); state.route = value.url.split('?')[0].slice(1); if (value.complete) value.complete() },
     switchTab(value) { state.routes.push(value.url); state.route = value.url.slice(1) },
     navigateTo(value) { state.routes.push(value.url) },
-    navigateBack() { state.routes.push('back') }
+    navigateBack() { state.routes.push('back') },
+    exitMiniProgram() { state.exitCalls++ }
   }
   const dependencies = {
     './utils/account-vault': { remember() {}, invalidateToken(token) { if(token)state.invalidated.push(token) }, list: () => [] },
@@ -538,78 +547,109 @@ test('同意失败不启动引导，退出或切换账号后旧引导与跳转�
   assert.equal(app.globalData.navigationGuideToken, '')
 })
 
-/** 冷静期内登录：服务端已恢复并带回 recoveredFromCancellation。 */
-function recoveredFlow(profile = {}) {
-  const flow = createFlow({ profile: { disclaimerAgreed: true, disclaimerVersion: 'v1', accountStatus: 1, ...profile } })
-  flow.app.globalData.isLoggedIn = true
-  flow.request.setToken('current-user')
-  flow.app.globalData.recoveredFromCancellation = true
-  return flow
+/** 冷静期内登录：后端返回 40901 + 一次性票据，前端必须二次确认。 */
+function recoverIntercept(overrides = {}) {
+  return {
+    code: 40901,
+    message: '账号处于注销冷静期，需确认是否恢复',
+    body: {
+      data: {
+        recoverRequired: true,
+        recoverTicket: 'ticket-1',
+        ticketExpireIn: 300,
+        remainingDays: 5,
+        cancelDeadlineAt: Date.UTC(2026, 10, 29, 15, 59),
+        usernameMasked: '张**',
+        phoneMasked: '138****0001',
+        recoverToStatus: 1,
+        willStayDisabled: false,
+        ...overrides
+      }
+    }
+  }
 }
 
-test('登录即恢复：弹一次告知框，点确定后进入主页', async () => {
-  const { app, state } = recoveredFlow()
-  const pending = app.goAfterLogin()
+async function interceptPhoneLogin(flow) {
+  const page = flow.page('login')
+  page.onPhoneLogin()
+  page.onPhoneInput({ detail: { value: '13800000001' } })
+  page.onSmsInput({ detail: { value: '123456' } })
+  page.onConfirmPhoneLogin()
   await flush()
-  assert.equal(state.modals.length, 1)
-  const modal = state.modals[0]
-  assert.equal(modal.title, '账号已恢复')
-  assert.match(modal.content, /本次登录已自动终止注销申请，账号已恢复正常/)
-  assert.match(modal.content, /本次恢复 24 小时后重新提交/)
-  assert.match(modal.content, /重新提交后 7 天内请勿登录/)
-  assert.equal(modal.confirmText, '我知道了，恢复账号')
-  // 单按钮纯告知：关掉弹窗不影响恢复结果，也不阻断后续路由
-  assert.equal(modal.showCancel, false)
-  assert.equal(state.routes.length, 0)
-  modal.complete({ confirm: true })
-  await pending
-  assert.equal(state.routes.at(-1), '/pages/ai/ai')
+  return page
+}
+
+test('冷静期内登录被拦截：展示二次确认弹窗且不下发 Token', async () => {
+  const flow = createFlow({ phoneLoginError: recoverIntercept() })
+  const page = await interceptPhoneLogin(flow)
+
+  assert.equal(page.data.recoverModalVisible, true)
+  assert.match(page.data.recoverContent, /剩余 5 天/)
+  assert.match(page.data.recoverContent, /是否撤销注销并登录/)
+  assert.equal(page.data.recoverPayload.recoverTicket, 'ticket-1')
+  assert.equal(page.data.recoverSubmitting, false)
+  assert.equal(flow.state.storage.has('accessToken'), false)
+  assert.equal(flow.state.confirms.length, 0)
 })
 
-test('登录即恢复：直接关闭弹窗同样恢复生效并继续进入主页', async () => {
-  const { app, state } = recoveredFlow()
-  const pending = app.goAfterLogin()
-  await flush()
-  state.modals[0].complete({ confirm: false, cancel: true })
-  await pending
-  assert.equal(state.routes.at(-1), '/pages/ai/ai')
-  assert.equal(app.globalData.isLoggedIn, true)
-})
+test('确认恢复：消费一次性票据、关闭弹窗并按正常流程登录', async () => {
+  const flow = createFlow({ phoneLoginError: recoverIntercept() })
+  const page = await interceptPhoneLogin(flow)
+  flow.app.goAfterLogin = () => { flow.state.routes.push('/pages/ai/ai') }
 
-test('登录即恢复：提示只弹一次，同一次登录后续路由不再重复', async () => {
-  const { app, state } = recoveredFlow()
-  const first = app.goAfterLogin()
+  page.onRecoverConfirm()
+  assert.equal(page.data.recoverSubmitting, true)
   await flush()
-  state.modals[0].complete({ confirm: true })
-  await first
-  assert.equal(state.modals.length, 1)
-  // 标记已被消费：再次进入登录后流程不再弹恢复提示
-  await app.goAfterLogin()
-  assert.equal(state.modals.length, 1)
-  assert.equal(state.routes.at(-1), '/pages/ai/ai')
-})
 
-test('未触发恢复时不弹恢复提示，直接进入主页', async () => {
-  const flow = createFlow({ profile: { disclaimerAgreed: true, disclaimerVersion: 'v1', accountStatus: 1 } })
-  flow.app.globalData.isLoggedIn = true
-  flow.request.setToken('current-user')
-  flow.app.globalData.recoveredFromCancellation = false
-  await flow.app.goAfterLogin()
-  assert.equal(flow.state.modals.length, 0)
+  assert.deepEqual(flow.state.confirms, ['ticket-1'])
+  assert.equal(page.data.recoverModalVisible, false)
+  assert.equal(flow.state.storage.get('accessToken'), 'recovered-token')
   assert.equal(flow.state.routes.at(-1), '/pages/ai/ai')
 })
 
-test('恢复后仍为禁用账号：先告知已恢复，再进入封禁提示页', async () => {
-  const { app, state } = recoveredFlow({ accountStatus: 0 })
-  const pending = app.goAfterLogin()
+test('禁用账号恢复：提示恢复后仍为禁用，并继续进入封禁提示页', async () => {
+  const flow = createFlow({
+    phoneLoginError: recoverIntercept({ willStayDisabled: true, recoverToStatus: 0 }),
+    confirmAccountStatus: 0
+  })
+  const page = await interceptPhoneLogin(flow)
+  assert.match(page.data.recoverContent, /仍将保持禁用状态/)
+
+  flow.app.goAfterLogin = () => { flow.state.routes.push('/pages/account-disabled/account-disabled') }
+  page.onRecoverConfirm()
   await flush()
-  assert.equal(state.modals.length, 1)
-  assert.equal(state.modals[0].title, '账号已恢复')
-  state.modals[0].complete({ confirm: true })
-  await pending
-  // 封禁账号不可自助注销：不再弹原生选项，直接进入封禁提示页
-  assert.equal(state.modals.length, 1)
-  assert.equal(state.routes.at(-1), '/pages/account-disabled/account-disabled')
+
+  assert.ok(flow.state.toasts.some(t => t.title === '账号已恢复，但当前处于禁用状态'))
+  assert.equal(flow.state.routes.at(-1), '/pages/account-disabled/account-disabled')
+})
+
+test('放弃恢复：不调用恢复接口、清本地会话并退出小程序', async () => {
+  const flow = createFlow({ storage: { accessToken: 'stale-token' }, phoneLoginError: recoverIntercept() })
+  const page = await interceptPhoneLogin(flow)
+
+  page.onRecoverAbandon()
+
+  assert.equal(flow.state.exitCalls, 1)
+  assert.equal(flow.state.confirms.length, 0)
+  assert.equal(flow.state.storage.has('accessToken'), false)
+  assert.equal(page.data.recoverModalVisible, false)
+})
+
+test('确认恢复票据失效：关闭弹窗并提示重新登录，不进入登录态', async () => {
+  const flow = createFlow({
+    phoneLoginError: recoverIntercept(),
+    confirmError: Object.assign(new Error('恢复确认已失效，请重新登录'), { code: 40001 })
+  })
+  const page = await interceptPhoneLogin(flow)
+
+  page.onRecoverConfirm()
+  await flush()
+
+  assert.deepEqual(flow.state.confirms, ['ticket-1'])
+  assert.equal(page.data.recoverModalVisible, false)
+  assert.equal(page.data.recoverSubmitting, false)
+  assert.equal(flow.state.storage.has('accessToken'), false)
+  assert.ok(flow.state.toasts.some(t => /重新登录/.test(t.title)))
 })
 
 test('封禁账号直接登录进入封禁提示页，不再弹原生注销选项', async () => {

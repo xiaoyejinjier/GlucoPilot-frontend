@@ -109,21 +109,25 @@ function mapFood(f, categoryName) {
 }
 
 /** ---------- auth ---------- */
-// 登录响应可能带回"本次登录顺带撤销了注销申请"，暂存到全局供 goAfterLogin 弹提示。
-function rememberRecovered(data) {
-  try {
-    const app = typeof getApp === 'function' ? getApp() : null
-    if (app && app.globalData) {
-      app.globalData.recoveredFromCancellation = !!(data && data.recoveredFromCancellation)
-    }
-  } catch (_) { /* 非小程序环境（测试）忽略 */ }
+// 冷静期登录拦截：后端不下发 Token，只返回一次性票据与脱敏信息。
+const RECOVER_CONFIRM_CODE = 40901
+
+function isRecoverConfirm(err) {
+  return !!err && err.code === RECOVER_CONFIRM_CODE && !!(err.body && err.body.data)
+}
+
+function confirmCancelRecovery(ticket) {
+  return post('/auth/cancel-recovery/sessions', { ticket }, { auth: false, timeout: 15000 }).then((data) => {
+    setToken(data.accessToken)
+    wx.setStorageSync('isLoggedIn', true)
+    return data
+  })
 }
 
 function wechatLogin(code) {
   return post('/auth/wechat/sessions', { code }, { auth: false, timeout: 15000 }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
-    rememberRecovered(data)
     return data
   })
 }
@@ -136,7 +140,6 @@ function phoneLogin(phone, smsCode) {
   return post('/auth/phone/sessions', { phone, smsCode }, { auth: false, timeout: 15000 }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
-    rememberRecovered(data)
     return data
   })
 }
@@ -149,7 +152,6 @@ function emailLogin(email, emailCode) {
   return post('/auth/email/sessions', { email, emailCode }, { auth: false }).then((data) => {
     setToken(data.accessToken)
     wx.setStorageSync('isLoggedIn', true)
-    rememberRecovered(data)
     return data
   })
 }
@@ -770,6 +772,8 @@ module.exports = {
   phoneLogin,
   sendEmailCode,
   emailLogin,
+  confirmCancelRecovery,
+  isRecoverConfirm,
   logoutRemote,
   fetchBanners,
   fetchNews,

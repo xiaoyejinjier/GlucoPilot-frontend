@@ -61,3 +61,9 @@
 .phone-panel .btn-primary{background:var(--navy);flex-shrink:0}
 .phone-panel .btn-ghost{flex-shrink:0}
 @media(max-height:740px){.login-screen{padding-top:16rpx}.login-hero{padding-bottom:68rpx}.login-intro{padding-top:28rpx}.login-illustration{min-height:158rpx;margin:20rpx 0 14rpx}.login-journal{height:158rpx;padding:18rpx 26rpx}.journal-chart,.journal-curve{height:68rpx}.journal-bars{margin-top:6rpx}.login-panel{padding-top:42rpx;padding-bottom:36rpx}.login-wechat{margin-top:32rpx}.login-alternatives{gap:18rpx;margin-top:18rpx}.login-footer{padding-top:24rpx;padding-bottom:28rpx}}
+.recover-mask{position:fixed;left:0;top:0;right:0;bottom:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:48rpx;background:rgba(17,24,39,.45)}
+.recover-dialog{width:100%;max-width:620rpx;box-sizing:border-box;padding:48rpx 40rpx 32rpx;border-radius:28rpx;background:#fff}
+.recover-title{display:block;font-size:var(--fs-title,34rpx);font-weight:600;line-height:1.5;text-align:center;color:var(--ink)}
+.recover-content{display:block;margin-top:24rpx;color:var(--muted);font-size:var(--fs-body,28rpx);line-height:1.7;white-space:pre-wrap;word-break:break-all}
+.recover-dialog .recover-primary{margin-top:40rpx;background:var(--navy);flex-shrink:0}
+.recover-dialog .recover-secondary{margin-top:12rpx;flex-shrink:0}

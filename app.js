@@ -20,8 +20,6 @@ App({
     disclaimerCurrentVersion: '',
     navigationGuideToken: '',
     unreadCount: 0,
-    /** 登录响应带回：本次登录已撤销注销申请，进入主导航前需提示一次。 */
-    recoveredFromCancellation: false,
     /** 只读调试信息：真机当前实际请求的 API 地址。 */
     apiBaseUrl: config.baseUrl,
     /** 拍照页传给确认页的临时图，避免 URL 传路径导致黑屏 */
@@ -94,7 +92,6 @@ App({
     this.globalData.pendingGlucoseOcr = null
     this.globalData.pendingLoginPhone = ''
     this.globalData.accountSwitchFlow = false
-    this.globalData.recoveredFromCancellation = false
   },
 
   // 所有鉴权请求（含静默通知轮询）共用失效处理，避免旧终端卡在加载或继续显示账号缓存。
@@ -188,27 +185,20 @@ App({
       })
   },
 
-  /** 登录完成后的唯一去向：恢复提示/禁用拦截优先，其次免责声明，否则进入记录页。 */
+  /** 登录完成后的唯一去向：禁用拦截优先，其次免责声明，否则进入记录页。 */
   goAfterLogin() {
     const token = getToken()
-    const recovered = !!this.globalData.recoveredFromCancellation
-    this.globalData.recoveredFromCancellation = false
     return this.syncProfile()
       .then((state) => {
         if (getToken() !== token || !this.globalData.isLoggedIn) return null
         const status = state.userInfo && state.userInfo.accountStatus
-        const proceed = () => {
-          if (status === 0) return this.interceptDisabledLogin()
-          if (state.needsDisclaimer) {
-            this.openRequiredDisclaimer()
-          } else {
-            wx.switchTab({ url: '/pages/ai/ai' })
-          }
-          return state
+        if (status === 0) return this.interceptDisabledLogin()
+        if (state.needsDisclaimer) {
+          this.openRequiredDisclaimer()
+        } else {
+          wx.switchTab({ url: '/pages/ai/ai' })
         }
-        // 本次登录在服务端已顺带撤销注销：先告知用户，再按正常流程继续
-        if (recovered) return this.showCancellationRecoveredModal().then(proceed)
-        return proceed()
+        return state
       })
       .catch((error) => {
         if ((error && error.sessionHandled) || (getToken() && getToken() !== token)) return null
@@ -218,25 +208,6 @@ App({
         wx.showToast({ title: (error && error.code === 40100) ? '登录已失效，请重新登录' : '资料获取失败，请重试登录', icon: 'none' })
         return null
       })
-  },
-
-  /**
-   * 冷静期内登录即恢复：服务端已在登录事务内撤销注销，前端只做告知。
-   * 点【确定】仅关闭提示，不影响恢复结果。
-   */
-  showCancellationRecoveredModal() {
-    return new Promise((resolve) => {
-      wx.showModal({
-        title: '账号已恢复',
-        content: '检测到您已成功登录，本次登录已自动终止注销申请，账号已恢复正常。'
-          + '如需继续注销，请于本次恢复 24 小时后重新提交；重新提交后 7 天内请勿登录，'
-          + '到期后账号将永久注销且不可恢复。',
-        confirmText: '我知道了，恢复账号',
-        showCancel: false,
-        confirmColor: '#0969da',
-        complete: () => resolve(null)
-      })
-    })
   },
 
   /** 退出当前会话：撤销远程会话、清账号级缓存并回登录页。 */

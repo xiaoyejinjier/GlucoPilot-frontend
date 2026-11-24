@@ -49,4 +49,13 @@
     <button class="btn-primary btn-block ui-interactive" bindtap="onConfirmEmailLogin" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("登录", locale)}}</button>
     <button class="btn-ghost btn-block btn-sm ui-interactive" bindtap="onCloseEmailPanel" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("取消", locale)}}</button>
   </view>
+
+  <view class="recover-mask" wx:if="{{recoverModalVisible}}" catchtouchmove="noop" catchtap="onRecoverMaskTap">
+    <view class="recover-dialog" catchtap="noop">
+      <text class="recover-title">{{i18n.t("账号注销中", locale)}}</text>
+      <text class="recover-content">{{recoverContent}}</text>
+      <button class="btn-primary btn-block ui-interactive recover-primary" loading="{{recoverSubmitting}}" disabled="{{recoverSubmitting}}" bindtap="onRecoverConfirm" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("恢复账号并登录", locale)}}</button>
+      <button class="btn-ghost btn-block btn-sm ui-interactive recover-secondary" disabled="{{recoverSubmitting}}" bindtap="onRecoverAbandon" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90" hover-stop-propagation="{{true}}">{{i18n.t("继续注销并退出", locale)}}</button>
+    </view>
+  </view>
 </view>
