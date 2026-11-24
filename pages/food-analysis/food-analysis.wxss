@@ -283,6 +283,19 @@
 .analysis-rule { display: block; margin-top: 6rpx; font-size: var(--fs-small); color: var(--muted); }
 .analysis-disclaimer { display: block; margin-top: 6rpx; font-size: var(--fs-small); color: var(--muted); line-height: 1.5; }
 
+/* 重点关注（单项 HIGH 元凶标记，只标注不改整餐档位） */
+.focus-lines { margin-top: 8rpx; display: flex; flex-direction: column; gap: 4rpx; }
+.focus-line { font-size: var(--fs-small); color: #a52a22; line-height: 1.5; }
+
+/* 分析依据逐项明细 */
+.basis-row { display: flex; flex-direction: column; gap: 2rpx; margin-top: 10rpx; padding-top: 10rpx; border-top: 1rpx solid rgba(0, 0, 0, 0.05); }
+.basis-head { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
+.basis-name { font-size: var(--fs-small); color: var(--text); font-weight: 600; }
+.basis-line { font-size: var(--fs-small); color: var(--muted); line-height: 1.5; }
+.basis-note { font-size: var(--fs-small); color: var(--muted); }
+.basis-focus { font-size: var(--fs-small); color: #a52a22; line-height: 1.5; }
+.basis-missing { font-size: var(--fs-small); color: #6b7a76; line-height: 1.5; }
+
 /* 识别的食物与营养 */
 .head-actions { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
 

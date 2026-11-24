@@ -73,6 +73,8 @@ Page({
     previewError: '',
     tierCounts: { LOW: 0, MODERATE: 0, HIGH: 0, UNKNOWN: 0 },
     analysisSub: '',
+    focusLines: [],
+    basisItems: [],
     adviceItems: [],
     adviceTitle: '逐项建议',
     adviceToggleLabel: '',
@@ -354,7 +356,7 @@ Page({
     else {
       this._previewVersion = (this._previewVersion || 0) + 1
       this.setData({ preview: null, previewError: '', previewLoading: false,
-        tierCounts: { ...EMPTY_TIER_COUNTS }, analysisSub: '', adviceItems: [],
+        tierCounts: { ...EMPTY_TIER_COUNTS }, analysisSub: '', focusLines: [], basisItems: [], adviceItems: [],
         adviceTitle: '逐项建议', adviceToggleLabel: '' })
     }
   },
@@ -393,7 +395,7 @@ Page({
       if (!this._alive || version !== this._previewVersion) return
       this.setData({ preview: null, previewLoading: false,
         previewError: (error && error.message) || '分析暂不可用，可稍后重试',
-        tierCounts: { ...EMPTY_TIER_COUNTS }, analysisSub: '', adviceItems: [],
+        tierCounts: { ...EMPTY_TIER_COUNTS }, analysisSub: '', focusLines: [], basisItems: [], adviceItems: [],
         adviceTitle: '逐项建议', adviceToggleLabel: '' })
     }
   },
@@ -411,6 +413,10 @@ Page({
     else if (preview.tier === 'MODERATE') analysisSub = (namesOf('MODERATE') ? namesOf('MODERATE') + '：' : '') + '需要控制份量，先吃蔬菜和蛋白质'
     else if (preview.tier === 'LOW') analysisSub = '所选食物升糖负担都在可控范围'
     else analysisSub = '补充食物重量或改用食品库食物后可评估'
+    // 重点关注：单项 HIGH 的元凶标记（后端 focusItems，文案已定稿），只标注不改整餐档位
+    const focusLines = (preview && Array.isArray(preview.focusItems) ? preview.focusItems : [])
+      .filter((focus) => focus && focus.text)
+      .map((focus) => focus.text)
     const active = filter || ''
     const shown = active ? list.filter((item) => item.tier === active) : list
     // 逐项建议按“需要注意”优先排序：HIGH → MODERATE → LOW → UNKNOWN，同档保持识别顺序
@@ -424,9 +430,28 @@ Page({
           adviceLine: stripTierPrefix(adviceText, tierLabel) }
       })
       .sort((a, b) => (rank[a.tier] == null ? 3 : rank[a.tier]) - (rank[b.tier] == null ? 3 : rank[b.tier]))
+    // 分析依据：每项判定依据（档位、规则、GI 来源、缺失字段、重点关注），数据全部来自后端
+    const basisItems = list.map((item) => {
+      const tier = item.tier || 'UNKNOWN'
+      const missing = Array.isArray(item.missingFields) && item.missingFields.length
+        ? '缺少' + item.missingFields.join('、') : ''
+      return {
+        foodName: item.foodName,
+        tier,
+        tierLabel: item.tierLabel || TIER_LABELS[tier] || TIER_LABELS.UNKNOWN,
+        ruleCode: item.ruleCode || '',
+        giSourceText: item.giSource === 'CLIENT' ? 'GI 为输入值' : (item.giSource === 'LIBRARY' ? 'GI 取自营养库' : ''),
+        giLowNote: item.giReliability === 'LOW' ? '与库值差异较大，结果仅供参考' : '',
+        focused: item.focused === true,
+        focusLabel: item.focusReason === 'PORTION' ? '份量偏大' : '升糖负担高',
+        missingText: missing
+      }
+    })
     return {
       tierCounts,
       analysisSub,
+      focusLines,
+      basisItems,
       adviceItems,
       adviceTitle: '逐项建议' + (active ? ' · ' + (TIER_LABELS[active] || '') : ''),
       adviceToggleLabel: open ? '收起' : '展开 ' + adviceItems.length + ' 项',

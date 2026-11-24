@@ -43,11 +43,14 @@
   <view wx:if="{{phase === 'ready'}}" class="card analysis-card">
     <view class="card-head">
       <text class="section-title">{{i18n.t("食物分析", locale)}}</text>
-      <text class="analysis-chip">{{i18n.t("按食物类别评估", locale)}}</text>
+      <text class="analysis-chip">{{i18n.t("按升糖负荷评估", locale)}}</text>
     </view>
     <view class="meal-verdict verdict-{{preview ? preview.tier : 'UNKNOWN'}}">
       <text class="mv-tier">{{i18n.t((preview ? preview.tierLabel : (previewLoading ? '分析中，请稍候…' : '暂无法分析')), locale)}}</text>
       <text wx:if="{{analysisSub}}" class="mv-sub">{{i18n.t((analysisSub), locale)}}</text>
+    </view>
+    <view wx:if="{{focusLines.length}}" class="focus-lines">
+      <text wx:for="{{focusLines}}" wx:key="*this" class="focus-line">{{i18n.t((item), locale)}}</text>
     </view>
     <text wx:if="{{previewError}}" class="recognition-tip">{{previewError}}</text>
     <view class="rate-sum">
@@ -100,6 +103,15 @@
       </view>
       <view wx:if="{{ruleBasisOpen}}" class="basis-body">
         <text class="analysis-disclaimer">{{i18n.t((preview && preview.disclaimer ? preview.disclaimer : ''), locale)}}</text>
+        <view wx:for="{{basisItems}}" wx:key="foodName" class="basis-row">
+          <view class="basis-head">
+            <text class="basis-name">{{item.foodName}}</text>
+            <text class="analysis-item-tier tier-{{item.tier}}">{{i18n.t((item.tierLabel), locale)}}</text>
+          </view>
+          <text class="basis-line">{{i18n.t("依据规则", locale)}} {{item.ruleCode || '—'}}<text wx:if="{{item.giSourceText}}" class="basis-note"> · {{i18n.t((item.giSourceText), locale)}}</text><text wx:if="{{item.giLowNote}}" class="basis-note"> · {{i18n.t((item.giLowNote), locale)}}</text></text>
+          <text wx:if="{{item.focused}}" class="basis-focus">{{i18n.t("重点关注", locale)}} · {{i18n.t((item.focusLabel), locale)}}</text>
+          <text wx:if="{{item.missingText}}" class="basis-missing">{{i18n.t((item.missingText), locale)}}</text>
+        </view>
         <text wx:if="{{preview && preview.ruleVersion}}" class="analysis-rule">{{i18n.t("规则版本", locale)}} {{preview.ruleVersion}}</text>
       </view>
     </view>
