@@ -517,6 +517,23 @@ function fetchDeviceSyncLogs(deviceId, limit) {
 }
 
 /**
+ * 本人某次同步的血糖样本快照（只读曲线）。
+ * @param {string|number} deviceId
+ * @param {string|number} logId
+ */
+function fetchDeviceSyncSamples(deviceId, logId) {
+  return get(`/devices/${deviceId}/sync-logs/${logId}/samples`, null, { auth: true }).then((data) => ({
+    syncedAt: data && data.syncedAt ? String(data.syncedAt).replace('T', ' ').slice(0, 19) : '',
+    sampleCount: data && data.sampleCount != null ? Number(data.sampleCount) : 0,
+    points: ((data && data.points) || []).map((row) => ({
+      recordedAt: row.recordedAt || '',
+      nodeCode: row.nodeCode || '',
+      glucoseValue: row.glucoseValue == null ? null : Number(row.glucoseValue)
+    }))
+  }))
+}
+
+/**
  * 设备同步总线：上传厂商/入口 raw payload。
  * @param {{ provider: string, deviceSn?: string, payload: object|array }} opts
  */
@@ -807,6 +824,7 @@ module.exports = {
   bindDevice,
   unbindDevice,
   fetchDeviceSyncLogs,
+  fetchDeviceSyncSamples,
   syncDeviceGlucose,
   fetchHuaweiAuthorizeUrl,
   fetchDeviceCloudAuth,

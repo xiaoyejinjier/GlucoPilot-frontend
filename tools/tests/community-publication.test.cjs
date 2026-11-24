@@ -399,9 +399,11 @@ test('发文页点＋进入全部标签页，首页官方默认常用，编辑�
 
 test('移出常用后首页话题栏同步隐藏，加回后恢复且＋始终保留',async()=>{
   const tags=[{code:'diet',name:'饮食控糖',type:'OFFICIAL'},{code:'other',name:'其他',type:'OFFICIAL'},{code:'custom_breakfast',name:'早餐搭配',type:'USER'}]
-  const manager=page('community-tags',{fetchCommunityTags:async()=>tags,fetchMyCommunityTags:async()=>[]},{mode:'browse'})
+  const manager=page('community-tags',{fetchCommunityTags:async()=>tags,fetchMyCommunityTags:async()=>[{code:'custom_breakfast',name:'早餐搭配',type:'USER',enabled:1}]},{mode:'browse'})
   await flush()
   assert.deepEqual(Array.from(manager.page.data.frequentTags,t=>t.code).filter(Boolean).sort(),['diet','other'])
+  assert.equal(manager.page.data.catalogTags.some(t=>t.type==='USER'||t.deletable||String(t.code||'').startsWith('custom_')),false)
+  assert.equal(fs.readFileSync(path.join(root,'pages/community-tags/community-tags.wxml'),'utf8').includes('wx:if="{{mode === \'pick\'}}"'),true)
   manager.page.onRemoveFrequent({currentTarget:{dataset:{key:'c:diet'}}});await flush()
   assert.equal(manager.page.data.frequentTags.some(t=>t.code==='diet'),false)
   const feed=page('index',{fetchCommunityTags:async()=>tags},{storage:manager.state.storage});await flush()

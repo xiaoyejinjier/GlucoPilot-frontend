@@ -26,7 +26,7 @@
     <view class="catalog-section">
       <view class="section-head">
         <text class="section-title">{{i18n.t("全部标签", locale)}}</text>
-        <text class="section-note">{{i18n.t("含社区首页话题与自建标签", locale)}}</text>
+        <text class="section-note">{{i18n.t(mode === 'pick' ? '含官方话题与自建标签' : '与社区首页官方话题一致', locale)}}</text>
       </view>
       <view wx:if="{{!catalogTags.length}}" class="tags-empty">{{i18n.t("暂时没有可用标签", locale)}}</view>
       <view wx:else class="tag-grid">
@@ -41,7 +41,7 @@
       </view>
     </view>
 
-    <view class="editor-card">
+    <view wx:if="{{mode === 'pick'}}" class="editor-card">
       <text class="editor-title">{{i18n.t("添加自定义", locale)}}</text>
       <view class="editor-row">
         <input value="{{input}}" maxlength="16" placeholder="{{i18n.t('标签名称，最多16字', locale)}}" bindinput="onInput" bindconfirm="onSave" confirm-type="done" />

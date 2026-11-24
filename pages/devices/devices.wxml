@@ -131,7 +131,91 @@
       <view wx:if="{{syncLogsExpanded}}" class="sync-log-panel">
         <text wx:if="{{syncLogsLoading}}" class="sync-log-empty">{{i18n.t("加载中…", locale)}}</text>
         <block wx:elif="{{syncLogs.length}}">
-          <view wx:for="{{syncLogs}}" wx:key="id" class="sync-log-item">
+          <view class="sync-sample-card">
+            <view class="sync-sample-head">
+              <text class="sync-sample-title">{{i18n.t("同步血糖统计", locale)}}</text>
+              <text wx:if="{{syncSampleSyncedAt}}" class="sync-sample-sub">{{syncSampleSyncedAt}}</text>
+            </view>
+            <view class="sync-sample-stats">
+              <view class="sync-sample-stat">
+                <text class="sync-sample-stat-value">{{syncSampleStats.count}}</text>
+                <text class="sync-sample-stat-label">{{i18n.t("样本数", locale)}}</text>
+              </view>
+              <view class="sync-sample-stat">
+                <text class="sync-sample-stat-value">{{syncSampleStats.avgText}}</text>
+                <text class="sync-sample-stat-label">{{i18n.t("均值", locale)}}</text>
+              </view>
+              <view class="sync-sample-stat">
+                <text class="sync-sample-stat-value">{{syncSampleStats.minText}}</text>
+                <text class="sync-sample-stat-label">{{i18n.t("最低", locale)}}</text>
+              </view>
+              <view class="sync-sample-stat">
+                <text class="sync-sample-stat-value">{{syncSampleStats.maxText}}</text>
+                <text class="sync-sample-stat-label">{{i18n.t("最高", locale)}}</text>
+              </view>
+            </view>
+            <view class="sync-sample-chart-wrap">
+              <view class="sync-sample-line">
+                <text class="sync-sample-unit">{{syncSampleChart.unit}}</text>
+                <view class="sync-sample-y-labels">
+                  <text
+                    wx:for="{{syncSampleChart.yTicks}}"
+                    wx:key="label"
+                    class="sync-sample-y-label"
+                    style="top: {{item.top}}%;"
+                  >{{item.label}}</text>
+                </view>
+                <view class="sync-sample-plot">
+                  <view class="sync-sample-axis-y"></view>
+                  <view class="sync-sample-axis-x"></view>
+                  <view
+                    wx:for="{{syncSampleChart.grid}}"
+                    wx:key="top"
+                    class="sync-sample-grid"
+                    style="top: {{item.top}}%;"
+                  ></view>
+                  <view
+                    wx:for="{{syncSampleChart.segments}}"
+                    wx:key="index"
+                    class="sync-sample-seg"
+                    style="left: {{item.left}}%; top: {{item.top}}%; width: {{item.width}}%; transform: rotate({{item.angle}}deg); background: {{syncSampleChart.brand}};"
+                  ></view>
+                  <view
+                    wx:for="{{syncSampleChart.points}}"
+                    wx:key="index"
+                    class="sync-sample-dot"
+                    style="left: {{item.left}}%; top: {{item.top}}%; background: {{item.color}};"
+                  ></view>
+                </view>
+                <view class="sync-sample-x-labels">
+                  <text
+                    wx:for="{{syncSampleChart.points}}"
+                    wx:key="index"
+                    wx:if="{{item.showLabel}}"
+                    class="sync-sample-x-label"
+                    style="left: {{item.left}}%;"
+                  >{{item.label}}</text>
+                </view>
+              </view>
+              <view wx:if="{{syncSampleLoading}}" class="sync-sample-mask">
+                <text class="sync-log-empty">{{i18n.t("曲线加载中…", locale)}}</text>
+              </view>
+              <view wx:elif="{{syncSampleError}}" class="sync-sample-mask">
+                <text class="sync-log-empty">{{i18n.t((syncSampleError), locale)}}</text>
+              </view>
+              <view wx:elif="{{syncSampleEmpty}}" class="sync-sample-mask">
+                <text class="sync-log-empty">{{i18n.t("该次同步暂无血糖快照（历史流水不回填）", locale)}}</text>
+              </view>
+            </view>
+          </view>
+          <text class="sync-log-hint">{{i18n.t("点击下方某次同步查看对应曲线", locale)}}</text>
+          <view
+            wx:for="{{syncLogs}}"
+            wx:key="id"
+            class="sync-log-item {{selectedSyncLogId === item.id ? 'sync-log-item-active' : ''}}"
+            data-id="{{item.id}}"
+            catchtap="onSelectSyncLog"
+          >
             <text class="sync-log-time">{{item.syncedAt}}</text>
             <text class="sync-log-meta">{{item.provider}} · {{i18n.t("样本", locale)}} {{item.sampleCount}} · {{i18n.t("新建", locale)}} {{item.createdCount}}</text>
             <text wx:if="{{item.remark}}" class="sync-log-remark">{{item.remark}}</text>
