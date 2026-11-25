@@ -67,11 +67,13 @@ Page({
   },
 
   onUseManual() {
-    this.setData({ manualEdit: true, value: '' })
+    if (this.data.busy) return
+    // 直接编辑当前数值，保留识别结果供用户修正。
+    this.setData({ manualEdit: true })
   },
 
   onAcceptRecognized() {
-    if (!this.data.recognizedValue) return
+    if (this.data.busy || this.data.manualEdit || !this.data.recognizedValue) return
     this.setData({ manualEdit: false, value: this.data.recognizedValue }, () => this.onConfirm())
   },
 

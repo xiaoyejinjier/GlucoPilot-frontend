@@ -2291,3 +2291,11 @@ SN：	SN:\s
 按升糖负荷评估	Assess by glycemic load
 依据规则	Rules applied
 重点关注	Key concerns
+同步血糖统计	Synced glucose statistics
+样本数	Samples
+均值	Average
+最低	Minimum
+最高	Maximum
+曲线加载中…	Loading chart…
+该次同步暂无血糖快照（历史流水不回填）	No glucose snapshot is available for this sync. Historical logs are not backfilled.
+点击下方某次同步查看对应曲线	Select a sync below to view its chart.

@@ -43,11 +43,18 @@
   font-weight: 800;
 }
 
+.ocr-value-row {
+  display: flex;
+  align-items: center;
+  min-height: 72rpx;
+  gap: 12rpx;
+}
+
 .ocr-unit {
   color: var(--muted);
   font-size: var(--fs-small);
   font-weight: 700;
-  margin-left: 12rpx;
+  flex-shrink: 0;
 }
 
 .ocr-confidence,
@@ -72,36 +79,24 @@
 
 .btn-choice {
   flex: 1;
+  width: 0;
+  min-width: 0;
   margin: 0;
   padding: 0 12rpx;
   font-size: var(--fs-small);
 }
 
-.value-box {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  border: 2rpx solid var(--brand);
-  border-radius: 20rpx;
-  padding: 12rpx 20rpx;
-  background: #f7fff9;
-}
-
-.value-num {
-  font-size: var(--fs-hero);
-  font-weight: 800;
-  flex: 1;
+.confirm-hint {
+  display: block;
+  margin-top: 12rpx;
 }
 
 .value-input {
+  width: 0;
+  min-width: 0;
+  color: var(--brand);
   font-size: var(--fs-hero);
   font-weight: 800;
   flex: 1;
   height: 72rpx;
-}
-
-.value-unit {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: var(--fs-small);
 }
