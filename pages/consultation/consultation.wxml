@@ -21,9 +21,9 @@
   <view class="consult-heading square-heading">
     <text class="consult-title">{{i18n.t('求助广场',locale)}}</text>
     <view class="square-heading-actions">
-      <view class="hide-mine-toggle {{hideMine ? 'is-selected' : ''}}" bindtap="onToggleHideMine" hover-class="ui-pressed" aria-role="checkbox" aria-checked="{{hideMine}}" aria-label="{{i18n.t('隐藏我的求助',locale)}}">
-        <view class="hide-mine-check" aria-hidden="true"><view wx:if="{{hideMine}}" class="hide-mine-tick"></view></view>
-        <text class="hide-mine-label">{{i18n.t('隐藏我的求助',locale)}}</text>
+      <view class="square-filter-trigger {{filterCount ? 'is-active' : ''}}" bindtap="onOpenFilters" hover-class="ui-pressed" aria-role="button" aria-label="{{i18n.t('筛选求助',locale)}}" aria-expanded="{{filterOpen}}">
+        <view class="square-filter-icon" aria-hidden="true"><view/><view/><view/></view>
+        <text>{{i18n.t('筛选',locale)}}</text><text wx:if="{{filterCount}}" class="square-filter-count">{{filterCount}}</text>
       </view>
     </view>
   </view>
@@ -36,16 +36,17 @@
     </scroll-view>
     <button class="topic-manage" bindtap="onManageTopics" hover-class="ui-pressed" aria-label="{{i18n.t('全部标签',locale)}}"><view class="topic-grid-icon"><view/><view/><view/><view/></view></button>
   </view>
-  <view wx:if="{{doctorApproved}}" class="consult-status-filters">
-    <button class="consult-status-button {{!unclaimedOnly ? 'selected' : ''}} ui-interactive" data-filter="all" bindtap="onUnclaimedFilter" aria-pressed="{{!unclaimedOnly}}" hover-class="ui-pressed">{{i18n.t('全部求助',locale)}}</button>
-    <button class="consult-status-button {{unclaimedOnly ? 'selected' : ''}} ui-interactive" data-filter="unclaimed" bindtap="onUnclaimedFilter" aria-pressed="{{unclaimedOnly}}" hover-class="ui-pressed">{{i18n.t('未接诊',locale)}}</button>
+  <view wx:if="{{filterCount}}" class="square-filter-summary" bindtap="onOpenFilters" aria-role="button">
+    <text wx:for="{{filterSummary}}" wx:key="*this" class="square-filter-tag">{{i18n.t(item,locale)}}</text>
+    <text class="square-filter-edit">{{i18n.t('更改',locale)}} ›</text>
   </view>
   <view wx:if="{{error}}" class="consult-error" bindtap="onRetry">{{i18n.t(error,locale)}} · {{i18n.t('点击重试',locale)}}</view>
   <view wx:if="{{loading && !records.length}}" class="consult-state">{{i18n.t('正在加载…',locale)}}</view>
   <view wx:elif="{{!records.length && !error}}" class="consult-card consult-empty">
-    <view class="consult-paper" aria-hidden="true"></view><text class="consult-empty-title">{{i18n.t(unclaimedOnly ? '暂无未接诊的求助' : hideMine ? '暂时没有其他糖友的求助' : '这里会出现糖友的求助',locale)}}</text>
-    <text class="consult-empty-note">{{i18n.t(unclaimedOnly ? '可以切换全部求助，或稍后刷新查看。' : hideMine ? '可以关闭“隐藏我的求助”查看全部内容。' : '可以先整理你的问题，看看求助表单和问诊单的样子。',locale)}}</text>
-    <button wx:if="{{!unclaimedOnly}}" class="consult-button" bindtap="onCompose" hover-class="ui-pressed">{{i18n.t('写下我的问题',locale)}} ↗</button>
+    <view class="consult-paper" aria-hidden="true"></view><text class="consult-empty-title">{{i18n.t(filterCount ? '暂无符合筛选条件的求助' : '这里会出现糖友的求助',locale)}}</text>
+    <text class="consult-empty-note">{{i18n.t(filterCount ? '可以更改筛选条件，或稍后刷新查看。' : '可以先整理你的问题，看看求助表单和问诊单的样子。',locale)}}</text>
+    <button wx:if="{{filterCount}}" class="consult-button" bindtap="onOpenFilters" hover-class="ui-pressed">{{i18n.t('更改筛选',locale)}}</button>
+    <button wx:else class="consult-button" bindtap="onCompose" hover-class="ui-pressed">{{i18n.t('写下我的问题',locale)}} ↗</button>
   </view>
   <view wx:for="{{records}}" wx:key="id" class="consult-card" data-id="{{item.id}}" bindtap="onOpen" hover-class="ui-pressed">
     <view class="consult-heading"><text class="consult-pill">{{i18n.t(item.topicLabel,locale)}}</text><text class="consult-muted">{{i18n.t(item.statusLabel,locale)}}</text></view>
@@ -53,4 +54,24 @@
     <view class="consult-list-meta"><text>{{item.patientName}}</text><text>{{item.timeLabel}}</text></view>
   </view>
   <text class="consult-fine-print">{{i18n.t('问诊用于健康咨询，处方须由具备资质的医生按规范开具。',locale)}}</text>
+</view>
+<view wx:if="{{filterOpen}}" class="square-filter-overlay" style="{{displayStyle}}" bindtap="onCloseFilters" catchtouchmove="onFilterTouchMove">
+  <view class="square-filter-sheet" catchtap="onFilterPanelTap" aria-role="dialog" aria-label="{{i18n.t('筛选求助',locale)}}">
+    <view class="square-filter-handle" aria-hidden="true"></view>
+    <view class="square-filter-header"><text class="square-filter-title">{{i18n.t('筛选求助',locale)}}</text><view class="square-filter-close" bindtap="onCloseFilters" aria-role="button" aria-label="{{i18n.t('关闭',locale)}}">×</view></view>
+    <scroll-view scroll-y="{{true}}" class="square-filter-body" show-scrollbar="{{false}}">
+    <text class="square-filter-section">{{i18n.t('发布人',locale)}}</text>
+    <view class="square-filter-options">
+      <view wx:for="{{ownerOptions}}" wx:key="value" class="square-filter-option {{draftOwner === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="onDraftOwner" aria-role="button" aria-pressed="{{draftOwner === item.value}}" hover-class="ui-pressed">{{i18n.t(item.label,locale)}}</view>
+    </view>
+    <text class="square-filter-section">{{i18n.t('问诊状态',locale)}}</text>
+    <view class="square-filter-options">
+      <view wx:for="{{statusOptions}}" wx:key="value" class="square-filter-option {{draftStatus === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="onDraftStatus" aria-role="button" aria-pressed="{{draftStatus === item.value}}" hover-class="ui-pressed">{{i18n.t(item.label,locale)}}</view>
+    </view>
+    </scroll-view>
+    <view class="square-filter-footer">
+      <view class="square-filter-reset" bindtap="onResetFilters" aria-role="button" hover-class="ui-pressed">{{i18n.t('重置',locale)}}</view>
+      <view class="square-filter-apply" bindtap="onApplyFilters" aria-role="button" hover-class="ui-pressed">{{i18n.t('确定',locale)}}</view>
+    </view>
+  </view>
 </view>

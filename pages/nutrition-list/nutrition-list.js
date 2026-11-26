@@ -57,7 +57,8 @@ Page({
     wx.showModal({
       title: item.name,
       content: `${item.carbs}克碳水/100g · 热量 ${item.cal}kcal` +
-        (item.gi != null ? ` · GI ${item.gi}` : ''),
+        (item.gi != null ? ` · GI ${item.gi}`
+          : item.giDemo != null ? ` · 模拟 GI ${item.giDemo}（仅演示，不用于计算）` : ''),
       showCancel: false
     })
   }

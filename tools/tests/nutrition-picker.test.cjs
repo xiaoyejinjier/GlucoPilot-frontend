@@ -21,7 +21,7 @@ function createPage(options = {}) {
         return {
           fetchFoodCategories: async () => [],
           fetchFoods: async () => ({ records: [] }),
-          fetchFoodDetail: async () => food
+          fetchFoodDetail: async () => options.food || food
         }
       }
       if (name === '../../utils/food-images') return { getFoodImage: () => '' }
@@ -41,7 +41,7 @@ function createPage(options = {}) {
     for (const [key, value] of Object.entries(update)) this.data[key] = value
   }
   page.getOpenerEventChannel = () => (options.noChannel ? null : channel)
-  page.data.searchResults = [food]
+  page.data.searchResults = [options.food || food]
   return { page, calls }
 }
 
@@ -86,4 +86,28 @@ test('选择器模式缺少 id 的本地降级数据不返回', () => {
   assert.equal(calls.emitted.length, 0)
   assert.equal(calls.backs, 0)
   assert.match(calls.toasts.at(-1)[0].title, /暂不支持/)
+})
+
+test('模拟GI展示时明确标注，选择食物时不回填为真实GI', async () => {
+  const simulated = { ...food, gi: null, giDemo: 15 }
+  const viewer = createPage({ food: simulated })
+  viewer.page.onLoad({})
+  viewer.page.onFoodTap({ currentTarget: { dataset: { index: 0 } } })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.match(viewer.calls.modals[0][0].content, /模拟 GI 15（仅演示，不用于计算）/)
+  const picker = createPage({ food: simulated })
+  picker.page.onLoad({ pick: '1' })
+  picker.page.onFoodTap({ currentTarget: { dataset: { index: 0 } } })
+  assert.equal(picker.calls.emitted[0][1].gi, null)
+  assert.equal(Object.hasOwn(picker.calls.emitted[0][1], 'giDemo'), false)
+})
+
+test('有已核对GI时优先展示真实字段，英文保留模拟标记', async () => {
+  const { page, calls } = createPage({ food: { ...food, gi: 36, giDemo: 15 } })
+  page.onLoad({}); page.onFoodTap({ currentTarget: { dataset: { index: 0 } } })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.match(calls.modals[0][0].content, /GI 36/)
+  assert.doesNotMatch(calls.modals[0][0].content, /模拟/)
+  const catalog = require('../../utils/locales/en')
+  assert.equal(catalog.t('模拟 GI 15（仅演示，不用于计算）', 'en'), 'Simulated GI 15 (display only, excluded from calculations)')
 })

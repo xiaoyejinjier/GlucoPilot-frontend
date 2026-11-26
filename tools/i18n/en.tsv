@@ -2299,3 +2299,17 @@ SN：	SN:\s
 曲线加载中…	Loading chart…
 该次同步暂无血糖快照（历史流水不回填）	No glucose snapshot is available for this sync. Historical logs are not backfilled.
 点击下方某次同步查看对应曲线	Select a sync below to view its chart.
+模拟 GI	Simulated GI
+（仅演示，不用于计算）	(display only, excluded from calculations)
+筛选求助	Filter requests
+其他人的求助	Other users’ requests
+全部状态	All statuses
+已出具问诊单	Report issued
+发布人	Posted by
+问诊状态	Consultation status
+暂无符合筛选条件的求助	No requests match these filters
+可以更改筛选条件，或稍后刷新查看。	Change the filters or refresh later.
+更改筛选	Change filters
+更改	Change
+重置	Reset
+筛选	Filter

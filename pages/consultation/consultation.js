@@ -3,26 +3,39 @@ const social = require('../../utils/community')
 const { decorate } = require('../../utils/consultation')
 const topicSettings = require('../../utils/consultation-topics')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
-const HIDE_MINE_KEY = 'consultationHideMine'
+const OWNER_OPTIONS = [
+  { value: 'ALL', label: '全部求助' },
+  { value: 'MINE', label: '我的求助' },
+  { value: 'OTHERS', label: '其他人的求助' }
+]
+const STATUS_OPTIONS = [
+  { value: '', label: '全部状态' },
+  { value: 'WAITING', label: '等待医生' },
+  { value: 'IN_PROGRESS', label: '接诊中' },
+  { value: 'REPORT_READY', label: '已出具问诊单' },
+  { value: 'CLOSED', label: '已结束' }
+]
 
 Page({
   data: { displayStyle: '', topics: [{code: '', name: '全部求助'}], catalog: [], topic: '', topicAnchor: '', records: [], loading: false, error: '',
-    capabilities: api.PREVIEW_CAPABILITIES, pageNum: 0, hasMore: false, hideMine: false,
-    doctorApproved: false, unclaimedOnly: false },
+    capabilities: api.PREVIEW_CAPABILITIES, pageNum: 0, hasMore: false,
+    filterOwner: 'ALL', filterStatus: '', filterCount: 0, filterSummary: [], filterOpen: false,
+    draftOwner: 'ALL', draftStatus: '', ownerOptions: OWNER_OPTIONS, statusOptions: STATUS_OPTIONS },
   onShow() {
     if (!getApp().checkLogin()) return
     const previous = this._communityToken
     social.begin(this)
     const app = getApp()
     if (app.globalData) this.setData({informationCounts:app.globalData.informationCounts || {}})
-    if (previous !== this._communityToken) this.setData({ doctorApproved: false, unclaimedOnly: false, records: [], topic: '', topicAnchor: '', catalog: [], topics: [{code:'',name:'全部求助'}] })
-    try { this.setData({ hideMine: wx.getStorageSync(HIDE_MINE_KEY) === true }) } catch (_) {}
+    if (previous !== this._communityToken) this.setData({ filterOwner: 'ALL', filterStatus: '', filterCount: 0,
+      filterSummary: [], filterOpen: false, draftOwner: 'ALL', draftStatus: '',
+      records: [], topic: '', topicAnchor: '', catalog: [], topics: [{code:'',name:'全部求助'}] })
     applyDisplayToCurrentPage()
     const tab = typeof this.getTabBar === 'function' && this.getTabBar()
     if (tab) { tab.setData({ selected: 1 }); if (tab.refreshGuide) tab.refreshGuide() }
     this.load(true)
   },
-  onHide() { social.end(this); this._run = (this._run || 0) + 1 },
+  onHide() { social.end(this); this._run = (this._run || 0) + 1; this.setData({ filterOpen: false }) },
   onUnload() { this.onHide() },
   onConversations() { if (social.active(this)) wx.navigateTo({url:'/pages/consultation-conversations/consultation-conversations'}) },
   async load(reset = true) {
@@ -32,11 +45,8 @@ Page({
     if (reset) this.setData({ records: [], pageNum: 0, hasMore: false })
     this.setData({ loading: true, error: '' })
     try {
-      const [capabilities, doctor, rawTopics] = await Promise.all([
-        api.capabilities(), api.doctor().catch(error => {
-          if (error.statusCode === 404 || error.statusCode === 501) return null
-          throw error
-        }), reset ? api.topics() : Promise.resolve(this.data.catalog)
+      const [capabilities, rawTopics] = await Promise.all([
+        api.capabilities(), reset ? api.topics() : Promise.resolve(this.data.catalog)
       ])
       if (!social.active(this, version) || run !== this._run) return
       const catalog = topicSettings.normalize(rawTopics)
@@ -51,11 +61,10 @@ Page({
             this.setData({topicAnchor: `consult-topic-${topic || 'all'}`})
         })
       })
-      const doctorApproved = !!doctor && doctor.status === 'APPROVED'
-      const unclaimedOnly = doctorApproved && this.data.unclaimedOnly
-      this.setData({ doctorApproved, unclaimedOnly, capabilities })
+      this.setData({ capabilities })
       const page = await api.list({ pageNum, pageSize: 10, topic: this.data.topic,
-        hideMine: this.data.hideMine, unclaimedOnly })
+        mine: this.data.filterOwner === 'MINE', hideMine: this.data.filterOwner === 'OTHERS',
+        status: this.data.filterStatus })
       if (!social.active(this, version) || run !== this._run) return
       const rows = (page.records || []).map(decorate)
       this.setData({ capabilities, records: reset ? rows : this.data.records.concat(rows),
@@ -79,18 +88,32 @@ Page({
         if (social.sameAccount(this, token)) this.setData({topic: item.code})
       } }})
   },
-  onToggleHideMine() {
+  onOpenFilters() {
     if (!social.active(this)) return
-    const hideMine = !this.data.hideMine
-    this.setData({ hideMine })
-    try { wx.setStorageSync(HIDE_MINE_KEY, hideMine) } catch (_) {}
-    return this.load(true)
+    this.setData({ filterOpen: true, draftOwner: this.data.filterOwner, draftStatus: this.data.filterStatus })
   },
-  onUnclaimedFilter(event) {
-    if (!social.active(this) || !this.data.doctorApproved) return
-    const unclaimedOnly = event.currentTarget.dataset.filter === 'unclaimed'
-    if (unclaimedOnly === this.data.unclaimedOnly) return
-    this.setData({ unclaimedOnly })
+  onCloseFilters() { this.setData({ filterOpen: false }) },
+  onFilterPanelTap() {},
+  onFilterTouchMove() {},
+  onDraftOwner(event) {
+    const value = event.currentTarget.dataset.value
+    if (OWNER_OPTIONS.some(item => item.value === value)) this.setData({ draftOwner: value })
+  },
+  onDraftStatus(event) {
+    const value = event.currentTarget.dataset.value
+    if (STATUS_OPTIONS.some(item => item.value === value)) this.setData({ draftStatus: value })
+  },
+  onResetFilters() { this.setData({ draftOwner: 'ALL', draftStatus: '' }) },
+  onApplyFilters() {
+    if (!social.active(this)) return
+    const owner = this.data.draftOwner, status = this.data.draftStatus
+    const changed = owner !== this.data.filterOwner || status !== this.data.filterStatus
+    const summary = []
+    if (owner !== 'ALL') summary.push(OWNER_OPTIONS.find(item => item.value === owner).label)
+    if (status) summary.push(STATUS_OPTIONS.find(item => item.value === status).label)
+    this.setData({ filterOpen: false, filterOwner: owner, filterStatus: status,
+      filterSummary: summary, filterCount: summary.length })
+    if (!changed) return
     return this.load(true)
   },
   onDoctor() { wx.navigateTo({ url: '/pages/consultation-doctor/consultation-doctor' }) },

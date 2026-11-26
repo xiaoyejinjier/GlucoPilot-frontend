@@ -7,6 +7,8 @@ function t(value, locale) {
   if (typeof translated === 'string') return value.replace(key, translated);
   if (!han.test(value)) return value;
   var match;
+  match = pattern('^模拟 GI ([\\d.]+)（仅演示，不用于计算）$').exec(key);
+  if (match) return 'Simulated GI ' + match[1] + ' (display only, excluded from calculations)';
   // Structured UI metadata only. Article bodies, names and messages never call t().
   var separators = [' · ', ' — ', ' 至 ', ' / '];
   for (var s = 0; s < separators.length; s++) {

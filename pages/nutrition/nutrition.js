@@ -135,7 +135,8 @@ Page({
       content: [
         `${item.carbs}克碳水/100g`,
         `热量 ${item.cal}kcal`,
-        item.gi != null ? `GI ${item.gi}` : 'GI 暂无数据'
+        item.gi != null ? `GI ${item.gi}`
+          : item.giDemo != null ? `模拟 GI ${item.giDemo}（仅演示，不用于计算）` : 'GI 暂无数据'
       ].join(' · '),
       showCancel: false
     })

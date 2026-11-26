@@ -441,66 +441,86 @@ test('旧账号的问诊列表迟到响应不能显示给新账号',async()=>{
   pending[1]({records:[],pages:0});await flush();assert.equal(page.data.loading,false)
 })
 
-test('隐藏本人求助保留分类和翻页筛选，并记住开关',async()=>{
+function applySquareFilters(page, owner, status) {
+  page.onOpenFilters()
+  page.onDraftOwner({currentTarget:{dataset:{value:owner}}})
+  page.onDraftStatus({currentTarget:{dataset:{value:status}}})
+  return page.onApplyFilters()
+}
+
+test('筛选草稿只在确定后生效，取消不请求，重置后可恢复全部',async()=>{
   const queries=[]
-  const {page,state}=harness('consultation',{list:async params=>{queries.push({...params});return{records:[{id:String(queries.length)}],pages:3}}})
-  page.onShow();await flush();assert.equal(queries.at(-1).hideMine,false)
-  await page.onToggleHideMine();assert.equal(queries.at(-1).hideMine,true);assert.equal(queries.at(-1).pageNum,1)
-  assert.equal(state.storage.get('consultationHideMine'),true)
-  await page.onReachBottom();assert.equal(queries.at(-1).pageNum,2);assert.equal(queries.at(-1).hideMine,true)
-  page.onTopic({currentTarget:{dataset:{code:'DIET'}}});await flush()
-  assert.equal(queries.at(-1).topic,'DIET');assert.equal(queries.at(-1).pageNum,1);assert.equal(queries.at(-1).hideMine,true)
-  page.onHide();page.setData({hideMine:false});page.onShow();await flush();assert.equal(page.data.hideMine,true)
-  await page.onToggleHideMine();assert.equal(queries.at(-1).hideMine,false);assert.equal(state.storage.get('consultationHideMine'),false)
+  const {page}=harness('consultation',{list:async p=>{queries.push({...p});return{records:[],pages:0}}})
+  page.onShow();await flush()
+  page.onOpenFilters();page.onDraftOwner({currentTarget:{dataset:{value:'MINE'}}})
+  page.onDraftStatus({currentTarget:{dataset:{value:'REPORT_READY'}}})
+  assert.equal(queries.length,1);assert.equal(page.data.filterOwner,'ALL')
+  page.onCloseFilters();assert.equal(page.data.filterOpen,false);assert.equal(queries.length,1)
+  await applySquareFilters(page,'MINE','REPORT_READY')
+  assert.equal(queries.at(-1).mine,true);assert.equal(queries.at(-1).hideMine,false)
+  assert.equal(queries.at(-1).status,'REPORT_READY');assert.equal(page.data.filterCount,2)
+  page.onOpenFilters();page.onResetFilters();assert.equal(page.data.filterOwner,'MINE')
+  await page.onApplyFilters();assert.equal(queries.at(-1).mine,false);assert.equal(queries.at(-1).hideMine,false)
+  assert.equal(queries.at(-1).status,'');assert.equal(page.data.filterCount,0)
+  const count=queries.length;page.onOpenFilters();await page.onApplyFilters();assert.equal(queries.length,count)
 })
 
-test('切换隐藏开关时旧筛选的迟到响应不能覆盖新列表',async()=>{
+test('其他人和状态筛选保留分类与翻页，返回广场保留已应用条件',async()=>{
+  const queries=[]
+  const {page}=harness('consultation',{list:async p=>{queries.push({...p});return{records:[{id:String(queries.length)}],pages:3}}})
+  page.onShow();await flush()
+  await applySquareFilters(page,'OTHERS','IN_PROGRESS')
+  assert.equal(queries.at(-1).mine,false);assert.equal(queries.at(-1).hideMine,true);assert.equal(queries.at(-1).pageNum,1)
+  await page.onReachBottom();assert.equal(queries.at(-1).pageNum,2);assert.equal(queries.at(-1).status,'IN_PROGRESS')
+  page.onTopic({currentTarget:{dataset:{code:'DIET'}}});await flush()
+  assert.equal(queries.at(-1).topic,'DIET');assert.equal(queries.at(-1).pageNum,1);assert.equal(queries.at(-1).hideMine,true)
+  page.onHide();page.onShow();await flush()
+  assert.equal(queries.at(-1).status,'IN_PROGRESS');assert.equal(queries.at(-1).hideMine,true)
+})
+
+test('切换组合筛选时旧响应不能覆盖新列表',async()=>{
   const pending=[]
   const {page}=harness('consultation',{list:params=>new Promise(resolve=>pending.push({params,resolve}))})
-  page.onShow();await flush();const switching=page.onToggleHideMine();await flush()
-  assert.equal(pending[1].params.hideMine,true)
-  pending[1].resolve({records:[{id:'20',mine:false}],pages:1});await switching
-  pending[0].resolve({records:[{id:'10',mine:true}],pages:1});await flush()
+  page.onShow();await flush();const changing=applySquareFilters(page,'OTHERS','REPORT_READY');await flush()
+  assert.equal(pending[1].params.hideMine,true);assert.equal(pending[1].params.status,'REPORT_READY')
+  pending[1].resolve({records:[{id:'20',status:'REPORT_READY'}],pages:1});await changing
+  pending[0].resolve({records:[{id:'10',status:'WAITING'}],pages:1});await flush()
   assert.equal(page.data.records.length,1);assert.equal(page.data.records[0].id,'20');assert.equal(page.data.loading,false)
 })
 
-test('认证医生可筛选未接诊，分类、隐藏本人和分页条件保持一致',async()=>{
+test('普通用户也能按公开状态筛选，不需要加载医生身份，不接受未知选项',async()=>{
   const queries=[]
-  const {page}=harness('consultation',{doctor:async()=>({status:'APPROVED'}),list:async params=>{
-    queries.push({...params});return{records:[{id:String(queries.length)}],pages:3}
-  }})
-  page.onShow();await flush();assert.equal(page.data.doctorApproved,true)
-  await page.onUnclaimedFilter({currentTarget:{dataset:{filter:'unclaimed'}}})
-  assert.equal(queries.at(-1).unclaimedOnly,true);assert.equal(queries.at(-1).pageNum,1)
-  await page.onReachBottom();assert.equal(queries.at(-1).unclaimedOnly,true);assert.equal(queries.at(-1).pageNum,2)
-  await page.onToggleHideMine();assert.equal(queries.at(-1).unclaimedOnly,true);assert.equal(queries.at(-1).hideMine,true)
-  page.onTopic({currentTarget:{dataset:{code:'DIET'}}});await flush()
-  assert.equal(queries.at(-1).topic,'DIET');assert.equal(queries.at(-1).pageNum,1)
-  await page.onUnclaimedFilter({currentTarget:{dataset:{filter:'all'}}});assert.equal(queries.at(-1).unclaimedOnly,false)
-})
-
-test('认证失效或切换账号会移除未接诊筛选，普通用户不能开启',async()=>{
-  let approved=true;const queries=[]
-  const {page,state}=harness('consultation',{doctor:async()=>approved?{status:'APPROVED'}:null,list:async params=>{queries.push({...params});return{records:[],pages:0}}})
-  page.onShow();await flush();await page.onUnclaimedFilter({currentTarget:{dataset:{filter:'unclaimed'}}})
-  page.onHide();approved=false;page.onShow();await flush()
-  assert.equal(page.data.doctorApproved,false);assert.equal(page.data.unclaimedOnly,false);assert.equal(queries.at(-1).unclaimedOnly,false)
-  const count=queries.length;await page.onUnclaimedFilter({currentTarget:{dataset:{filter:'unclaimed'}}});assert.equal(queries.length,count)
-  approved=true;page.onHide();page.onShow();await flush();await page.onUnclaimedFilter({currentTarget:{dataset:{filter:'unclaimed'}}})
-  page.onHide();state.token='another-account';page.onShow();assert.equal(page.data.unclaimedOnly,false)
-  await flush();assert.equal(queries.at(-1).unclaimedOnly,false)
-})
-
-test('切换未接诊筛选后忽略旧列表，已认证医生返回页面保留筛选',async()=>{
-  const pending=[]
-  const {page}=harness('consultation',{doctor:async()=>({status:'APPROVED'}),list:params=>new Promise(resolve=>pending.push({params,resolve}))})
+  const {page}=harness('consultation',{doctor:async()=>{throw Error('不应请求医生身份')},list:async p=>{queries.push({...p});return{records:[],pages:0}}})
   page.onShow();await flush()
-  const changing=page.onUnclaimedFilter({currentTarget:{dataset:{filter:'unclaimed'}}});await flush()
-  pending[1].resolve({records:[{id:'2',status:'WAITING'}],pages:1});await changing
-  pending[0].resolve({records:[{id:'1',status:'IN_PROGRESS'}],pages:1});await flush()
-  assert.equal(page.data.records[0].id,'2')
-  page.onHide();page.onShow();await flush();assert.equal(pending[2].params.unclaimedOnly,true)
+  for(const status of ['WAITING','IN_PROGRESS','REPORT_READY','CLOSED']){
+    await applySquareFilters(page,'ALL',status)
+    assert.equal(queries.at(-1).status,status);assert.equal(queries.at(-1).unclaimedOnly,undefined)
+  }
+  page.onOpenFilters();page.onDraftStatus({currentTarget:{dataset:{value:'INVALID'}}})
+  page.onDraftOwner({currentTarget:{dataset:{value:'999'}}})
+  assert.equal(page.data.draftStatus,'CLOSED');assert.equal(page.data.draftOwner,'ALL')
+})
+
+test('离页关闭筛选面板，换账号清空归属状态，旧账号响应不覆盖',async()=>{
+  const pending=[]
+  const {page,state}=harness('consultation',{list:p=>new Promise(resolve=>pending.push({params:p,resolve}))})
+  page.onShow();await flush();pending[0].resolve({records:[],pages:0});await flush()
+  const changing=applySquareFilters(page,'MINE','REPORT_READY');await flush()
+  page.onOpenFilters();page.onHide();assert.equal(page.data.filterOpen,false)
+  state.token='user-two';page.onShow();await flush()
+  assert.equal(page.data.filterOwner,'ALL');assert.equal(page.data.filterStatus,'');assert.equal(page.data.filterCount,0)
+  pending[1].resolve({records:[{id:'1',title:'前一个账号的内容'}],pages:1});await changing
+  assert.equal(page.data.records.length,0)
   pending[2].resolve({records:[],pages:0});await flush();assert.equal(page.data.loading,false)
+})
+
+test('筛选入口替换隐藏本人和医生独立行，中英选项和空状态可见',()=>{
+  const markup=fs.readFileSync(path.join(root,'pages/consultation/consultation.wxml'),'utf8')
+  assert.match(markup,/class="square-heading-actions"/);assert.match(markup,/bindtap="onOpenFilters"/)
+  assert.doesNotMatch(markup,/hide-mine-toggle|onToggleHideMine|onUnclaimedFilter|consult-status-filters/)
+  const {page}=harness('consultation');assert.equal(page.data.ownerOptions.length,3);assert.equal(page.data.statusOptions.length,5)
+  const en=require('../../utils/locales/en')
+  for(const item of [...page.data.ownerOptions,...page.data.statusOptions])assert.notEqual(en.t(item.label,'en'),item.label)
 })
 
 test('真实支付使用稳定请求编号，重复点击只发送一次，解锁以服务端为准',async()=>{
@@ -551,7 +571,7 @@ test('医生申请仅提交本人资料，旧账号迟到的付款结果不会�
 })
 
 
-test('广场可选择新标签并与未接诊、隐藏本人组合，停用后刷新回到全部',async()=>{
+test('广场新标签与等待医生、其他人的筛选组合，停用后分类回到全部',async()=>{
  let enabled=true;const queries=[]
  const h=harness('consultation',{topics:async()=>[...helpers.TOPICS.filter(x=>x.code),...(enabled?[{code:'POST_MEAL',name:'餐后血糖',groupName:'血糖管理'}]:[])],doctor:async()=>({status:'APPROVED'}),list:async p=>{queries.push(p);return{records:[{id:'10',topic:'POST_MEAL',topicName:'餐后血糖'}],pages:2}}})
  h.page.onShow();await flush()
@@ -559,8 +579,8 @@ test('广场可选择新标签并与未接诊、隐藏本人组合，停用后�
  h.page.onHide();h.state.navs.at(-1).events.selectTopic({code:'POST_MEAL',name:'餐后血糖'})
  h.page.onShow();await flush()
  assert.equal(queries.at(-1).topic,'POST_MEAL');assert.equal(h.page.data.records[0].topicLabel,'餐后血糖')
- await h.page.onToggleHideMine();await h.page.onUnclaimedFilter({currentTarget:{dataset:{filter:'unclaimed'}}})
- await h.page.onReachBottom();assert.equal(queries.at(-1).pageNum,2);assert.equal(queries.at(-1).topic,'POST_MEAL');assert.equal(queries.at(-1).hideMine,true);assert.equal(queries.at(-1).unclaimedOnly,true)
+ await applySquareFilters(h.page,'OTHERS','WAITING')
+ await h.page.onReachBottom();assert.equal(queries.at(-1).pageNum,2);assert.equal(queries.at(-1).topic,'POST_MEAL');assert.equal(queries.at(-1).hideMine,true);assert.equal(queries.at(-1).status,'WAITING')
  enabled=false;await h.page.load(true);assert.equal(queries.at(-1).topic,'')
 })
 

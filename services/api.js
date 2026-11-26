@@ -103,6 +103,7 @@ function mapFood(f, categoryName) {
     carbs: f.carbsPer100g,
     cal: f.caloriesPer100g,
     gi: f.giValue,
+    giDemo: f.giDemoValue == null ? null : f.giDemoValue,
     imageUrl: f.imageUrl || '',
     image: getFoodImage(f.foodName, resolvedCategoryName, f.imageUrl)
   }
