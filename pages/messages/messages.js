@@ -242,6 +242,14 @@ Page({
     const done=()=>{if(this._messageReadTask===task)this._messageReadTask=null}
     task.then(done,done);return task
   },
+  mergeMessages(existing, incoming) {
+    const messages = social.mergeMessages(existing, incoming)
+    // 连续消息按完整日期和分钟分组；补拉历史或新消息后重新计算时间分界。
+    return messages.map((message, index) => ({
+      ...message,
+      showTime: !!message.timeLabel && (index === 0 || message.timeLabel !== messages[index - 1].timeLabel)
+    }))
+  },
   onRetry() { return this.loadLatest() },
   loadLatest(quiet=false,preservePosition=false){
     if(this._loading)return this._messageReadTask||Promise.resolve()
@@ -278,12 +286,12 @@ Page({
       const known = new Set(this.data.messages.map(item => item.id))
       // After a long absence, use a contiguous latest page instead of silently leaving a gap.
       const reset = !incremental && !empty && page.hasMore && !page.records.some(item => known.has(item.id))
-      let messages = social.mergeMessages(reset ? [] : this.data.messages, page.records)
+      let messages = this.mergeMessages(reset ? [] : this.data.messages, page.records)
       if (this._refreshReadState) {
         this._refreshReadState = false
         const recent = await api.fetchDirectMessages(this._peer, { pageSize:50 })
         if (!social.active(this, version)) return
-        messages = social.mergeMessages(messages, recent.records)
+        messages = this.mergeMessages(messages, recent.records)
       }
       const last = messages[messages.length - 1], changed = last && (!oldLast || last.id !== oldLast.id)
       this._afterId = page.records.length ? page.records[page.records.length - 1].id : afterId
@@ -309,7 +317,7 @@ Page({
     try {
       const page = await api.fetchDirectMessages(this._peer, { pageSize: 50, beforeId: this.data.beforeId })
       if (!social.active(this, version)) return
-      this.setData({ messages: social.mergeMessages(this.data.messages, page.records), hasMore: page.hasMore,
+      this.setData({ messages: this.mergeMessages(this.data.messages, page.records), hasMore: page.hasMore,
         beforeId: page.nextBeforeId, ...(anchor ? { scrollTarget: `dm-${anchor.id}` } : {}) },()=>this.measureList())
       this.applySendPermission(page.sendPermission,permissionEpoch)
     } catch (error) { social.failure(this, error, version) }
@@ -335,7 +343,7 @@ Page({
       this._cursor = 0
       this._permissionEpoch++
       if(this.data.sendPermission&&this.data.sendPermission.state==='FIRST_MESSAGE')this.applySendPermission({...this.data.sendPermission,canSend:false,state:'WAITING_REPLY'},this._permissionEpoch)
-      this.setData({ input: '', emojiVisible:false, messages: social.mergeMessages(this.data.messages, [message]), scrollTarget: `dm-${message.id}` })
+      this.setData({ input: '', emojiVisible:false, messages: this.mergeMessages(this.data.messages, [message]), scrollTarget: `dm-${message.id}` })
       this.refreshPermission()
     } catch (error) { if(social.active(this,version)&&error.code===40301){this._permissionEpoch++;this.applySendPermission({canSend:false,following:!!(this.data.sendPermission&&this.data.sendPermission.following),mutualFollowing:false,state:'WAITING_REPLY'},this._permissionEpoch);this.refreshPermission()}social.failure(this, error, version) }
     finally { if (social.active(this, version)) this.setData({ sending: false }) }

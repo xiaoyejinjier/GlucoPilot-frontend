@@ -468,6 +468,47 @@ test('WebSocket唤醒后跨多页增量补拉，保留旧页、已读边界及�
   page.onUnload()
 })
 
+test('私信同分钟合并时间，发送、实时补拉、已读更新和历史分页均重算边界', async () => {
+  const row = (id, createdAt, mine = false) => ({ ...message(id, mine), createdAt })
+  const current = [row(3, '2026-11-26T11:16:10'), row(4, '2026-11-26T11:16:20', true)]
+  const history = [row(1, '2026-11-25T11:16:00'), row(2, '2026-11-26T11:16:00')]
+  const saved = row(5, '2026-11-26T11:16:45', true)
+  for (const socket of [false, true]) {
+    let nextMinute = false
+    const { page, state } = harness('messages', {
+      ...(socket ? { socketSend: async () => saved } : {}),
+      api: {
+        fetchDirectMessages: async (_peer, query) => ({
+          records: query.beforeId ? history : query.afterId ?
+            nextMinute ? [row(6, '2026-11-26T11:17:01')] : [] : current,
+          hasMore: !query.beforeId && !query.afterId,
+          nextBeforeId: !query.beforeId && !query.afterId ? '3' : null
+        }),
+        sendDirectMessage: async () => saved
+      }
+    })
+    await flush()
+    assert.deepEqual(Array.from(page.data.messages, row => row.showTime), [true, false])
+    page.onInput({ detail: { value: '同一分钟发送' } })
+    await page.onSend(); await flush()
+    assert.deepEqual(Array.from(page.data.messages, row => row.showTime), [true, false, false])
+    nextMinute = true
+    for (const listener of state.realtimeListeners) listener({ type: 'DM_CHANGED', peerUserId: '2', kind: 'MESSAGE' })
+    await flush()
+    assert.deepEqual(Array.from(page.data.messages, row => row.showTime), [true, false, false, true])
+    await page.onOlder()
+    assert.deepEqual(Array.from(page.data.messages, row => row.id), ['1', '2', '3', '4', '5', '6'])
+    assert.deepEqual(Array.from(page.data.messages, row => row.showTime), [true, true, false, false, false, true])
+    current[1] = { ...current[1], readAt: '2026-11-26T11:18:00' }
+    for (const listener of state.realtimeListeners) listener({ type: 'DM_CHANGED', peerUserId: '2', kind: 'READ' })
+    await flush()
+    assert.equal(page.data.messages.length, 6)
+    assert.equal(page.data.messages.find(row => row.id === '4').readAt, '2026-11-26T11:18:00')
+    assert.equal(page.data.messages.filter(row => row.showTime).length, 3)
+    page.onUnload()
+  }
+})
+
 test('WebSocket发送使用保存后的确认，失败重试复用编号并保留HTTP兜底',async()=>{
   let fail=true;const attempts=[]
   const {page,state}=harness('messages',{socketSend:async(peer,payload)=>{
