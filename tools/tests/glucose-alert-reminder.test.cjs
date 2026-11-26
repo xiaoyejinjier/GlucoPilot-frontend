@@ -7,6 +7,17 @@ const { buildGlucoseAlerts } = require('../../utils/glucose-alerts')
 const directory = path.resolve(__dirname, '../../components/glucose-alert-reminder')
 const measured = (value, extra = {}) => ({ id: 'before_breakfast', value, hasRecord: true, ...extra })
 
+test('医生审核结果在记录页提醒，可直接进入工作台，手动已读携带展示的版本',async()=>{
+ const {component,instance,state}=createComponent()
+ component.properties.socialCounts.observer.call(instance,{total:2,doctorReviews:1,doctorReview:{status:'APPROVED',version:'13'},consultations:1})
+ assert.equal(instance.data.socialItems[0].key,'doctorReviews');assert.equal(instance.data.socialItems[0].title,'医生认证已通过')
+ assert.equal(instance.data.socialItems[1].key,'consultations')
+ instance.onInformation({currentTarget:{dataset:{key:'doctorReviews'}}})
+ assert.equal(state.navs[0].url,'/pages/consultation-doctor/consultation-doctor');assert.equal(state.reads.length,0)
+ await instance.onReadInformation({currentTarget:{dataset:{key:'doctorReviews'}}})
+ assert.deepEqual(state.reads[0],['DOCTOR_REVIEW_ONE','13']);assert.equal(state.refreshes,1)
+})
+
 test('问诊消息接入记录页全局提醒，打开会话列表不自动已读，可主动整类已读', async () => {
   const {component,instance,state}=createComponent()
   component.properties.socialCounts.observer.call(instance,{total:2,consultations:2})
@@ -66,9 +77,15 @@ function createComponent(fetchReplies = async () => ({ records: [], total: 0 }),
     Component(value) { component = value }, wx:{navigateTo:value=>{state.navs.push(value);if(state.navFails){if(value.fail)value.fail()}else if(value.success)value.success()},showToast:value=>state.toasts.push(value)},require(name) {
       if (name === '../../utils/glucose-alerts') return { buildGlucoseAlerts }
       if (name === '../../utils/request') return { getToken: () => state.token }
-      if (name === '../../services/consultation') return {readMessages:async(...args)=>state.reads.push(['CONSULTATION_ONE',...args])}
+      if (name === '../../services/consultation') return {
+        readMessages:async(...args)=>state.reads.push(['CONSULTATION_ONE',...args]),
+        readDoctorReview:async version=>state.reads.push(['DOCTOR_REVIEW_ONE',version])
+      }
       if (name === '../../utils/storage') return { getTodayKey: () => '2026-10-15' }
-      if (name === '../../utils/message-notifications') return { refresh: async () => { state.refreshes++ } }
+      if (name === '../../utils/message-notifications') return {
+        refresh: async () => { state.refreshes++ },
+        doctorReviewNotice:value=>value && value.status==='APPROVED' ? {...value,title:'医生认证已通过',description:'可以前往医生工作台接诊。'} : null
+      }
       assert.equal(name, '../../services/api')
       return { fetchUserReminders: async ({pageNum:page,pageSize:size}) => { state.calls.push({page,size});return {alerts:[],replies:await fetchReplies(page,size)} },
         readUserReminder:async(...args)=>{state.reads.push(args)},readInformationCategory:async(...args)=>{state.reads.push(args)},readAllUserReminders:async(...args)=>{state.reads.push(['ALL',...args])},...overrides }

@@ -28,6 +28,7 @@
 .square-filter-title { font-size:32rpx; font-weight:600; }
 .square-filter-close { display:flex; align-items:center; justify-content:center; width:64rpx; height:64rpx; color:#7b8da5; font-size:42rpx; }
 .square-filter-body { display:block; height:460rpx; max-height:52vh; overflow-y:auto; }
+.square-filter-body.has-assigned { height:560rpx; }
 .square-filter-section { display:block; margin:12rpx 0 16rpx; color:#6b7d96; font-size:24rpx; }
 .square-filter-options + .square-filter-section { margin-top:26rpx; }
 .square-filter-options { display:flex; gap:14rpx; flex-wrap:wrap; }

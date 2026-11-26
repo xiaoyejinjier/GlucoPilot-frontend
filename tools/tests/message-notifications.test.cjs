@@ -15,6 +15,49 @@ function harness(combined=false) {
   })
   return {notifications:module.exports,state,page,tab,app}
 }
+
+test('医生审核结果计入全局及问诊角标，持久横幅不泄露资质，已读汇总后消除',async()=>{
+ const {notifications:n,state,page,tab,app}=harness(true)
+ state.queue.push(Promise.resolve({total:1,doctorReviews:1,doctorReview:{status:'APPROVED',version:'13',licenseNumber:'不应透传'}}))
+ n.start();await flush()
+ assert.equal(app.globalData.unreadCount,1);assert.equal(tab.consultationUnread,1)
+ assert.equal(tab.doctorReviewNotice.title,'医生认证已通过');assert.equal(tab.doctorReviewNotice.version,'13')
+ assert.equal(tab.doctorReviewNotice.licenseNumber,undefined);assert.equal(state.toasts.length,0)
+ state.queue.push(Promise.resolve({total:0,doctorReviews:0}));await n.refresh(true)
+ assert.equal(tab.doctorReviewNotice,null);assert.equal(tab.consultationUnread,0);assert.equal(page.data.unreadLabel,'')
+ n.stop()
+})
+
+test('无Tab页面审核结果仅提示一次，后台恢复不重复，新的审核版本重新提醒',async()=>{
+ const {notifications:n,state,page}=harness(true);page.getTabBar=()=>null;page.route='pages/ai/ai'
+ const first={total:1,doctorReviews:1,doctorReview:{status:'APPROVED',version:'1'}}
+ state.queue.push(Promise.resolve(first));n.start();await flush();assert.equal(state.toasts.length,1)
+ state.queue.push(Promise.resolve(first));await n.refresh();assert.equal(state.toasts.length,1)
+ n.stop();state.queue.push(Promise.resolve(first));n.start();await flush();assert.equal(state.toasts.length,1)
+ state.queue.push(Promise.resolve({total:1,doctorReviews:1,doctorReview:{status:'REJECTED',version:'2'}}));await n.refresh()
+ assert.equal(state.toasts.length,2);assert.match(state.toasts[1].title,/未通过/)
+ n.stop();assert.equal(n.doctorReviewNotice({status:'PENDING',version:'3'}),null)
+ assert.equal(n.doctorReviewNotice({status:'__proto__',version:'3'}),null)
+ assert.equal(n.doctorReviewNotice({status:'APPROVED',version:'bad'}),null)
+})
+
+test('停留在医生申请页但仍显示旧状态时，新审批结果仍然提示',async()=>{
+ const {notifications:n,state,page}=harness(true)
+ page.route='pages/consultation-doctor/consultation-doctor';page.getTabBar=()=>null
+ page.data.profile={status:'PENDING',version:1}
+ state.queue.push(Promise.resolve({total:1,doctorReviews:1,doctorReview:{status:'APPROVED',version:'2'}}))
+ n.start();await flush();assert.equal(state.toasts.length,1);assert.match(state.toasts[0].title,/已通过/)
+ n.stop()
+})
+
+test('换账号丢弃旧审核结果和横幅，在途旧汇总不能恢复',async()=>{
+ const {notifications:n,state,tab,app}=harness(true),old=deferred()
+ state.queue.push(old.promise);n.start()
+ state.token='another-user';state.queue.push(Promise.resolve({total:0}));n.start();await flush()
+ old.resolve({total:1,doctorReviews:1,doctorReview:{status:'APPROVED',version:'9'}});await flush()
+ assert.equal(app.globalData.unreadCount,0);assert.equal(tab.doctorReviewNotice,null);assert.equal(state.toasts.length,0)
+ n.stop()
+})
 test('全会话未读提示不含正文、无0角标，读后更新且不会把回退的MAX ID当新消息',async()=>{
   const {notifications:n,state,page,tab}=harness()
   state.queue.push(Promise.resolve({unreadCount:'2',latestMessageId:'100',latestSenderId:'2'}));n.start();await flush()

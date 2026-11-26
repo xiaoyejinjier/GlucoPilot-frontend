@@ -10,12 +10,27 @@
     <text wx:if="{{profile && !canEdit}}" class="consult-body">{{profile.realName}} · {{profile.hospital}} · {{profile.specialty}}</text>
     <text wx:if="{{profile.reviewNote}}" class="consult-body">{{i18n.t('审核意见',locale)}}：{{profile.reviewNote}}</text>
   </view>
-  <view wx:if="{{canEdit && !loading}}" class="consult-card">
-    <view class="consult-field"><text class="consult-field-title">{{i18n.t('真实姓名',locale)}}</text><input class="consult-input" maxlength="50" value="{{form.realName}}" data-field="realName" bindinput="onField" disabled="{{saving}}" /></view>
-    <view class="consult-field"><text class="consult-field-title">{{i18n.t('执业机构',locale)}}</text><input class="consult-input" maxlength="120" value="{{form.hospital}}" data-field="hospital" bindinput="onField" disabled="{{saving}}" /></view>
-    <view class="consult-field"><text class="consult-field-title">{{i18n.t('专业科室',locale)}}</text><input class="consult-input" maxlength="80" value="{{form.specialty}}" data-field="specialty" bindinput="onField" disabled="{{saving}}" /></view>
-    <view class="consult-field"><text class="consult-field-title">{{i18n.t('执业证号',locale)}}</text><input class="consult-input" maxlength="80" value="{{form.licenseNumber}}" data-field="licenseNumber" bindinput="onField" disabled="{{saving}}" /></view>
-    <view class="consult-field"><text class="consult-field-title">{{i18n.t('资质说明',locale)}}</text><textarea class="consult-textarea" maxlength="1000" value="{{form.qualificationNote}}" data-field="qualificationNote" bindinput="onField" disabled="{{saving}}" /></view>
+  <view wx:if="{{canEdit && !loading}}" class="consult-card doctor-application-form">
+    <view class="consult-field">
+      <text class="consult-field-title">{{i18n.t('真实姓名',locale)}}</text>
+      <view class="doctor-input-shell"><input class="doctor-form-input" maxlength="50" value="{{form.realName}}" data-field="realName" bindinput="onField" disabled="{{saving}}" aria-label="{{i18n.t('真实姓名',locale)}}" /></view>
+    </view>
+    <view class="consult-field">
+      <text class="consult-field-title">{{i18n.t('执业机构',locale)}}</text>
+      <view class="doctor-input-shell"><input class="doctor-form-input" maxlength="120" value="{{form.hospital}}" data-field="hospital" bindinput="onField" disabled="{{saving}}" aria-label="{{i18n.t('执业机构',locale)}}" /></view>
+    </view>
+    <view class="consult-field">
+      <text class="consult-field-title">{{i18n.t('专业科室',locale)}}</text>
+      <view class="doctor-input-shell"><input class="doctor-form-input" maxlength="80" value="{{form.specialty}}" data-field="specialty" bindinput="onField" disabled="{{saving}}" aria-label="{{i18n.t('专业科室',locale)}}" /></view>
+    </view>
+    <view class="consult-field">
+      <text class="consult-field-title">{{i18n.t('执业证号',locale)}}</text>
+      <view class="doctor-input-shell"><input class="doctor-form-input" maxlength="80" value="{{form.licenseNumber}}" data-field="licenseNumber" bindinput="onField" disabled="{{saving}}" aria-label="{{i18n.t('执业证号',locale)}}" /></view>
+    </view>
+    <view class="consult-field">
+      <text class="consult-field-title">{{i18n.t('资质说明',locale)}}</text>
+      <view class="doctor-notes-shell"><textarea class="doctor-form-notes" maxlength="1000" value="{{form.qualificationNote}}" data-field="qualificationNote" bindinput="onField" disabled="{{saving}}" aria-label="{{i18n.t('资质说明',locale)}}" /></view>
+    </view>
     <text class="consult-field-note">{{i18n.t('资质资料仅本人及审核管理员可见。',locale)}}</text>
     <button class="consult-button primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onApply">{{i18n.t('提交医生审核',locale)}}</button>
   </view>

@@ -28,6 +28,7 @@ module.exports = {
   PREVIEW_CAPABILITIES, capabilities, list, orders,
   topics: () => get('/consultations/topics', null, { auth: true }),
   doctor: () => get('/consultation-doctors/me', null, { auth: true }),
+  readDoctorReview: version => put('/consultation-doctors/me/review/read', { version: String(version) }, { auth: true }),
   applyDoctor: payload => put('/consultation-doctors/me', payload, { auth: true }),
   images: id => get(`/consultations/${encodeURIComponent(id)}/images`, null, { auth: true }),
   messages: (id, params) => get(`/consultations/${encodeURIComponent(id)}/messages`, params, { auth: true }),

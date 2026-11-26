@@ -2,6 +2,14 @@
 .doctor-wallet-card{margin-top:24rpx;background:#f7faff;border-color:#cfddf1}
 .doctor-wallet-card .consult-button{margin-top:24rpx}
 .doctor-workspace { padding-bottom:calc(64rpx + env(safe-area-inset-bottom)); }
+/* 原生input不叠加竖向padding，边框和留白交给外层，避免文字偏下及宽度溢出。 */
+.doctor-application-form { width:100%; min-width:0; box-sizing:border-box; }
+.doctor-application-form .consult-field { width:100%; min-width:0; }
+.doctor-input-shell,.doctor-notes-shell { width:100%; max-width:100%; min-width:0; box-sizing:border-box; border:1rpx solid #dce5f0; border-radius:16rpx; background:#f8fafd; }
+.doctor-input-shell { display:flex; align-items:center; height:96rpx; padding:0 22rpx; }
+.doctor-form-input { display:block; flex:1; width:0; min-width:0; height:100%; margin:0; padding:0; border:0; background:transparent; color:#304b70; font-size:var(--fs-body,28rpx); line-height:normal; box-sizing:border-box; }
+.doctor-notes-shell { padding:18rpx 22rpx; }
+.doctor-form-notes { display:block; width:100%; max-width:100%; min-width:0; height:224rpx; margin:0; padding:0; border:0; background:transparent; color:#304b70; font-size:var(--fs-body,28rpx); line-height:1.6; box-sizing:border-box; }
 .doctor-wallet-card { padding:32rpx; border-color:#d8e4f4; background:linear-gradient(145deg,#f8fbff,#f1f6ff); }
 .doctor-work-actions { gap:18rpx; margin-top:32rpx; margin-bottom:52rpx; }
 .doctor-work-actions .consult-button { flex:1; width:0; min-width:0; min-height:94rpx; border-radius:20rpx; }

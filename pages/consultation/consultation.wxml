@@ -59,8 +59,8 @@
   <view class="square-filter-sheet" catchtap="onFilterPanelTap" aria-role="dialog" aria-label="{{i18n.t('筛选求助',locale)}}">
     <view class="square-filter-handle" aria-hidden="true"></view>
     <view class="square-filter-header"><text class="square-filter-title">{{i18n.t('筛选求助',locale)}}</text><view class="square-filter-close" bindtap="onCloseFilters" aria-role="button" aria-label="{{i18n.t('关闭',locale)}}">×</view></view>
-    <scroll-view scroll-y="{{true}}" class="square-filter-body" show-scrollbar="{{false}}">
-    <text class="square-filter-section">{{i18n.t('发布人',locale)}}</text>
+    <scroll-view scroll-y="{{true}}" class="square-filter-body {{doctorApproved ? 'has-assigned' : ''}}" show-scrollbar="{{false}}">
+    <text class="square-filter-section">{{i18n.t('求助范围',locale)}}</text>
     <view class="square-filter-options">
       <view wx:for="{{ownerOptions}}" wx:key="value" class="square-filter-option {{draftOwner === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="onDraftOwner" aria-role="button" aria-pressed="{{draftOwner === item.value}}" hover-class="ui-pressed">{{i18n.t(item.label,locale)}}</view>
     </view>

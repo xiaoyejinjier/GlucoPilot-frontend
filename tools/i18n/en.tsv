@@ -2313,3 +2313,13 @@ SN：	SN:\s
 更改	Change
 重置	Reset
 筛选	Filter
+医生认证已通过	Doctor verification approved
+医生认证未通过	Doctor verification not approved
+医生资格已停用	Doctor access disabled
+可以前往医生工作台接诊。	You can now accept requests in the doctor workspace.
+请前往医生工作台查看审核意见。	View the review feedback in the doctor workspace.
+请前往医生工作台查看当前状态。	View your current status in the doctor workspace.
+医生认证已通过，可前往医生工作台查看	Doctor verification approved. Open the doctor workspace.
+医生认证未通过，可前往医生工作台查看	Doctor verification not approved. Open the doctor workspace.
+医生资格已停用，可前往医生工作台查看	Doctor access disabled. Open the doctor workspace.
+求助范围	Request scope

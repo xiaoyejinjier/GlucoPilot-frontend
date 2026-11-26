@@ -34,8 +34,8 @@
         <view wx:if="{{socialItems.length}}" class="reply-card">
           <view class="reply-heading"><view class="notice-section-label"><text>{{i18n.t("新信息", locale)}}</text></view></view>
           <view wx:for="{{socialItems}}" wx:key="key" class="social-notice-row ui-interactive" data-key="{{item.key}}" bindtap="onInformation" hover-class="ui-pressed">
-            <view class="social-notice-target"><view class="social-notice-copy"><text>{{i18n.t(item.title, locale)}}<text wx:if="{{item.peerName}}"> · {{item.peerName}}</text></text><text wx:if="{{item.contextTitle}}" class="notice-thread-title">{{item.contextTitle}}</text></view><text class="social-notice-count">{{item.count > 99 ? '99+' : item.count}}</text><text> ›</text></view>
-            <button class="notice-read-button" data-key="{{item.key}}" catchtap="onReadInformation" disabled="{{!!informationReading || allReading}}">{{i18n.t(informationReading === item.key ? '处理中…' : item.consultationId ? '标为已读' : '全部已读', locale)}}</button>
+            <view class="social-notice-target"><view class="social-notice-copy"><text>{{i18n.t(item.title, locale)}}<text wx:if="{{item.peerName}}"> · {{item.peerName}}</text></text><text wx:if="{{item.contextTitle}}" class="notice-thread-title">{{item.doctorReview ? i18n.t(item.contextTitle,locale) : item.contextTitle}}</text></view><text class="social-notice-count">{{item.count > 99 ? '99+' : item.count}}</text><text> ›</text></view>
+            <button class="notice-read-button" data-key="{{item.key}}" catchtap="onReadInformation" disabled="{{!!informationReading || allReading}}">{{i18n.t(informationReading === item.key ? '处理中…' : item.consultationId || item.doctorReview ? '标为已读' : '全部已读', locale)}}</button>
           </view>
         </view>
         <view wx:if="{{alerts.length}}" class="alert-card">

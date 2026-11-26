@@ -7,6 +7,9 @@ const consultations = require('../../services/consultation')
 function informationItems(counts) {
   const source = counts || {}, threads = Array.isArray(source.consultationConversations) ? source.consultationConversations : []
   const rows = [], seen = new Set()
+  const review = Number(source.doctorReviews) > 0 && notifications.doctorReviewNotice(source.doctorReview)
+  if (review) rows.push({key:'doctorReviews',title:review.title,contextTitle:review.description,
+    doctorReview:true,reviewVersion:review.version,count:1})
   for (const row of threads) {
     const id = String(row.consultationId || '')
     if (!/^[1-9]\d{0,18}$/.test(id) || seen.has(id) || !(Number(row.unreadCount) > 0)) continue
@@ -15,7 +18,7 @@ function informationItems(counts) {
       contextTitle:row.title,throughId:String(row.lastMessageId),count:Number(row.unreadCount) })
   }
   const categories = [{key:'consultations',title:'问诊交流'},{key:'messages',title:'私信'},{key:'likes',title:'点赞'},{key:'collections',title:'收藏'},{key:'comments',title:'评论'},{key:'follows',title:'新关注我的'},{key:'reports',title:'举报反馈'}]
-  return rows.concat(categories.filter(item => item.key !== 'consultations' || !rows.length)
+  return rows.concat(categories.filter(item => item.key !== 'consultations' || !seen.size)
     .map(item => ({...item,count:Math.max(0,Number(source[item.key])||0)})).filter(item => item.count > 0))
 }
 
@@ -50,7 +53,7 @@ Component({
       if(this.data.allReading)return
       const key=e.currentTarget.dataset.key, item=this.data.socialItems.find(row=>row.key===key)
       this.closeNotice()
-      wx.navigateTo({url:item && item.consultationId ? `/pages/consultation-chat/consultation-chat?id=${item.consultationId}` : key==='consultations'?'/pages/consultation-conversations/consultation-conversations':key==='reports'?'/pages/community-reports/community-reports':`/pages/information/information?tab=${key}`})
+      wx.navigateTo({url:item && item.doctorReview ? '/pages/consultation-doctor/consultation-doctor' : item && item.consultationId ? `/pages/consultation-chat/consultation-chat?id=${item.consultationId}` : key==='consultations'?'/pages/consultation-conversations/consultation-conversations':key==='reports'?'/pages/community-reports/community-reports':`/pages/information/information?tab=${key}`})
     },
     openNotice() {
       if (!this._alive || !this._visible || this.data.noticeVisible) return
@@ -139,12 +142,13 @@ Component({
       if (!this._alive || !this._visible || this.data.informationReading || this.data.allReading) return
       const key = e.currentTarget.dataset.key
       const kind = {messages:'MESSAGE',likes:'LIKE',collections:'COLLECT',comments:'COMMENT',follows:'FOLLOW',reports:'REPORT',consultations:'CONSULTATION'}[key]
-      const item = this.data.socialItems.find(row => row.key === key && row.consultationId)
+      const item = this.data.socialItems.find(row => row.key === key && (row.consultationId || row.doctorReview))
       const token = getToken()
       if ((!kind && !item) || !token) return
       this.setData({ informationReading: key })
       try {
-        if (item) await consultations.readMessages(item.consultationId,item.throughId)
+        if (item && item.doctorReview) await consultations.readDoctorReview(item.reviewVersion)
+        else if (item) await consultations.readMessages(item.consultationId,item.throughId)
         else await readInformationCategory(kind)
         if (getToken() === token) {
           await notifications.refresh(true)

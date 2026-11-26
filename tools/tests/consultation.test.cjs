@@ -31,6 +31,7 @@ function harness(name, overrides = {}) {
     module:social,require:()=>request,wx,getApp:()=>({})
   })
   const api = { topics:async()=>helpers.TOPICS.filter(item=>item.code), PREVIEW_CAPABILITIES:previewCaps, capabilities:async()=>previewCaps,doctor:async()=>null,
+    readDoctorReview:async version=>{state.doctorReads=(state.doctorReads||[]).concat([version])},
     list:async()=>({records:[],pages:0}),orders:async()=>({records:[],pages:0}),images:async()=>[],messages:async()=>({records:[],canSend:true,hasMore:false}),
     readMessages:async(...args)=>state.reads.push(args),conversations:async()=>({records:[],pages:0}),
     publish:async body=>state.publishes.push(body), createOrder:async body=>state.orders.push(body), ...overrides }
@@ -119,6 +120,28 @@ test('设备移入我的，问诊占用第二个Tab，保留设备页面及其�
   const mine=fs.readFileSync(path.join(root,'pages/mine/mine.wxml'),'utf8')
   assert.match(mine,/bindtap="onDevicesTap"/)
   assert.match(mine,/data-url="\/pages\/consultation-records\/consultation-records"/)
+})
+
+test('医生审核结果实际渲染后标记展示版本，离页或换账号不清除新账号提醒',async()=>{
+ const profile={status:'APPROVED',version:13,reviewedAt:'2026-11-26T11:00:00'}
+ const {page,state}=harness('consultation-doctor',{doctor:async()=>profile,wallet:{summary:async()=>({activated:true})}})
+ const original=page.setData.bind(page);let rendered
+ page.setData=(data,callback)=>{original(data);if(callback)rendered=callback}
+ page.onShow();await flush();assert.equal(state.doctorReads,undefined)
+ rendered();await flush();assert.equal(state.doctorReads[0],13);assert.equal(state.notificationRefreshes,1)
+ page.onHide();state.token='user-two';page.onShow();await flush();page.onHide();rendered();await flush()
+ assert.equal(state.doctorReads.length,1)
+})
+
+test('医生审核已读请求失败保留工作台和资料，刷新可重试且不伪造已读',async()=>{
+ let attempts=0,fail=true
+ const {page,state}=harness('consultation-doctor',{
+  doctor:async()=>({status:'REJECTED',version:4,reviewedAt:'2026-11-26T11:00:00',reviewNote:'需要补充资质'}),
+  readDoctorReview:async version=>{attempts++;assert.equal(version,4);if(fail)throw Error('网络不可用')}
+ })
+ page.onShow();await flush();assert.equal(attempts,1);assert.equal(page.data.profile.reviewNote,'需要补充资质')
+ assert.equal(page.data.error,'');fail=false;await page.load();await flush();assert.equal(attempts,2)
+ assert.equal(state.notificationRefreshes,2)
 })
 
 test('医生申请提交只更新状态，不清空重载表单或新增上方状态卡，保留输入与布局',async()=>{
@@ -488,9 +511,9 @@ test('切换组合筛选时旧响应不能覆盖新列表',async()=>{
   assert.equal(page.data.records.length,1);assert.equal(page.data.records[0].id,'20');assert.equal(page.data.loading,false)
 })
 
-test('普通用户也能按公开状态筛选，不需要加载医生身份，不接受未知选项',async()=>{
+test('普通用户也能按公开状态筛选，只有通过审核的医生有接诊选项，不接受未知选项',async()=>{
   const queries=[]
-  const {page}=harness('consultation',{doctor:async()=>{throw Error('不应请求医生身份')},list:async p=>{queries.push({...p});return{records:[],pages:0}}})
+  const {page}=harness('consultation',{doctor:async()=>null,list:async p=>{queries.push({...p});return{records:[],pages:0}}})
   page.onShow();await flush()
   for(const status of ['WAITING','IN_PROGRESS','REPORT_READY','CLOSED']){
     await applySquareFilters(page,'ALL',status)
@@ -499,6 +522,44 @@ test('普通用户也能按公开状态筛选，不需要加载医生身份，�
   page.onOpenFilters();page.onDraftStatus({currentTarget:{dataset:{value:'INVALID'}}})
   page.onDraftOwner({currentTarget:{dataset:{value:'999'}}})
   assert.equal(page.data.draftStatus,'CLOSED');assert.equal(page.data.draftOwner,'ALL')
+})
+
+test('认证通过后追加我的接诊，可组合状态分类并保持分页，只发送当前医生归属参数',async()=>{
+ let status='PENDING';const queries=[]
+ const {page}=harness('consultation',{doctor:async()=>({status}),list:async p=>{queries.push({...p});return{records:[{id:String(queries.length)}],pages:3}}})
+ page.onShow();await flush();assert.equal(page.data.ownerOptions.some(item=>item.value==='ASSIGNED'),false)
+ page.onOpenFilters();page.onDraftOwner({currentTarget:{dataset:{value:'ASSIGNED'}}});assert.equal(page.data.draftOwner,'ALL')
+ page.onHide();status='APPROVED';page.onShow();await flush()
+ assert.equal(page.data.ownerOptions.find(item=>item.value==='ASSIGNED').label,'我的接诊')
+ await applySquareFilters(page,'ASSIGNED','REPORT_READY')
+ assert.equal(queries.at(-1).assigned,true);assert.equal(queries.at(-1).mine,false);assert.equal(queries.at(-1).hideMine,false)
+ assert.equal(queries.at(-1).status,'REPORT_READY');assert.equal(queries.at(-1).doctorId,undefined)
+ assert.equal(page.data.filterSummary[0],'我的接诊')
+ page.onTopic({currentTarget:{dataset:{code:'DIET'}}});await flush()
+ await page.onReachBottom();assert.equal(queries.at(-1).pageNum,2);assert.equal(queries.at(-1).assigned,true);assert.equal(queries.at(-1).topic,'DIET')
+ page.onHide();page.onShow();await flush();assert.equal(queries.at(-1).assigned,true);assert.equal(queries.at(-1).pageNum,1)
+})
+
+test('医生停用或切换普通账号后移除我的接诊，清空接诊归属且不混入旧分页',async()=>{
+ let status='APPROVED';const queries=[]
+ const {page,state}=harness('consultation',{doctor:async()=>({status}),list:async p=>{queries.push({...p});return{records:[{id:String(queries.length)}],pages:3}}})
+ page.onShow();await flush();await applySquareFilters(page,'ASSIGNED','IN_PROGRESS');await page.onReachBottom()
+ status='DISABLED';await page.load(true)
+ assert.equal(page.data.ownerOptions.length,3);assert.equal(page.data.filterOwner,'ALL');assert.equal(page.data.draftOwner,'ALL')
+ assert.equal(queries.at(-1).assigned,false);assert.equal(queries.at(-1).pageNum,1);assert.equal(queries.at(-1).status,'IN_PROGRESS')
+ assert.equal(page.data.records.length,1);assert.equal(page.data.filterSummary.length,1)
+ status='APPROVED';await page.load(true);await applySquareFilters(page,'ASSIGNED','')
+ page.onHide();state.token='ordinary-user';status='PENDING';page.onShow()
+ assert.equal(page.data.ownerOptions.length,3);assert.equal(page.data.doctorApproved,false)
+ await flush();assert.equal(queries.at(-1).assigned,false)
+})
+
+test('换账号后的迟到医生身份不能重新显示我的接诊选项',async()=>{
+ let resolveDoctor,calls=0
+ const {page,state}=harness('consultation',{doctor:()=>++calls===1?new Promise(resolve=>{resolveDoctor=resolve}):Promise.resolve(null)})
+ page.onShow();await flush();page.onHide();state.token='new-user';page.onShow();await flush()
+ resolveDoctor({status:'APPROVED'});await flush()
+ assert.equal(page.data.doctorApproved,false);assert.equal(page.data.ownerOptions.length,3)
 })
 
 test('离页关闭筛选面板，换账号清空归属状态，旧账号响应不覆盖',async()=>{

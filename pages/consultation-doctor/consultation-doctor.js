@@ -3,6 +3,7 @@ const wallet = require('../../services/wallet')
 const social = require('../../utils/community')
 const { decorate } = require('../../utils/consultation')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
+const notifications = require('../../utils/message-notifications')
 
 const labels = { PENDING: '待审核', APPROVED: '已通过', REJECTED: '未通过', DISABLED: '已停用' }
 const emptyForm = () => ({ realName: '', hospital: '', specialty: '', licenseNumber: '', qualificationNote: '' })
@@ -30,13 +31,32 @@ Page({
     } catch (error) {
       if (!social.active(this, version) || run !== this._run) return
       this.setData({ error: error.message || '医生资料加载失败，请重试' }); social.failure(this, error, version)
-    } finally { if (social.active(this, version) && run === this._run) this.setData({ loading: false }) }
+    } finally {
+      if (social.active(this, version) && run === this._run) this.setData({ loading: false }, () => {
+        if (social.active(this, version) && run === this._run) this.readReview(this.data.profile)
+      })
+    }
   },
   showProfile(profile, preserveForm = false) {
     const form = emptyForm()
     if (profile) Object.keys(form).forEach(key => { form[key] = profile[key] || '' })
     this.setData({ profile, ...(preserveForm ? {} : { form }), statusLabel: profile ? labels[profile.status] || profile.status : '未提交',
       canEdit: !profile || ['PENDING', 'REJECTED'].includes(profile.status) })
+  },
+  async readReview(profile) {
+    if (this.data.loading || this.data.error || !profile || !profile.reviewedAt || profile.version == null
+      || !['APPROVED','REJECTED','DISABLED'].includes(profile.status) || !social.active(this)) return
+    const version = this._communityVersion
+    if (this._readingReview && this._readingReview.pageVersion === version && this._readingReview.version === profile.version) return
+    const marker = this._readingReview = { pageVersion:version, version:profile.version }
+    try {
+      // setData回调后才确认当前展示版本；新审核与此版本不同会由后端拒绝，不会误清。
+      await api.readDoctorReview(profile.version)
+      if (social.active(this,version)) await notifications.refresh(true)
+    } catch (_) {
+      // 网络失败保留未读，返回或下拉时可重试；新版本仍通过全局汇总提示。
+      if (social.active(this,version)) notifications.refresh(true)
+    } finally { if (this._readingReview === marker) this._readingReview = null }
   },
   async loadWallet() {
     if (!social.active(this) || this.data.walletLoading) return

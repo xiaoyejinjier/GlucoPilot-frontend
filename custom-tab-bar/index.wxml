@@ -1,5 +1,9 @@
 <wxs module="i18n" src="/utils/i18n.wxs" />
-<view wx:if="{{consultationNotice && !guideActive}}" class="consultation-message-banner" bindtap="onConsultationNotice" aria-role="button" hover-class="ui-pressed">
+<view wx:if="{{doctorReviewNotice && !guideActive}}" class="consultation-message-banner doctor-review-banner" bindtap="onDoctorReviewNotice" aria-role="button" hover-class="ui-pressed">
+  <view class="consultation-banner-icon">!</view><view class="consultation-banner-copy"><text class="consultation-banner-title">{{i18n.t(doctorReviewNotice.title,locale)}}</text><text class="consultation-banner-name">{{i18n.t(doctorReviewNotice.description,locale)}}</text></view>
+  <text class="consultation-banner-open">{{i18n.t('查看',locale)}} ›</text>
+</view>
+<view wx:elif="{{consultationNotice && !guideActive}}" class="consultation-message-banner" bindtap="onConsultationNotice" aria-role="button" hover-class="ui-pressed">
   <view class="consultation-banner-icon">✉</view><view class="consultation-banner-copy"><text class="consultation-banner-title">{{i18n.t('问诊新消息',locale)}}</text><text class="consultation-banner-name">{{consultationNotice.peerName}}</text></view>
   <text class="consultation-banner-count">{{consultationNotice.unreadCount > 99 ? '99+' : consultationNotice.unreadCount}}</text><text class="consultation-banner-open">{{i18n.t('查看',locale)}} ›</text>
 </view>

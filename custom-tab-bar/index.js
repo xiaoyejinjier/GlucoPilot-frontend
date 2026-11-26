@@ -4,6 +4,7 @@ Component({
     unreadCount: 0,
     consultationUnread: 0,
     consultationNotice: null,
+    doctorReviewNotice: null,
     guideActive: false,
     selectedColor: '#0969da'
   },
@@ -15,7 +16,8 @@ Component({
     refreshGuide() {
       const app = getApp()
       const counts = app.globalData && app.globalData.informationCounts || {}
-      this.setData({ unreadCount:Number(app.globalData && app.globalData.unreadCount || 0), consultationUnread:Number(counts.consultations)||0,
+      this.setData({ unreadCount:Number(app.globalData && app.globalData.unreadCount || 0), consultationUnread:(Number(counts.consultations)||0)+(Number(counts.doctorReviews)||0),
+        doctorReviewNotice:counts.doctorReview || null,
         consultationNotice:Array.isArray(counts.consultationConversations) ? counts.consultationConversations[0] || null : null })
       this._guideToken = typeof app.getNavigationGuideToken === 'function' ? app.getNavigationGuideToken() : ''
       this.setData({ guideActive: !!this._guideToken })
@@ -26,6 +28,12 @@ Component({
       if (typeof app.checkLogin === 'function' && !app.checkLogin()) return
       if (notice && /^[1-9]\d{0,18}$/.test(String(notice.consultationId)))
         wx.navigateTo({url:`/pages/consultation-chat/consultation-chat?id=${notice.consultationId}`})
+    },
+
+    onDoctorReviewNotice() {
+      const app = getApp()
+      if (typeof app.checkLogin === 'function' && !app.checkLogin()) return
+      if (this.data.doctorReviewNotice) wx.navigateTo({url:'/pages/consultation-doctor/consultation-doctor'})
     },
 
     onGuideComplete(event) {

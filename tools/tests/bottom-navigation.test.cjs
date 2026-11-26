@@ -5,6 +5,18 @@ const path = require('node:path')
 const vm = require('node:vm')
 const root = path.resolve(__dirname, '../..')
 
+test('认证审核横幅进入医生工作台，计入问诊角标，点击本身不标已读',()=>{
+ let definition;const pages=[]
+ const notice={version:'13',status:'APPROVED',title:'医生认证已通过'}
+ const app={globalData:{unreadCount:1,informationCounts:{doctorReviews:1,doctorReview:notice}},checkLogin:()=>true}
+ vm.runInNewContext(fs.readFileSync(path.join(root,'custom-tab-bar/index.js'),'utf8'),{Component:value=>definition=value,getApp:()=>app,wx:{navigateTo:value=>pages.push(value)}})
+ const bar={...definition.methods,data:{...definition.data},setData(value){Object.assign(this.data,value)}}
+ definition.lifetimes.attached.call(bar);assert.equal(bar.data.consultationUnread,1)
+ bar.onDoctorReviewNotice();assert.equal(pages[0].url,'/pages/consultation-doctor/consultation-doctor')
+ assert.equal(app.globalData.informationCounts.doctorReviews,1)
+ app.globalData.informationCounts={};bar.refreshGuide();assert.equal(bar.data.doctorReviewNotice,null)
+})
+
 test('问诊消息横幅打开对应聊天，不自动已读；返回主页面可恢复未读入口',()=>{
  let definition;const pages=[]
  const app={globalData:{unreadCount:2,informationCounts:{consultations:2,consultationConversations:[{consultationId:'8',unreadCount:2}]}},checkLogin:()=>true}
