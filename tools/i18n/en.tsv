@@ -2331,3 +2331,8 @@ SN：	SN:\s
 主料	Main ingredient
 配料	Seasoning
 样	items
+整餐碳水	Meal carbs
+整餐热量	Meal calories
+按每 100g 展示便于对比，整餐合计按识别克重折算。	Shown per 100g for comparison; the meal total is derived from the recognised grams.
+每 100g	per 100 g
+食物	Foods

@@ -35,11 +35,11 @@ function stripTierPrefix(text, label) {
   if (!text || !label || text.indexOf(label) !== 0) return text || ''
   return text.slice(label.length).replace(/^[，,、；;：:\s]+/, '')
 }
-const TIER_LABELS = { LOW: '负担较低', MODERATE: '负担中等', HIGH: '负担较高', UNKNOWN: '信息不足' }
+const TIER_LABELS = { LOW: '建议食用', MODERATE: '适量食用', HIGH: '不建议食用', UNKNOWN: '信息不足' }
 const ADVICE_FALLBACK = {
-  LOW: '升糖负担较低，注意保持均衡搭配',
-  MODERATE: '升糖负担中等，建议控制份量',
-  HIGH: '升糖负担较高，建议减少份量或替换为升糖负担更低的食物',
+  LOW: '建议食用，注意保持均衡搭配',
+  MODERATE: '适量食用，注意进食顺序与搭配',
+  HIGH: '不建议食用，可换用升糖负担更低的食物',
   UNKNOWN: '信息不足，建议补充重量或改用食品库食物'
 }
 const EMPTY_TIER_COUNTS = { LOW: 0, MODERATE: 0, HIGH: 0, UNKNOWN: 0 }
@@ -313,6 +313,7 @@ Page({
     let carbs = 0
     let calories = 0
     let unknownCount = 0
+    const nutritionCards = []
     const items = this.data.items.map((item) => {
       const weight = numberOrNull(item.weightInput)
       const weightValid = weight > 0 && weight <= 5000
@@ -325,6 +326,19 @@ Page({
       const itemCarbs = nutritionKnown && weightValid ? rounded(weight * perCarbs / 100) : null
       const itemCalories = nutritionKnown && weightValid ? rounded(weight * perCalories / 100) : null
       if (itemCarbs !== null) { carbs += itemCarbs; calories += itemCalories }
+      // 营养卡：每 100g 的碳水/热量/升糖负荷（GL = GI × 每100g碳水 / 100），与克重无关
+      const perGi = numberOrNull(item.giValue)
+      const perGl = perCarbs !== null && perGi !== null ? rounded(perGi * perCarbs / 100) : null
+      nutritionCards.push({
+        key: item.key || ('nutri-' + nutritionCards.length),
+        name: item.foodName,
+        dishName: item.dishName || '',
+        weightText: weightValid ? weight + 'g' : '重量待确认',
+        carbsText: perCarbs === null ? '—' : perCarbs + 'g',
+        caloriesText: perCalories === null ? '—' : perCalories + 'kcal',
+        glText: perGl === null ? '—' : String(perGl),
+        unknown: perCarbs === null || perCalories === null
+      })
       // 份数以识别克重为基准，仅用于显示与步进；提交仍只使用 weightG
       const portion = weightValid && base > 0 ? Math.round(weight / base * 10) / 10 : null
       return { ...item, weightG: weightValid ? weight : null, weightValid, nutritionKnown,
@@ -352,6 +366,13 @@ Page({
       carbsG: items.length ? rounded(carbs) : null,
       caloriesKcal: items.length ? rounded(calories) : null,
       dishGroups: buildDishGroups(items),
+      nutritionCards,
+      nutritionTotals: {
+        carbsText: items.length && carbs > 0 ? rounded(carbs) + 'g' : '—',
+        caloriesText: items.length && calories > 0 ? rounded(calories) + 'kcal' : '—',
+        countText: items.length + ' 样',
+        missingText: unknownCount > 0 ? unknownCount + ' 样缺营养数据，未计入合计' : ''
+      },
       foodsText: items.map((item) => item.foodName + (item.weightG > 0 ? ' ' + item.weightG + 'g' : '（重量待确认）')).join('、').slice(0, 512),
       foodNamesText: items.map((item) => item.foodName).join(' · ').slice(0, 200),
       mealSummaryText: items.length ? '识别 ' + items.length + ' 种食物'
@@ -418,9 +439,9 @@ Page({
       .map((item) => item.foodName).slice(0, 3).join('、')
     let analysisSub = ''
     if (!list.length) analysisSub = '添加食物后自动给出分析'
-    else if (preview.tier === 'HIGH') analysisSub = (namesOf('HIGH') ? namesOf('HIGH') + '：' : '') + '建议减少份量或替换为升糖负担更低的食物'
-    else if (preview.tier === 'MODERATE') analysisSub = (namesOf('MODERATE') ? namesOf('MODERATE') + '：' : '') + '需要控制份量，先吃蔬菜和蛋白质'
-    else if (preview.tier === 'LOW') analysisSub = '所选食物升糖负担都在可控范围'
+    else if (preview.tier === 'HIGH') analysisSub = (namesOf('HIGH') ? namesOf('HIGH') + '：' : '') + '建议换用升糖负担更低的食物'
+    else if (preview.tier === 'MODERATE') analysisSub = (namesOf('MODERATE') ? namesOf('MODERATE') + '：' : '') + '建议适量食用，可先吃蔬菜和蛋白质'
+    else if (preview.tier === 'LOW') analysisSub = '所选食物都建议食用'
     else analysisSub = '补充食物重量或改用食品库食物后可评估'
     // 重点关注：单项 HIGH 的元凶标记（后端 focusItems，文案已定稿），只标注不改整餐档位
     const focusLines = (preview && Array.isArray(preview.focusItems) ? preview.focusItems : [])
@@ -452,7 +473,7 @@ Page({
         giSourceText: item.giSource === 'CLIENT' ? 'GI 为输入值' : (item.giSource === 'LIBRARY' ? 'GI 取自营养库' : ''),
         giLowNote: item.giReliability === 'LOW' ? '与库值差异较大，结果仅供参考' : '',
         focused: item.focused === true,
-        focusLabel: item.focusReason === 'PORTION' ? '份量偏大' : '升糖负担高',
+        focusLabel: '升糖负担高',
         missingText: missing
       }
     })

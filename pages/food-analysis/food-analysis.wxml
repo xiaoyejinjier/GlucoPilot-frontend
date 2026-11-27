@@ -40,6 +40,42 @@
     </view>
   </view>
 
+  <view wx:if="{{phase === 'ready'}}" class="card nutrition-card">
+    <view class="card-head">
+      <text class="section-title">{{i18n.t("食物营养", locale)}}</text>
+      <text class="analysis-chip">{{i18n.t("每 100g", locale)}}</text>
+    </view>
+    <view class="total-row">
+      <view class="total-item">
+        <text class="total-label">{{i18n.t("整餐碳水", locale)}}</text>
+        <text class="total-value">{{nutritionTotals.carbsText}}</text>
+      </view>
+      <view class="total-item">
+        <text class="total-label">{{i18n.t("整餐热量", locale)}}</text>
+        <text class="total-value">{{nutritionTotals.caloriesText}}</text>
+      </view>
+      <view class="total-item">
+        <text class="total-label">{{i18n.t("食物", locale)}}</text>
+        <text class="total-value">{{nutritionTotals.countText}}</text>
+      </view>
+    </view>
+    <text wx:if="{{nutritionTotals.missingText}}" class="nutri-missing">{{nutritionTotals.missingText}}</text>
+    <view class="nutri-list">
+      <view wx:for="{{nutritionCards}}" wx:key="key" class="nutri-row {{item.unknown ? 'is-unknown' : ''}}">
+        <view class="nutri-main">
+          <text class="nutri-name">{{item.name}}</text>
+          <text wx:if="{{item.dishName}}" class="nutri-dish">{{item.dishName}}</text>
+          <text class="nutri-weight">{{item.weightText}}</text>
+        </view>
+        <view class="nutri-facts">
+          <text class="nutri-fact">{{i18n.t("碳水", locale)}} {{item.carbsText}}</text>
+          <text class="nutri-fact">{{i18n.t("热量", locale)}} {{item.caloriesText}}</text>
+          <text class="nutri-fact">GL {{item.glText}}</text>
+        </view>
+      </view>
+    </view>
+    <text class="nutri-note">{{i18n.t("按每 100g 展示便于对比，整餐合计按识别克重折算。", locale)}}</text>
+  </view>
   <view wx:if="{{phase === 'ready'}}" class="card analysis-card">
     <view class="card-head">
       <text class="section-title">{{i18n.t("食物分析", locale)}}</text>
@@ -68,7 +104,7 @@
       </view>
     </view>
     <text wx:if="{{tierCounts.UNKNOWN > 0}}" class="rate-unknown">{{i18n.t("信息不足", locale)}} {{tierCounts.UNKNOWN}}</text>
-    <text wx:if="{{carbsG !== null}}" class="carb-line">{{i18n.t("本餐碳水估算约", locale)}} {{carbsG}}g <text class="carb-note">{{i18n.t("（随份量变化）", locale)}}</text></text>
+    <text wx:if="{{carbsG !== null}}" class="carb-line">{{i18n.t("本餐碳水估算约", locale)}} {{carbsG}}g </text>
     <view class="advice-panel">
       <view class="advice-head-row">
         <view class="advice-toggle" bindtap="onToggleAdvice" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">

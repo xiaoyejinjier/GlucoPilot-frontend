@@ -641,3 +641,112 @@
 .dish-seasoning { display: block; margin-top: 2rpx; font-size: 22rpx; color: #a29480; }
 .food-role-tag { margin-left: 10rpx; font-size: 20rpx; color: #7a8a5a; background: #eef3e4; border-radius: 8rpx; padding: 2rpx 8rpx; }
 .food-role-tag.is-seasoning { color: #a08256; background: #f6efe2; }
+/* ===== 食物营养卡（2026-11-27：营养信息置顶，只展示每 100g 与整餐合计，不再谈份量） ===== */
+.nutrition-card {
+  margin-bottom: 20rpx;
+}
+
+.nutrition-card .total-row {
+  display: flex;
+  gap: 16rpx;
+  margin: 8rpx 0 4rpx;
+}
+
+.nutrition-card .total-item {
+  flex: 1;
+  min-width: 0;
+  padding: 18rpx 16rpx;
+  border-radius: 18rpx;
+  background: var(--brand-soft, #f6f1e7);
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.nutrition-card .total-label {
+  font-size: 22rpx;
+  color: var(--ink-3, #8a8378);
+}
+
+.nutrition-card .total-value {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--ink-1, #2f2a22);
+  font-variant-numeric: tabular-nums;
+}
+
+.nutrition-card .nutri-missing {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #b88230;
+}
+
+.nutrition-card .nutri-list {
+  margin-top: 12rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.nutrition-card .nutri-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 14rpx 0;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.nutrition-card .nutri-row:first-child {
+  border-top: none;
+}
+
+.nutrition-card .nutri-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+  min-width: 0;
+}
+
+.nutrition-card .nutri-name {
+  font-size: 28rpx;
+  color: var(--ink-1, #2f2a22);
+  max-width: 220rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nutrition-card .nutri-dish {
+  font-size: 22rpx;
+  color: var(--ink-3, #8a8378);
+}
+
+.nutrition-card .nutri-weight {
+  font-size: 22rpx;
+  color: var(--ink-3, #8a8378);
+  font-variant-numeric: tabular-nums;
+}
+
+.nutrition-card .nutri-facts {
+  display: flex;
+  gap: 14rpx;
+  flex-shrink: 0;
+}
+
+.nutrition-card .nutri-fact {
+  font-size: 22rpx;
+  color: var(--ink-2, #5c554a);
+  font-variant-numeric: tabular-nums;
+}
+
+.nutrition-card .nutri-row.is-unknown .nutri-fact {
+  color: #b88230;
+}
+
+.nutrition-card .nutri-note {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--ink-3, #8a8378);
+}
