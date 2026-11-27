@@ -137,9 +137,22 @@
         <text class="select-all-label">{{i18n.t("全选", locale)}}</text>
       </view>
     </view>
+    <view wx:if="{{dishGroups.length > 1 || (dishGroups.length === 1 && dishGroups[0].dishName !== '未归类')}}" class="dish-groups">
+      <text class="dish-groups-title">{{i18n.t("按菜分组", locale)}}</text>
+      <view wx:for="{{dishGroups}}" wx:key="dishName" class="dish-group">
+        <view class="dish-group-head">
+          <text class="dish-name">{{item.ungrouped ? i18n.t("未归类", locale) : item.dishName}}</text>
+          <text wx:if="{{item.cookMethod}}" class="dish-cook">{{item.cookMethod}}</text>
+          <text class="dish-count">{{item.count}} {{i18n.t("样", locale)}}</text>
+        </view>
+        <text class="dish-items">{{item.mains.length ? item.mains[0].foodName : ''}}<text wx:for="{{item.mains}}" wx:for-item="entry" wx:if="{{index > 0}}" wx:key="foodName">、{{entry.foodName}}</text><text wx:if="{{!item.mains.length}}">{{i18n.t("全是配料", locale)}}</text></text>
+        <text wx:if="{{item.seasoningNames}}" class="dish-seasoning">{{i18n.t("另含配料", locale)}}：{{item.seasoningNames}}</text>
+      </view>
+    </view>
     <view wx:for="{{items}}" wx:key="key" wx:if="{{foodListExpanded || index < 2}}" class="meal-food-item {{item.needsConfirmation ? (item.confirmed ? 'low-confidence-confirmed' : 'low-confidence') : ''}}">
       <view class="meal-food-head">
         <text class="meal-food-name">{{item.foodName}}</text>
+        <text wx:if="{{item.roleText}}" class="food-role-tag {{item.role === 'SEASONING' ? 'is-seasoning' : ''}}">{{i18n.t((item.roleText), locale)}}</text>
         <text class="nutrition-source {{item.nutritionSource === 'AI_ESTIMATE' ? 'estimated' : ''}}">{{i18n.t((item.sourceText), locale)}}</text>
         <text wx:if="{{deleteMode}}" class="del-x ui-interactive" data-index="{{index}}" bindtap="onRemoveItem" hover-class="ui-pressed" hover-start-time="0" hover-stay-time="90">×</text>
       </view>

@@ -97,6 +97,8 @@ function createPage(options = {}) {
       }
     },
     '../../utils/request': { getToken: () => 'test-token' },
+    // 按菜分组是纯函数，直接复用真实实现（测的是页面接线，不是分组逻辑本身）
+    '../../utils/meal-dish': require('../../utils/meal-dish'),
     '../../utils/record-window': { getNodeRecordWindow: () => ({ locked: false }) },
     '../../utils/constants': require('../../utils/constants')
   }

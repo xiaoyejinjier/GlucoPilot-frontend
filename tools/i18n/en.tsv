@@ -2323,3 +2323,11 @@ SN：	SN:\s
 医生认证未通过，可前往医生工作台查看	Doctor verification not approved. Open the doctor workspace.
 医生资格已停用，可前往医生工作台查看	Doctor access disabled. Open the doctor workspace.
 求助范围	Request scope
+
+按菜分组	Grouped by dish
+未归类	Ungrouped
+另含配料	Also contains seasonings
+全是配料	Seasonings only
+主料	Main ingredient
+配料	Seasoning
+样	items

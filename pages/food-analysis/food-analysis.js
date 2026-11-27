@@ -1,4 +1,5 @@
 const { analyzeMealPhoto, saveMealRecord, previewMealSuitability, fetchGlucoseRecords, fetchFoods } = require('../../services/api')
+const { buildDishGroups } = require('../../utils/meal-dish')
 const { getTodayKey, getRecords, saveRecord } = require('../../utils/storage')
 const { applyDisplayToCurrentPage } = require('../../utils/display')
 const { readShotImage, clearShotImage } = require('../../utils/shot')
@@ -267,6 +268,10 @@ Page({
         userCorrected: false,
         // 低置信项默认未确认，由用户逐项勾选后放行保存
         confirmed: !item.needsConfirmation,
+        dishName: item.dishName || '',
+        role: item.role || '',
+        cookMethod: item.cookMethod || '',
+        roleText: item.role === 'SEASONING' ? '配料' : (item.role === 'MAIN' ? '主料' : ''),
         sourceText: item.nutritionSource === 'AI_ESTIMATE' ? '模型估算 · 待审核'
           : item.nutritionSource === 'LIBRARY' ? '食品库数据' : '待确认',
         per100Text: item.carbsPer100g == null || item.caloriesPer100g == null ? '营养未知，不计入总量'
@@ -346,6 +351,7 @@ Page({
       someConfirmed: confirmedCount > 0 && pendingConfirm > 0,
       carbsG: items.length ? rounded(carbs) : null,
       caloriesKcal: items.length ? rounded(calories) : null,
+      dishGroups: buildDishGroups(items),
       foodsText: items.map((item) => item.foodName + (item.weightG > 0 ? ' ' + item.weightG + 'g' : '（重量待确认）')).join('、').slice(0, 512),
       foodNamesText: items.map((item) => item.foodName).join(' · ').slice(0, 200),
       mealSummaryText: items.length ? '识别 ' + items.length + ' 种食物'
@@ -385,7 +391,10 @@ Page({
           nutritionSource: item.nutritionSource || undefined,
           confidence: item.confidence == null ? undefined : item.confidence,
           userCorrected: item.userCorrected === true,
-          libraryStatus: item.libraryStatus || undefined
+          libraryStatus: item.libraryStatus || undefined,
+          dishName: item.dishName || undefined,
+          role: item.role || undefined,
+          cookMethod: item.cookMethod || undefined
         }))
       })
       if (!this._alive || version !== this._previewVersion) return
@@ -890,7 +899,10 @@ Page({
           userCorrected: item.userCorrected === true,
           weightG: item.weightG,
           carbsG: item.carbsG,
-          caloriesKcal: item.caloriesKcal
+          caloriesKcal: item.caloriesKcal,
+          dishName: item.dishName || undefined,
+          role: item.role || undefined,
+          cookMethod: item.cookMethod || undefined
         }))
       }
       // 有识别令牌才带确认语义：无令牌（旧客户端/快照过期）后端不走低置信拦截
